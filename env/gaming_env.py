@@ -88,7 +88,7 @@ class GamingENV:
         tanks = []
         for team_name,tank_config in tank_configs.items():
             x,y = self.empty_space[np.random.choice(range(len(self.empty_space)))]
-            tanks.append(Tank(team_name,x+40,y+40,tank_config["color"],tank_config["keys"],env = self))
+            tanks.append(Tank(tank_config["team"],x+40,y+40,tank_config["color"],tank_config["keys"],env = self))
         return tanks
     
     def update_reward(self,shooter,victim):

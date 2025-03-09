@@ -74,100 +74,6 @@ class Bullet:
     def draw(self):
         pygame.draw.circle(self.sharing_env.screen, self.owner.color, (int(self.x), int(self.y)), 5)
 
-# class Tank:
-#     def __init__(self, x, y, color, keys, env):
-#         self.x = x
-#         self.y = y
-#         self.angle = 0
-#         self.speed = 0
-#         self.color = color
-#         self.width = 40
-#         self.height = 32
-#         self.alive = True
-#         self.keys = keys
-#         self.sharing_env = env
-#         self.max_bullets = MAX_BULLETS
-#         self.bullet_cooldown = BULLET_COOLDOWN
-#         self.last_shot_time = 0
-
-#     def get_corners(self, x=None, y=None, angle=None):
-#         """获取坦克旋转后的四个角坐标"""
-#         if x is None: x = self.x
-#         if y is None: y = self.y
-#         if angle is None: angle = self.angle
-
-#         hw, hh = self.width / 2, self.height / 2
-#         center = pygame.Vector2(x, y)
-#         corners = [
-#             pygame.Vector2(-hw, -hh),
-#             pygame.Vector2(hw, -hh),
-#             pygame.Vector2(hw, hh),
-#             pygame.Vector2(-hw, hh),
-#         ]
-#         return [center + c.rotate(angle) for c in corners]
-
-#     def move(self):
-#         if not self.alive:
-#             return
-        
-#         rad = math.radians(self.angle)
-#         new_x = self.x + self.speed * math.cos(rad)
-#         new_y = self.y - self.speed * math.sin(rad)
-
-#         # 预测新位置的旋转边界
-#         new_corners = self.get_corners(new_x, new_y)
-
-#         # 确保坦克不会穿墙
-#         if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
-#             self.x, self.y = new_x, new_y
-
-#     def rotate(self, direction):
-#         if not self.alive:
-#             return
-
-#         new_angle = (self.angle + direction * ROTATION_SPEED) % 360
-#         new_corners = self.get_corners(angle=new_angle)
-
-#         # 旋转后如果碰撞墙壁，则禁止旋转
-#         if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
-#             self.angle = new_angle
-    
-#     def shoot(self):
-#         """ 发射子弹，限制子弹数量和射击间隔 """
-#         if not self.alive:
-#             return
-
-#         current_time = pygame.time.get_ticks()
-
-#         # **检查场上当前子弹数量**
-#         active_bullets = [b for b in self.sharing_env.bullets if b.owner == self]
-#         if len(active_bullets) >= self.max_bullets:
-#             return  # **超过最大子弹数，不发射**
-
-#         # **检查冷却时间**
-#         if current_time - self.last_shot_time < self.bullet_cooldown:
-#             return  # **未冷却完毕，不发射**
-
-#         # **计算子弹初始位置**
-#         rad = math.radians(self.angle)
-#         bullet_x = self.x + 40 * math.cos(rad)
-#         bullet_y = self.y - 40 * math.sin(rad)
-
-#         # **创建并添加子弹**
-#         bullet = Bullet(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
-#         self.sharing_env.bullets.append(bullet)
-
-#         # **更新射击时间**
-#         self.last_shot_time = current_time
-
-#     def draw(self):
-#         if not self.alive:
-#             return
-#         tank_surface = pygame.Surface((self.width, self.height), pygame.SRCALPHA)
-#         pygame.draw.rect(tank_surface, self.color, (0, 0, self.width, self.height))
-#         rotated_surface = pygame.transform.rotate(tank_surface, self.angle)
-#         rotated_rect = rotated_surface.get_rect(center=(self.x, self.y))
-#         self.sharing_env.screen.blit(rotated_surface, rotated_rect.topleft)
 
 class Tank:
     def __init__(self, team,x, y, color, keys, env):
@@ -176,7 +82,7 @@ class Tank:
         self.y = y
         self.angle = 0
         self.speed = 0
-        self.color = color  # **用户定义的颜色**
+        self.color = color  # the custom color
         self.width = 40
         self.height = 32
         self.alive = True
@@ -198,13 +104,12 @@ class Tank:
         pil_image = Image.open(gif_path)
         frames = []
 
-        # **解析 GIF 并修改颜色**
         for frame in ImageSequence.Iterator(pil_image):
-            frame = frame.convert("RGBA")  # **转换为 RGBA**
+            frame = frame.convert("RGBA")  # convert to RGBA
             resized_frame = frame.resize(size)  # **调整大小**
-            colorized_frame = self.apply_color_tint(resized_frame, target_color)  # **应用颜色偏差**
+            colorized_frame = self.apply_color_tint(resized_frame, target_color)  # apply color shift
 
-            # **转换为 pygame 兼容格式**
+            #convert image to pygame.image
             mode = colorized_frame.mode
             size = colorized_frame.size
             data = colorized_frame.tobytes()
@@ -217,20 +122,20 @@ class Tank:
         """ 计算颜色偏差，并应用到 GIF 帧上 """
         r, g, b = target_color
 
-        # **拆分 RGBA 颜色通道**
+        #  split RGBA
         r_band, g_band, b_band, alpha = image.split()
 
-        # **调整 R/G/B 颜色**
+        # change RGB color
         r_band = ImageEnhance.Brightness(r_band).enhance(r / 255.0)
         g_band = ImageEnhance.Brightness(g_band).enhance(g / 255.0)
         b_band = ImageEnhance.Brightness(b_band).enhance(b / 255.0)
 
-        # **合并回 RGBA**
+        # convert back to RGBA
         colorized_image = Image.merge("RGBA", (r_band, g_band, b_band, alpha))
         return colorized_image
 
     def get_corners(self, x=None, y=None, angle=None):
-        """获取坦克旋转后的四个角坐标"""
+        """get the cooridnates of 4 corners of tank after rotation"""
         if x is None: x = self.x
         if y is None: y = self.y
         if angle is None: angle = self.angle
@@ -253,10 +158,10 @@ class Tank:
         new_x = self.x + self.speed * math.cos(rad)
         new_y = self.y - self.speed * math.sin(rad)
 
-        # 预测新位置的旋转边界
+        # calculate the new corners
         new_corners = self.get_corners(new_x, new_y)
 
-        # 确保坦克不会穿墙
+        # make sure tank won't go through the wall
         if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
             self.x, self.y = new_x, new_y
 
@@ -267,32 +172,32 @@ class Tank:
         new_angle = (self.angle + direction * ROTATION_SPEED) % 360
         new_corners = self.get_corners(angle=new_angle)
 
-        # 旋转后如果碰撞墙壁，则禁止旋转
+        # if it will hit walls after rotation, forbidden it.
         if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
             self.angle = new_angle
     
     def shoot(self):
-        """ 发射子弹，限制子弹数量和射击间隔 """
+        """ shoot bullets with frequncy limit and existing max bullets limits """
         if not self.alive:
             return
 
         current_time = pygame.time.get_ticks()
 
-        # **检查场上当前子弹数量**
+        # check if the currents bullets exist the maximum (the owern's bullets will be count)
         active_bullets = [b for b in self.sharing_env.bullets if b.owner == self]
         if len(active_bullets) >= self.max_bullets:
-            return  # **超过最大子弹数，不发射**
+            return  
 
-        # **检查冷却时间**
+        # check cooling time for fireing
         if current_time - self.last_shot_time < self.bullet_cooldown:
-            return  # **未冷却完毕，不发射**
+            return  # not yet
 
-        # **计算子弹初始位置**
+        # compute the initial place
         rad = math.radians(self.angle)
         bullet_x = self.x + 10 * math.cos(rad)
         bullet_y = self.y - 10 * math.sin(rad)
 
-        # **创建并添加子弹**
+        # creates and add bullets
         bullet = Bullet(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
         self.sharing_env.bullets.append(bullet)
 
@@ -304,18 +209,18 @@ class Tank:
         if not self.alive:
             return
 
-        # **获取当前帧**
+        # get the current frame
         tank_frame = self.frames[self.frame_index]
 
-        # **旋转坦克**
+        # rotate tanks
         rotated_surface = pygame.transform.rotate(tank_frame, self.angle)
         rotated_rect = rotated_surface.get_rect(center=(self.x, self.y))
 
-        # **绘制坦克**
+        # draw the new tank
         self.sharing_env.screen.blit(rotated_surface, rotated_rect.topleft)
 
 
-# 定义墙壁类
+# Wall 
 class Wall:
     def __init__(self, x, y, env):
         self.rect = pygame.Rect(x, y, GRID_SIZE, GRID_SIZE)

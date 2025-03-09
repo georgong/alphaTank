@@ -20,10 +20,10 @@ BULLET_MAX_BOUNCES = 5
 BULLET_MAX_DISTANCE = 100000 #ensure random action would kill tank
 MAX_BULLETS = 6  
 BULLET_COOLDOWN = 200 
-tank_configs = {"TeamA":{"color":GREEN, "keys":{
+tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
     "left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s, "shoot": pygame.K_f
 }},
-               "TeamB":{"color":RED, "keys":{
+               "Tank2":{"team":"TeamB", "color":RED, "keys":{
      "left": pygame.K_LEFT, "right": pygame.K_RIGHT, "up": pygame.K_UP, "down": pygame.K_DOWN, "shoot": pygame.K_SPACE
 }}
 }
