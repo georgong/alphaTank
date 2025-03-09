@@ -2,9 +2,10 @@ import gym
 import logging
 import pygame
 import numpy as np
-from config import *
-from sprite import Tank,Bullet,Wall
-from maze import generate_maze
+from env.config import *
+from env.sprite import Tank,Bullet,Wall
+from env.maze import generate_maze
+
 class GamingENV:
     def __init__(self,mode = "human_play"):
         self.screen = None
@@ -54,7 +55,7 @@ class GamingENV:
                 tank.move() 
         else:
             for tank in self.tanks:
-                i = self.tanks.index(tank) 
+                i = self.tanks.index(tank)
                 if actions[i][0] == 0: tank.rotate(1) 
                 elif actions[i][0] == 1: tank.rotate(-1)  
                 if actions[i][1] == 0: tank.speed = 2
@@ -114,18 +115,3 @@ class GamingENV:
                 else:
                     empty_space.append((col * GRID_SIZE,row * GRID_SIZE))
         return walls,empty_space
-                
-
-
-
-
-
-
-
-
-
-if __name__ == "__main__":
-    env = GamingENV()
-    while env.running:
-        env.render()
-        env.step()

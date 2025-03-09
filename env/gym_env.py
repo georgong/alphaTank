@@ -1,8 +1,8 @@
 import gym
 import numpy as np
 import pygame
-from config import *
-from gaming_env import GamingENV
+from env.config import *
+from env.gaming_env import GamingENV
 
 class MultiAgentEnv(gym.Env):
     def __init__(self):
@@ -30,8 +30,8 @@ class MultiAgentEnv(gym.Env):
     def step(self, actions):
         self.training_step += 1
 
-        parsed_actions = [actions[i * 3:(i + 1) * 3] for i in range(self.num_tanks)]
-        self.game_env.step(parsed_actions)
+        # parsed_actions = [actions[i * 3:(i + 1) * 3] for i in range(self.num_tanks)]
+        self.game_env.step(actions)
         obs = self._get_observation()
         rewards = self._calculate_rewards()
         done = self._check_done()
@@ -72,13 +72,3 @@ class MultiAgentEnv(gym.Env):
 
     def close(self):
         pygame.quit()
-
-if __name__ == "__main__":
-    env = MultiAgentEnv()
-    for _ in range(10000):
-        env.render()
-        action = env.action_space.sample()
-        observation, reward, terminated, truncated, info = env.step(action)
-        if terminated or truncated:
-            observation, info = env.reset()
-    env.close()

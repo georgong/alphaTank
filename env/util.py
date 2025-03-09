@@ -1,7 +1,7 @@
 import pygame
 import random
 import math
-from config import *
+from env.config import *
 
 def reflect_vector(incident, normal):
     """计算反弹方向：反射向量 = incident - 2 * (incident ⋅ normal) * normal"""

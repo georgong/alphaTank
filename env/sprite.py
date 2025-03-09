@@ -1,8 +1,8 @@
 import pygame
 import random
 import math
-from config import *
-from util import *
+from env.config import *
+from env.util import *
 from PIL import Image, ImageSequence, ImageEnhance
 
 class Bullet:
@@ -188,7 +188,7 @@ class Tank:
         self.reward = 0
 
         # **加载坦克 GIF 动画，并应用颜色调整**
-        self.frames = self.load_and_colorize_gif("assets/tank.gif", color, (self.width+3, self.height+3))
+        self.frames = self.load_and_colorize_gif("env/assets/tank.gif", color, (self.width+3, self.height+3))
         self.frame_index = 0  # **当前播放帧**
         self.frame_rate = 5  # **每 5 帧更新一次**
         self.tick = 0  # **计数器**

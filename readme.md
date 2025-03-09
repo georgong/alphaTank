@@ -25,13 +25,20 @@ pip install -r requirements.txt
 - **Bullets will bounce off walls**
 
 ```python
-python gaming_env.py
+python play_env.py --mode play
 ```
 ---
 
 ## **🤖 Random Action Rendering**
 ```python
-python gym_env.py
+python play_env.py --mode random
+```
+
+---
+
+## **🚀 Training A PPO Agent**
+```python
+python train.py
 ```
 
 ---
