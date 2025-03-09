@@ -5,7 +5,6 @@ import numpy as np
 from config import *
 from sprite import Tank,Bullet,Wall
 from maze import generate_maze
-import matplotlib.pyplot as plt
 class GamingENV:
     def __init__(self,mode = "human_play"):
         self.screen = None
@@ -52,6 +51,7 @@ class GamingENV:
                     elif actions[i][1] == 1: tank.speed = -2  # **后退**
                     else: tank.speed = 0  # **停止**
                     if actions[i][2] == 1: tank.shoot()  # **射击**
+                tank.move() 
         else:
             for tank in self.tanks:
                 i = self.tanks.index(tank) 
@@ -61,8 +61,7 @@ class GamingENV:
                 elif actions[i][1] == 1: tank.speed = -2 
                 else: tank.speed = 0 
                 if actions[i][2] == 1: tank.shoot()  
-
-            tank.move() 
+                tank.move() 
 
 
         for bullet in self.bullets[:]:
@@ -130,4 +129,3 @@ if __name__ == "__main__":
     while env.running:
         env.render()
         env.step()
-    env.close()

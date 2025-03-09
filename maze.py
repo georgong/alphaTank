@@ -1,6 +1,5 @@
 import random
 import numpy as np
-import matplotlib.pyplot as plt
 
 MAZEWIDTH, MAZEHEIGHT = 11,11 
 DIRECTIONS = [(-2, 0), (2, 0), (0, -2), (0, 2)]
