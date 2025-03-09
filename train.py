@@ -83,7 +83,6 @@ def train():
     max_grad_norm = wandb.config.max_grad_norm
 
     global_step = 0
-    reset_count = 0
     start_time = time.time()
     next_obs, _ = env.reset()
     next_obs = torch.tensor(next_obs, dtype=torch.float32).to(device).reshape(num_tanks, obs_dim)
@@ -92,6 +91,7 @@ def train():
     progress_bar = tqdm(range(total_timesteps // batch_size), desc="Training PPO", position=0, leave=True)
 
     for iteration in progress_bar:
+        reset_count = 0
         obs = torch.zeros((num_steps, num_tanks, obs_dim)).to(device)
         actions = torch.zeros((num_steps, num_tanks, 3)).to(device)
         logprobs = torch.zeros(num_steps, num_tanks, 3).to(device)
@@ -126,16 +126,12 @@ def train():
             rewards[step] = torch.tensor(reward_np, dtype=torch.float32).to(device)
             next_done = torch.tensor(done_np, dtype=torch.float32).to(device)
             next_obs = torch.tensor(next_obs_np, dtype=torch.float32).to(device).reshape(num_tanks, obs_dim)
-            
-            if iteration == 0:
-                reset_table = wandb.Table(columns=["Iteration", "Global Step", "Resets"])
 
             # Auto-reset after a certain number of iterations
             #TODO: make it an autoreset wrapper
-            auto_reset_interval = 500
-            if np.any(done_np) or (step % auto_reset_interval == 0 and step > 0):
+            auto_reset_interval = 1000
+            if np.any(done_np) or (global_step % auto_reset_interval == 0 and global_step > 0):
                 reset_count += 1
-                reset_table.add_data(step, global_step, reset_count)
                 next_obs, _ = env.reset()
                 next_obs = torch.tensor(next_obs, dtype=torch.float32).to(device).reshape(num_tanks, obs_dim)
                 next_done = torch.zeros(num_tanks).to(device)
