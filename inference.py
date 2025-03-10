@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from env.gym_env import MultiAgentEnv
-from train import PPOAgent  # Import the same PPOAgent class
+from train_ppo import PPOAgent
 
 def load_agents(env, device):
     """Loads trained agents from the saved models."""

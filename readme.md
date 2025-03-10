@@ -36,9 +36,10 @@ python play_env.py --mode random
 
 ---
 
-## **🚀 Training A PPO Agent**
+## **🚀 Training A PPO/SAC Agent**
 ```python
-python train.py
+python train_ppo.py
+python train_sac.py
 ```
 
 ---
