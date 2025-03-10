@@ -5,6 +5,7 @@ import numpy as np
 from env.config import *
 from env.sprite import Tank,Bullet,Wall
 from env.maze import generate_maze
+import math
 
 class GamingENV:
     def __init__(self,mode = "human_play"):
@@ -22,14 +23,8 @@ class GamingENV:
         pass
 
     def step(self, actions=None):
-        # for tank in self.tanks:
-        #     print(f"[DEBUG] Tank {tank.team}: Reward = {tank.reward}")  # Print rewards
-        
         for bullet in self.bullets[:]:
             bullet.move()
-            for tank in self.tanks:
-                # print(f"[DEBUG] Bullet hit! Shooter: {bullet.owner.team}, Victim: {tank.team}")
-                self.update_reward(bullet.owner, tank)
 
         if self.mode == "human_play":
             for event in pygame.event.get():
@@ -90,6 +85,15 @@ class GamingENV:
             tank.draw()
         for bullet in self.bullets:
             bullet.draw()
+
+        pygame.font.init()  # 初始化字体模块
+        font = pygame.font.SysFont("Arial", 20)  # 设定字体和大小
+
+        for i, tank in enumerate(self.tanks):
+            reward_text = f"Tank {i+1} (Team {tank.team}) Reward: {tank.reward}"
+            text_surface = font.render(reward_text, True, (0, 0, 0))  # 黑色文本
+            self.screen.blit(text_surface, (10, 10 + i * 30))  # 依次向下排列
+
         pygame.display.update() 
         self.clock.tick(60)
 
@@ -97,10 +101,10 @@ class GamingENV:
         tanks = []
         for team_name,tank_config in tank_configs.items():
             x,y = self.empty_space[np.random.choice(range(len(self.empty_space)))]
-            tanks.append(Tank(tank_config["team"],x+40,y+40,tank_config["color"],tank_config["keys"],env = self))
+            tanks.append(Tank(tank_config["team"],x+GRID_SIZE/2,y+GRID_SIZE/2,tank_config["color"],tank_config["keys"],env = self))
         return tanks
     
-    def update_reward(self,shooter,victim):
+    def update_reward_by_bullets(self,shooter,victim):
         if shooter.team == victim.team: #shoot the teammate
             shooter.reward += TEAM_HIT_PENALTY
             victim.reward += HIT_PENALTY

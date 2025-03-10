@@ -20,7 +20,7 @@ wandb.init(project="multiagent-ppo", config={
     "max_grad_norm": 0.5,
     "num_steps": 128,
     "num_epochs": 4,
-    "total_timesteps": 100000
+    "total_timesteps": 200000
 })
 
 
@@ -67,6 +67,8 @@ def train():
     act_dim = env.action_space.nvec[:3]  
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    # if torch.backends.mps.is_available():
+    #     device = torch.device("mps")
 
     agents = [PPOAgent(obs_dim, act_dim).to(device) for _ in range(num_tanks)]
     optimizers = [optim.Adam(agent.parameters(), lr=wandb.config.learning_rate, eps=1e-5) for agent in agents]
