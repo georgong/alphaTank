@@ -12,6 +12,7 @@ def run_random():
         actions_np = actions.reshape(env.num_tanks, 3)
         actions_list = actions_np.tolist()
         observation, reward, terminated, truncated, info = env.step(actions_list)
+        # print(reward)
         if terminated or truncated:
             observation, info = env.reset()
     env.close()

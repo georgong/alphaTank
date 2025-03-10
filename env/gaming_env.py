@@ -22,6 +22,15 @@ class GamingENV:
         pass
 
     def step(self, actions=None):
+        # for tank in self.tanks:
+        #     print(f"[DEBUG] Tank {tank.team}: Reward = {tank.reward}")  # Print rewards
+        
+        for bullet in self.bullets[:]:
+            bullet.move()
+            for tank in self.tanks:
+                # print(f"[DEBUG] Bullet hit! Shooter: {bullet.owner.team}, Victim: {tank.team}")
+                self.update_reward(bullet.owner, tank)
+
         if self.mode == "human_play":
             for event in pygame.event.get():
                 if event.type == pygame.QUIT:

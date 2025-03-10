@@ -11,16 +11,16 @@ import gym
 from env.gym_env import MultiAgentEnv
 
 wandb.init(project="multiagent-ppo", config={
-    "learning_rate": 1e-5,
+    "learning_rate": 2.5e-4,
     "gamma": 0.99,
     "gae_lambda": 0.95,
     "clip_coef": 0.2,
-    "ent_coef": 0.001,
+    "ent_coef": 0.0005,
     "vf_coef": 0.5,
     "max_grad_norm": 0.5,
     "num_steps": 128,
     "num_epochs": 4,
-    "total_timesteps": 50000
+    "total_timesteps": 100000
 })
 
 
@@ -61,6 +61,7 @@ class PPOAgent(nn.Module):
 
 def train():
     env = MultiAgentEnv()
+    env.render()
     num_tanks = env.num_tanks  
     obs_dim = env.observation_space.shape[0] // num_tanks  
     act_dim = env.action_space.nvec[:3]  
@@ -117,11 +118,13 @@ def train():
             logprobs[step] = logprobs_tensor
             values[step] = values_tensor
             
+            
             actions_np = actions_tensor.cpu().numpy().astype(int)
             actions_np = actions_np.reshape(env.num_tanks, 3)
             actions_list = actions_np.tolist()
 
             next_obs_np, reward_np, done_np, _, _ = env.step(actions_list)
+            # print(reward_np)
 
             rewards[step] = torch.tensor(reward_np, dtype=torch.float32).to(device)
             next_done = torch.tensor(done_np, dtype=torch.float32).to(device)
@@ -129,7 +132,7 @@ def train():
 
             # Auto-reset after a certain number of iterations
             #TODO: make it an autoreset wrapper
-            auto_reset_interval = 1000
+            auto_reset_interval = 10000
             if np.any(done_np) or (global_step % auto_reset_interval == 0 and global_step > 0):
                 reset_count += 1
                 next_obs, _ = env.reset()
@@ -187,6 +190,16 @@ def train():
 
 
         progress_bar.set_postfix({f"Agent_{i} Reward": rewards[:, i].mean().item() for i in range(num_tanks)})
+        
+    
+    # Save trained models after all iterations
+    model_save_dir = "checkpoints"
+    os.makedirs(model_save_dir, exist_ok=True)
+
+    for i, agent in enumerate(agents):
+        model_path = os.path.join(model_save_dir, f"ppo_agent_{i}.pt")
+        torch.save(agent.state_dict(), model_path)
+        print(f"[INFO] Saved model for Agent {i} at {model_path}")
 
     env.close()
     wandb.finish()

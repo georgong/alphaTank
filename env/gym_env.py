@@ -22,10 +22,13 @@ class MultiAgentEnv(gym.Env):
         return tank_dim + bullet_dim
 
     def reset(self):
-        obs = self._get_observation()
-        info = {f"Tank:{i}-{tank.team}":tank.reward for i, tank in enumerate(self.game_env.tanks)}
         self.game_env.reset()
-        return obs,info
+        for tank in self.game_env.tanks:
+            tank.reward = 0  # Reset rewards for new episode
+        obs = self._get_observation()
+        info = {f"Tank:{i}-{tank.team}": tank.reward for i, tank in enumerate(self.game_env.tanks)}
+        return obs, info
+
 
     def step(self, actions):
         self.training_step += 1
@@ -38,7 +41,6 @@ class MultiAgentEnv(gym.Env):
         obs = np.array(obs, dtype=np.float32).flatten()
         rewards = np.array(rewards, dtype=np.float32).flatten()
         return obs, rewards, done, False, {}
-
 
     def _get_observation(self):
         obs = []
@@ -53,8 +55,6 @@ class MultiAgentEnv(gym.Env):
                 active_bullets.append(None) 
         obs = np.array(obs, dtype=np.float32).flatten()
         return obs
-
-
 
     def _calculate_rewards(self):
         return np.array([tank.reward for tank in self.game_env.tanks], dtype=np.float32)
