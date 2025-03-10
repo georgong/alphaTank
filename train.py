@@ -11,11 +11,11 @@ import gym
 from env.gym_env import MultiAgentEnv
 
 wandb.init(project="multiagent-ppo", config={
-    "learning_rate": 2.5e-4,
+    "learning_rate": 1e-4,
     "gamma": 0.99,
     "gae_lambda": 0.95,
     "clip_coef": 0.2,
-    "ent_coef": 0.0005,
+    "ent_coef": 0.001,
     "vf_coef": 0.5,
     "max_grad_norm": 0.5,
     "num_steps": 128,

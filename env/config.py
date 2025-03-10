@@ -13,12 +13,12 @@ GRAY = (100, 100, 100)
 
 #TANK
 EPSILON = 0.01  
-TANK_SPEED = 2
+TANK_SPEED = 10
 ROTATION_SPEED = 3
 BULLET_SPEED = 5
 BULLET_MAX_BOUNCES = 30
 BULLET_MAX_DISTANCE = 10000 #ensure random action would kill tank
-MAX_BULLETS = 20  
+MAX_BULLETS = 100  
 BULLET_COOLDOWN = 200 
 tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
     "left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s, "shoot": pygame.K_f

@@ -42,7 +42,7 @@ def run_inference():
 
         env.render()
 
-        auto_reset_interval = 1000
+        auto_reset_interval = 100
         reset_wait = 0 
         if np.any(done_np) or (reset_wait % auto_reset_interval == 0 and reset_wait > 0):
             reset_wait += 1
