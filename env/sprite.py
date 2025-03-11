@@ -57,7 +57,7 @@ class Bullet:
                 if bullet_rect.colliderect(tank_rect):
                     tank.alive = False  
                     self.sharing_env.bullets.remove(self)  
-                    self.sharing_env.update_reward(self.owner,tank)
+                    self.sharing_env.update_reward_by_bullets(self.owner,tank)
                     return
             
 
@@ -91,7 +91,13 @@ class Tank:
         self.max_bullets = MAX_BULLETS
         self.bullet_cooldown = BULLET_COOLDOWN
         self.last_shot_time = 0
+        self.closer_reward = 0
         self.reward = 0
+
+        # **reward compute**
+        self.last_x, self.last_y = x, y  # 记录上一次位置
+        self.stationary_steps = 0  # 站立不动的帧数
+        self.wall_hits = 0  # 连续撞墙次数
 
         # **加载坦克 GIF 动画，并应用颜色调整**
         self.frames = self.load_and_colorize_gif("env/assets/tank.gif", color, (self.width+3, self.height+3))
@@ -161,9 +167,39 @@ class Tank:
         # calculate the new corners
         new_corners = self.get_corners(new_x, new_y)
 
+        if any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
+            self.wall_hits += 1  # 记录撞墙次数
+            if self.wall_hits >= WALL_HIT_THRESHOLD:
+                self.reward += WALL_HIT_STRONG_PENALTY  # **连续撞墙，给予更大惩罚**
+            else:
+                self.reward += WALL_HIT_PENALTY  # **单次撞墙，给予普通惩罚**
+            return  # 停止移动       
+
         # make sure tank won't go through the wall
         if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
             self.x, self.y = new_x, new_y
+        self.wall_hits = 0  # **重置撞墙计数**
+        
+        # **🏆 计算停留原地的惩罚**  # 记录当前坐标
+
+        for opponent in self.sharing_env.tanks:
+            if opponent != self and opponent.alive:
+                dist_now = math.sqrt((self.x - opponent.x) ** 2 + (self.y - opponent.y) ** 2)
+                dist_prev = math.sqrt((self.last_x - opponent.x) ** 2 + (self.last_y - opponent.y) ** 2)
+                # ✅ **只有朝对手移动时才给奖励**
+                if dist_now < dist_prev:
+                    if self.closer_reward < CLOSER_REWARD_MAX:  # **确保不超过最大值**
+                        self.reward += CLOSER_REWARD
+                        self.closer_reward += CLOSER_REWARD
+        
+        if abs(self.x - self.last_x) < STATIONARY_EPSILON and abs(self.y - self.last_y) < STATIONARY_EPSILON:
+            self.stationary_steps += 1
+            if self.stationary_steps % 10 == 0:  # 每 10 帧不动就扣分
+                self.reward += STATIONARY_PENALTY
+        else:
+            self.stationary_steps = 0  # **重置不动计数**
+        self.last_x, self.last_y = self.x, self.y
+
 
     def rotate(self, direction):
         if not self.alive:
@@ -224,6 +260,9 @@ class Tank:
 class Wall:
     def __init__(self, x, y, env):
         self.rect = pygame.Rect(x, y, GRID_SIZE, GRID_SIZE)
+        self.x = x
+        self.y = y
+        self.size = GRID_SIZE
         self.sharing_env = env
 
     def draw(self):

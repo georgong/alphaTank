@@ -10,6 +10,7 @@ class MultiAgentEnv(gym.Env):
         self.training_step = 0
         self.game_env = GamingENV(mode="agent")
         self.num_tanks = len(self.game_env.tanks)
+        self.num_walls = len(self.game_env.walls)
         self.max_bullets_per_tank = 6 
 
         obs_dim = self._calculate_obs_dim()
@@ -17,9 +18,10 @@ class MultiAgentEnv(gym.Env):
         self.action_space = gym.spaces.MultiDiscrete([3, 3, 2] * self.num_tanks)  
 
     def _calculate_obs_dim(self):
-        tank_dim = self.num_tanks * 4 
-        bullet_dim = self.num_tanks * self.max_bullets_per_tank * 4 
-        return tank_dim + bullet_dim
+        tank_dim = self.num_tanks * 4 #num_tanks * (x,y,angle,alive) 
+        bullet_dim = self.num_tanks * self.max_bullets_per_tank * 4  # num_tanks * (x,y,dx,dy)
+        wall_dim = self.num_walls * 3 #(x,y,grid_size)
+        return tank_dim + bullet_dim + wall_dim
 
     def reset(self):
         self.game_env.reset()
@@ -46,6 +48,8 @@ class MultiAgentEnv(gym.Env):
         obs = []
         for tank in self.game_env.tanks:
             obs.extend([float(tank.x), float(tank.y), float(tank.angle), float(1 if tank.alive else 0)])
+        for wall in self.game_env.walls:
+            obs.extend([float(wall.x), float(wall.y),float(wall.size)])
         for tank in self.game_env.tanks:
             active_bullets = [b for b in self.game_env.bullets if b.owner == tank]
             for bullet in active_bullets[:self.max_bullets_per_tank]:  
