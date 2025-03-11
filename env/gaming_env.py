@@ -50,22 +50,22 @@ class GamingENV:
                 # **AI 控制**
                 elif actions is not None:
                     i = self.tanks.index(tank)  # **获取坦克索引**
-                    if actions[i][0] == 0: tank.rotate(1)  # **左转**
-                    elif actions[i][0] == 1: tank.rotate(-1)  # **右转**
-                    if actions[i][1] == 0: tank.speed = 2  # **前进**
-                    elif actions[i][1] == 1: tank.speed = -2  # **后退**
-                    else: tank.speed = 0  # **停止**
+                    if actions[i][0] == 1: tank.rotate(1)  # **左转**
+                    elif actions[i][0] == -1: tank.rotate(-1)  # **右转**
+                    if actions[i][1] == 1: tank.speed = 2  # **前进**
+                    elif actions[i][1] == -1: tank.speed = -2  # **后退**
+                    else: tank.speed = 0  # **停止** 
                     if actions[i][2] == 1: tank.shoot()  # **射击**
                 tank.move() 
         else:
             for tank in self.tanks:
-                i = self.tanks.index(tank)
-                if actions[i][0] == 0: tank.rotate(1) 
-                elif actions[i][0] == 1: tank.rotate(-1)  
-                if actions[i][1] == 0: tank.speed = 2
-                elif actions[i][1] == 1: tank.speed = -2 
-                else: tank.speed = 0 
-                if actions[i][2] == 1: tank.shoot()  
+                i = self.tanks.index(tank)  # **获取坦克索引**
+                if actions[i][0] == 1: tank.rotate(1)  # **左转**
+                elif actions[i][0] == -1: tank.rotate(-1)  # **右转**
+                if actions[i][1] == 1: tank.speed = 2  # **前进**
+                elif actions[i][1] == -1: tank.speed = -2  # **后退**
+                else: tank.speed = 0  # **停止** 
+                if actions[i][2] == 1: tank.shoot()  # **射击** 
                 tank.move() 
 
 

@@ -18,9 +18,9 @@ class MultiAgentEnv(gym.Env):
         self.action_space = gym.spaces.MultiDiscrete([3, 3, 2] * self.num_tanks)  
 
     def _calculate_obs_dim(self):
-        tank_dim = self.num_tanks * 4 
-        bullet_dim = self.num_tanks * self.max_bullets_per_tank * 4 
-        wall_dim = self.num_walls * 3
+        tank_dim = self.num_tanks * 4 #num_tanks * (x,y,angle,alive) 
+        bullet_dim = self.num_tanks * self.max_bullets_per_tank * 4  # num_tanks * (x,y,dx,dy)
+        wall_dim = self.num_walls * 3 #(x,y,grid_size)
         return tank_dim + bullet_dim + wall_dim
 
     def reset(self):

@@ -67,8 +67,8 @@ def train():
     act_dim = env.action_space.nvec[:3]  
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    # if torch.backends.mps.is_available():
-    #     device = torch.device("mps")
+    if torch.backends.mps.is_available():
+        device = torch.device("mps")
 
     agents = [PPOAgent(obs_dim, act_dim).to(device) for _ in range(num_tanks)]
     optimizers = [optim.Adam(agent.parameters(), lr=wandb.config.learning_rate, eps=1e-5) for agent in agents]
