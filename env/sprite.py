@@ -167,20 +167,20 @@ class Tank:
         # calculate the new corners
         new_corners = self.get_corners(new_x, new_y)
 
-        # if any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
-        #     self.wall_hits += 1  # 记录撞墙次数
-        #     if self.wall_hits >= WALL_HIT_THRESHOLD:
-        #         self.reward += WALL_HIT_STRONG_PENALTY  # **连续撞墙，给予更大惩罚**
-        #     else:
-        #         self.reward += WALL_HIT_PENALTY  # **单次撞墙，给予普通惩罚**
-        #     return  # 停止移动       
+        if any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
+            self.wall_hits += 1  # 记录撞墙次数
+            if self.wall_hits >= WALL_HIT_THRESHOLD:
+                self.reward += WALL_HIT_STRONG_PENALTY  # **连续撞墙，给予更大惩罚**
+            else:
+                self.reward += WALL_HIT_PENALTY  # **单次撞墙，给予普通惩罚**
+            return  # 停止移动       
 
         # make sure tank won't go through the wall
         if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
             self.x, self.y = new_x, new_y
-        # self.wall_hits = 0  # **重置撞墙计数**
+        self.wall_hits = 0  # **重置撞墙计数**
         
-        # # **🏆 计算停留原地的惩罚**  # 记录当前坐标
+        # **🏆 计算停留原地的惩罚**  # 记录当前坐标
 
         for opponent in self.sharing_env.tanks:
             if opponent != self and opponent.alive:
@@ -192,12 +192,12 @@ class Tank:
                         self.reward += CLOSER_REWARD
                         self.closer_reward += CLOSER_REWARD
         
-        # if abs(self.x - self.last_x) < STATIONARY_EPSILON and abs(self.y - self.last_y) < STATIONARY_EPSILON:
-        #     self.stationary_steps += 1
-        #     if self.stationary_steps % 10 == 0:  # 每 10 帧不动就扣分
-        #         self.reward += STATIONARY_PENALTY
-        # else:
-        #     self.stationary_steps = 0  # **重置不动计数**
+        if abs(self.x - self.last_x) < STATIONARY_EPSILON and abs(self.y - self.last_y) < STATIONARY_EPSILON:
+            self.stationary_steps += 1
+            if self.stationary_steps % 10 == 0:  # 每 10 帧不动就扣分
+                self.reward += STATIONARY_PENALTY
+        else:
+            self.stationary_steps = 0  # **重置不动计数**
         self.last_x, self.last_y = self.x, self.y
 
 

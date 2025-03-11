@@ -90,7 +90,7 @@ class GamingENV:
         font = pygame.font.SysFont("Arial", 20)  # 设定字体和大小
 
         for i, tank in enumerate(self.tanks):
-            reward_text = f"Tank {i+1} (Team {tank.team}) Reward: {tank.reward}"
+            reward_text = f"Tank {i+1} (Team {tank.team}) Reward: {tank.reward:.4f}"
             text_surface = font.render(reward_text, True, (0, 0, 0))  # 黑色文本
             self.screen.blit(text_surface, (10, 10 + i * 30))  # 依次向下排列
 
