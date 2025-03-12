@@ -74,18 +74,12 @@ class GamingENV:
                 # 4) Human controls or AI actions
                 #    (Here we assume the tank is human-controlled if 'tank.keys' is True.)
                 if tank.keys:
-                    if keys[tank.keys["left"]]:
-                        tank.rotate(1)
-                    if keys[tank.keys["right"]]:
-                        tank.rotate(-1)
-                    if keys[tank.keys["up"]]:
-                        tank.speed = 2
-                    elif keys[tank.keys["down"]]:
-                        tank.speed = -2
-                    else:
-                        tank.speed = 0
-                    if keys[tank.keys["shoot"]]:
-                        tank.shoot()
+                    if keys[tank.keys["left"]]: tank.rotate(1)  
+                    if keys[tank.keys["right"]]: tank.rotate(-1) 
+                    if keys[tank.keys["up"]]: tank.speed = 2 
+                    elif keys[tank.keys["down"]]: tank.speed = -2  
+                    else: tank.speed = 0  
+                    if keys[tank.keys["shoot"]]: tank.shoot()  
 
                 # If the tank is controlled by AI
                 elif actions is not None:
@@ -116,18 +110,20 @@ class GamingENV:
                     rot_cmd, mov_cmd, shoot_cmd = chosen_action
                     
                     # Rotate
-                    if rot_cmd == 1:
+                    if rot_cmd == 0:
                         tank.rotate(1)   # left
-                    elif rot_cmd == -1:
+                    elif rot_cmd == 2:
                         tank.rotate(-1)  # right
+                    else:
+                        pass
                     
                     # Move
-                    if mov_cmd == 1:
+                    if mov_cmd == 0:
                         tank.speed = 2   # forward
-                    elif mov_cmd == -1:
+                    elif mov_cmd == 2:
                         tank.speed = -2  # backward
                     else:
-                        tank.speed = 0   # stop
+                        tank.speed = 1   # stop
                     
                     # Shoot
                     if shoot_cmd == 1:
@@ -146,20 +142,16 @@ class GamingENV:
 
                     
                     if new_dist < old_dist:
-                        self.tanks[i].reward += 0.1
+                        self.tanks[i].reward += 0.1 * (old_dist - new_dist)
                     elif new_dist == old_dist:
                         self.tanks[i].reward += 0
                     else:
-                        self.tanks[i].reward -= 0.2
+                        self.tanks[i].reward -= 0.15 * (new_dist - old_dist)    
                     
         # ========== AI ONLY MODE ==========
         else:
             for tank in self.tanks:
                 i = self.tanks.index(tank)
-                
-                # 1) Get the chosen action
-                chosen_action = actions[i]  # (rotate, move, shoot)
-                rot_cmd, mov_cmd, shoot_cmd = chosen_action
                 
                 # 2) BFS path
                 my_pos = tank.get_grid_position() 
@@ -175,28 +167,21 @@ class GamingENV:
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
 
-                # 5) Apply the chosen action
-                if rot_cmd == 1:
-                    tank.rotate(1)  # left
-                elif rot_cmd == -1:
-                    tank.rotate(-1) # right
                 
-                if mov_cmd == 1:
-                    tank.speed = 2   # forward
-                elif mov_cmd == -1:
-                    tank.speed = -2  # backward
-                else:
-                    tank.speed = 0   # stop
-
-                if shoot_cmd == 1:
-                    tank.shoot()
-                
+                i = self.tanks.index(tank)  # **获取坦克索引**
+                if actions[i][0] == 2: tank.rotate(1)  # **左转**
+                elif actions[i][0] == 0: tank.rotate(-1)  # **右转**
+                else: pass
+                if actions[i][1] == 2: tank.speed = 2  # **前进**
+                elif actions[i][1] == 0: tank.speed = -2  # **后退**
+                else: tank.speed = 0  # **停止** 
+                if actions[i][2] == 1: tank.shoot()  # **射击**
+                else: pass
                 tank.move()
 
                 # ### NEW LOGIC ###
                 # 6) Compare new distance
                 if next_cell is not None and old_dist is not None:
-
                     next_cell = self.path[1]
                     r, c = next_cell
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
@@ -205,11 +190,12 @@ class GamingENV:
 
                     
                     if new_dist < old_dist:
-                        self.tanks[i].reward += 0.1  # e.g. gained ground
+                        self.tanks[i].reward += 0.1 * (old_dist - new_dist)
                     elif new_dist == old_dist:
                         self.tanks[i].reward += 0
                     else:
-                        self.tanks[i].reward -= 0.2  # e.g. moved away or sideways
+                        self.tanks[i].reward -= 0.15 * (new_dist - old_dist)   
+                    # print("AFTER: ", self.tanks[i].reward)
         
         self.bullets_trajs = [traj for traj in self.bullets_trajs if not traj.update()]
 

@@ -19,7 +19,7 @@ wandb.init(project="multiagent-ppo", config={
     "vf_coef": 0.5,
     "max_grad_norm": 0.3,
     "num_steps": 512,
-    "num_epochs": 20,
+    "num_epochs": 200,
     "total_timesteps": 100000
 })
 

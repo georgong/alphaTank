@@ -19,6 +19,11 @@ class Bullet:
         self.bounces = 0
         self.max_bounces = BULLET_MAX_BOUNCES
 
+        self.reward_list = []
+
+    def set_reward(self):
+        ...
+
     def move(self):
         """ 子弹移动 & 反弹检测（优化防止穿墙） """
         next_x = self.x + self.dx * self.speed
@@ -350,9 +355,9 @@ class Tank:
 
     def _stationary_penalty(self):
         '''Reward #3: stationary penalty'''
-        if abs(self.x - self.last_x) < STATIONARY_EPSILON and abs(self.y - self.last_y) < STATIONARY_EPSILON:
+        if int(self.x // GRID_SIZE - self.last_x // GRID_SIZE) == 0 and int(self.y // GRID_SIZE - self.last_y // GRID_SIZE) == 0:
             self.stationary_steps += 1
-            if self.stationary_steps % 30 == 0:  # 每 30 帧不动就扣分
+            if self.stationary_steps % 10 == 0:  # 每 30 帧不动就扣分
                 self.reward += STATIONARY_PENALTY
         else:
             self.stationary_steps = 0  # **重置不动计数**
