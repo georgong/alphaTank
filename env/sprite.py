@@ -500,6 +500,12 @@ class Tank:
         # draw the new tank
         self.sharing_env.screen.blit(rotated_surface, rotated_rect.topleft)
 
+    def get_grid_position(self):
+        """
+        Returns (row, col) of the tank in grid coordinates,
+        based on its (x,y) pixel position and the grid_size.
+        """
+        return [ int(self.y // GRID_SIZE), int(self.x// GRID_SIZE)]
 
 # Wall 
 class Wall:
