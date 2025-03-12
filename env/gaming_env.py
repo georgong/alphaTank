@@ -14,6 +14,7 @@ class GamingENV:
         self.screen = None
         self.running = True
         self.clock = None
+        self.GRID_SIZE = GRID_SIZE
         self.reset()
         self.mode = mode
         self.visualize_traj = VISUALIZE_TRAJ
@@ -23,7 +24,7 @@ class GamingENV:
             self.strategy_bot = StrategyBot(self.tanks[0])  # Control second tank
 
     def reset(self):
-        self.walls,self.empty_space = self.constructWall()
+        self.walls, self.empty_space = self.constructWall()
         self.tanks = self.setup_tank(tank_configs)
         self.bullets = []
         self.bullets_trajs = []
@@ -151,7 +152,7 @@ class GamingENV:
         tanks = []
         for team_name,tank_config in tank_configs.items():
             x,y = self.empty_space[np.random.choice(range(len(self.empty_space)))]
-            tanks.append(Tank(tank_config["team"],x+GRID_SIZE/2,y+GRID_SIZE/2,tank_config["color"],tank_config["keys"],env = self))
+            tanks.append(Tank(tank_config["team"],x+self.GRID_SIZE/2,y+self.GRID_SIZE/2,tank_config["color"],tank_config["keys"],env = self))
         return tanks
     
     def update_reward_by_bullets(self,shooter,victim):
@@ -168,13 +169,17 @@ class GamingENV:
 
 
     def constructWall(self):
+        # define constant variables
+        mazewidth = MAZEWIDTH
+        mazeheight = MAZEHEIGHT
+
         walls = []
         empty_space = []
-        maze = generate_maze(MAZEWIDTH, MAZEHEIGHT)
-        for row in range(MAZEHEIGHT):
-            for col in range(MAZEWIDTH):
+        maze = generate_maze(mazewidth, mazeheight)
+        for row in range(mazeheight):
+            for col in range(mazewidth):
                 if maze[row, col] == 1:
-                    walls.append(Wall(col * GRID_SIZE, row * GRID_SIZE,self))
+                    walls.append(Wall(col * self.GRID_SIZE, row * self.GRID_SIZE, self))
                 else:
-                    empty_space.append((col * GRID_SIZE,row * GRID_SIZE))
-        return [],empty_space
+                    empty_space.append((col * self.GRID_SIZE,row * self.GRID_SIZE))
+        return walls,empty_space

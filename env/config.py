@@ -31,10 +31,10 @@ tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
 }
 
 #REWARD
-HIT_PENALTY = -100           # punishement of being hit
-TEAM_HIT_PENALTY = -100      # punishment of hitting teamate
-OPPONENT_HIT_REWARD = 100    # reward of hitting enemy
-VICTORY_REWARD = 100    
+HIT_PENALTY = -80           # punishement of being hit
+TEAM_HIT_PENALTY = -80      # punishment of hitting teamate
+OPPONENT_HIT_REWARD = 80    # reward of hitting enemy
+VICTORY_REWARD = 80    
 WALL_HIT_THRESHOLD = 8
 WALL_HIT_STRONG_PENALTY = -1e-2
 WALL_HIT_PENALTY = -1e-2 
@@ -48,8 +48,8 @@ TRAJECTORY_DIST_REWARD = 0.05    # Base reward for good aim
 TRAJECTORY_DIST_PENALTY = -0.5    # Base reward for good aim
 TRAJECTORY_FAR_THRESHOLD = 300  # Distance threshold for penalty
 TRAJECTORY_DIST_THRESHOLD = 200 # Distance threshold for reward
-TRAJECTORY_AIM_REWARD = 0.01
+TRAJECTORY_AIM_REWARD = 0.001
 
 # Keyboard Setting
 VISUALIZE_TRAJ = False
-RENDER_AIMING = False
+RENDER_AIMING = True
