@@ -169,15 +169,20 @@ class GamingENV:
                 # ### NEW LOGIC ###
                 # 6) Compare new distance
                 if next_cell is not None and old_dist is not None:
-                    new_pos = tank.get_grid_position()  # after move
-                    new_dist = self.euclidean_distance(new_pos, next_cell)
+
+                    next_cell = self.path[1]
+                    r, c = next_cell
+                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
+                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
+                    new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
+
                     
                     if new_dist < old_dist:
-                        self.tanks[i].reward += 0.1  # e.g. gained ground
+                        self.tanks[i].reward += 0.1
                     elif new_dist == old_dist:
                         self.tanks[i].reward += 0
                     else:
-                        self.tanks[i].reward -= 0.2# e.g. moved away or sideways
+                        self.tanks[i].reward -= 0.2
         # -- Move bullets again or do collision checks if desired --
         for bullet in self.bullets[:]:
             bullet.move()
