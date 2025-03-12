@@ -2,44 +2,37 @@
 from collections import deque
 import pygame
 from env.config import *
+
 def bfs_path(grid, start, goal):
-    """
-    grid: 2D array or list of lists indicating free cells (0) and walls (1).
-    start: (row, col) for the AI tank's current position.
-    goal: (row, col) for the opponent's position.
-    
-    Returns:
-        A list of (row, col) positions representing the shortest path
-        from 'start' to 'goal', inclusive of both endpoints.
-        Returns None if no path is found.
-    """
     rows = len(grid)
     cols = len(grid[0])
-
-    if not (0 <= start[0] < rows and 0 <= start[1] < cols): 
+    start = tuple(start)
+    goal = tuple(goal)
+    if not (0 <= start[0] < rows and 0 <= start[1] < cols):
+        print("the start agent not on the map")
         return None
     if not (0 <= goal[0] < rows and 0 <= goal[1] < cols):
+        print("the end agent not on the map")
         return None
     if grid[start[0]][start[1]] == 1 or grid[goal[0]][goal[1]] == 1:
+        print("the agent starts in the wall.")
         return None
-    
+
     visited = [[False]*cols for _ in range(rows)]
     parent = dict()
-    
+
     queue = deque([start])
     visited[start[0]][start[1]] = True
-    
     found = False
 
     directions = [(-1, 0), (1, 0), (0, -1), (0, 1)]
-    
+
     while queue and not found:
         r, c = queue.popleft()
-        
         if (r, c) == goal:
             found = True
             break
-        
+
         for dr, dc in directions:
             nr, nc = r + dr, c + dc
             if 0 <= nr < rows and 0 <= nc < cols:
@@ -47,21 +40,21 @@ def bfs_path(grid, start, goal):
                     visited[nr][nc] = True
                     parent[(nr, nc)] = (r, c)
                     queue.append((nr, nc))
-    
+
     if not found:
+        print("not found")
         return None
-    
+
+    # Retrace the path
     path = []
     cur = goal
     while cur != start:
         path.append(cur)
         cur = parent[cur]
     path.append(start)
-    path.reverse()  # Now it goes from start -> goal
-    
-
-    
+    path.reverse()
     return path
+
 
 def get_bfs_recommended_action(current_pos, next_pos):
     """

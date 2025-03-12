@@ -182,15 +182,15 @@ class Tank:
         
         # **🏆 计算停留原地的惩罚**  # 记录当前坐标
 
-        for opponent in self.sharing_env.tanks:
-            if opponent != self and opponent.alive:
-                dist_now = math.sqrt((self.x - opponent.x) ** 2 + (self.y - opponent.y) ** 2)
-                dist_prev = math.sqrt((self.last_x - opponent.x) ** 2 + (self.last_y - opponent.y) ** 2)
-                # ✅ **只有朝对手移动时才给奖励**
-                if dist_now < dist_prev:
-                    if self.closer_reward < CLOSER_REWARD_MAX:  # **确保不超过最大值**
-                        self.reward += CLOSER_REWARD
-                        self.closer_reward += CLOSER_REWARD
+        # for opponent in self.sharing_env.tanks:
+        #     if opponent != self and opponent.alive:
+        #         dist_now = math.sqrt((self.x - opponent.x) ** 2 + (self.y - opponent.y) ** 2)
+        #         dist_prev = math.sqrt((self.last_x - opponent.x) ** 2 + (self.last_y - opponent.y) ** 2)
+        #         # ✅ **只有朝对手移动时才给奖励**
+        #         if dist_now < dist_prev:
+        #             if self.closer_reward < CLOSER_REWARD_MAX:  # **确保不超过最大值**
+        #                 self.reward += CLOSER_REWARD
+        #                 self.closer_reward += CLOSER_REWARD
         
         if abs(self.x - self.last_x) < STATIONARY_EPSILON and abs(self.y - self.last_y) < STATIONARY_EPSILON:
             self.stationary_steps += 1
@@ -255,6 +255,12 @@ class Tank:
         # draw the new tank
         self.sharing_env.screen.blit(rotated_surface, rotated_rect.topleft)
 
+    def get_grid_position(self):
+        """
+        Returns (row, col) of the tank in grid coordinates,
+        based on its (x,y) pixel position and the grid_size.
+        """
+        return [ int(self.y // GRID_SIZE), int(self.x// GRID_SIZE)]
 
 # Wall 
 class Wall:
