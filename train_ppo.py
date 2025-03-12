@@ -15,12 +15,12 @@ wandb.init(project="multiagent-ppo", config={
     "gamma": 0.99,
     "gae_lambda": 0.95,
     "clip_coef": 0.2,
-    "ent_coef": 0.1,
+    "ent_coef": 0.01,
     "vf_coef": 0.5,
     "max_grad_norm": 0.3,
     "num_steps": 512,
     "num_epochs": 20,
-    "total_timesteps": 100000
+    "total_timesteps": 500000
 })
 
 class PPOAgent(nn.Module):

@@ -56,6 +56,7 @@ class GamingENV:
         if self.mode == "human_play":
             for tank in self.tanks:
                 i = self.tanks.index(tank)
+                overall_bfs_dist = 0
                 
                 # 1) Get BFS path
                 my_pos = tank.get_grid_position() 
@@ -64,12 +65,14 @@ class GamingENV:
                 self.run_bfs += 1
                 old_dist = None
                 next_cell = None
+                
                 if self.path is not None and len(self.path) > 1:
                     next_cell = self.path[1]
                     r, c = next_cell
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
+                    overall_bfs_dist = len(self.path)
 
                 # 4) Human controls or AI actions
                 #    (Here we assume the tank is human-controlled if 'tank.keys' is True.)
@@ -139,8 +142,6 @@ class GamingENV:
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-
-                    
                                                            
                     if new_dist < old_dist:
                         self.tanks[i].reward += 0.001 * (old_dist - new_dist)
@@ -148,13 +149,14 @@ class GamingENV:
                         self.tanks[i].reward += 0
                     else:
                         self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
-
-
                     
+                    self.tanks[i].reward -= 0.005 * overall_bfs_dist
+
         # ========== AI ONLY MODE ==========
         else:
             for tank in self.tanks:
                 i = self.tanks.index(tank)
+                overall_bfs_dist = 0
                 
                 # 2) BFS path
                 my_pos = tank.get_grid_position() 
@@ -169,6 +171,7 @@ class GamingENV:
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
+                    overall_bfs_dist = len(self.path)
 
                 
                 i = self.tanks.index(tank)  # **获取坦克索引**
@@ -190,16 +193,15 @@ class GamingENV:
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-
-                    
-                                                           
+                         
                     if new_dist < old_dist:
                         self.tanks[i].reward += 0.001 * (old_dist - new_dist)
                     elif new_dist == old_dist:
                         self.tanks[i].reward += 0
                     else:
                         self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
-
+                    
+                    self.tanks[i].reward -= 0.005 * overall_bfs_dist
 
                     # print("AFTER: ", self.tanks[i].reward)
         
