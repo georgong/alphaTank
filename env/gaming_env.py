@@ -52,8 +52,7 @@ class GamingENV:
                 # 1) Get BFS path
                 my_pos = tank.get_grid_position() 
                 opponent_pos = self.tanks[1 - i].get_grid_position()
-                if self.run_bfs // 20 == 0:
-                    self.path = bfs_path(self.grid_map, my_pos,opponent_pos)
+                self.path = bfs_path(self.grid_map, my_pos,opponent_pos)
                 self.run_bfs += 1
                 old_dist = None
                 next_cell = None
@@ -116,11 +115,11 @@ class GamingENV:
 
                     
                     if new_dist < old_dist:
-                        self.tanks[i].reward += 1
+                        self.tanks[i].reward += 0.1
                     elif new_dist == old_dist:
                         self.tanks[i].reward += 0
                     else:
-                        self.tanks[i].reward -= 1
+                        self.tanks[i].reward -= 0.2
                     
         # ========== AI ONLY MODE ==========
         else:
@@ -174,11 +173,11 @@ class GamingENV:
                     new_dist = self.euclidean_distance(new_pos, next_cell)
                     
                     if new_dist < old_dist:
-                        self.tanks[i].reward += 1  # e.g. gained ground
+                        self.tanks[i].reward += 0.1  # e.g. gained ground
                     elif new_dist == old_dist:
                         self.tanks[i].reward += 0
                     else:
-                        self.tanks[i].reward -= 1# e.g. moved away or sideways
+                        self.tanks[i].reward -= 0.2# e.g. moved away or sideways
         # -- Move bullets again or do collision checks if desired --
         for bullet in self.bullets[:]:
             bullet.move()
