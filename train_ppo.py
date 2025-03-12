@@ -20,8 +20,30 @@ wandb.init(project="multiagent-ppo", config={
     "max_grad_norm": 0.3,
     "num_steps": 512,
     "num_epochs": 20,
-    "total_timesteps": 200000
+    "total_timesteps": 100000
 })
+
+class RunningMeanStd:
+    """Tracks mean and variance for online normalization."""
+    def __init__(self, shape, epsilon=1e-4):
+        self.mean = torch.zeros(shape, dtype=torch.float32)
+        self.var = torch.ones(shape, dtype=torch.float32)
+        self.count = epsilon  # Prevent division by zero
+
+    def update(self, x):
+        batch_mean = x.mean(dim=0)
+        batch_var = x.var(dim=0, unbiased=False)
+        batch_count = x.shape[0]
+
+        delta = batch_mean - self.mean
+        total_count = self.count + batch_count
+
+        self.mean += delta * batch_count / total_count
+        self.var += (batch_var * batch_count + delta**2 * self.count * batch_count / total_count) / total_count
+        self.count = total_count
+
+    def normalize(self, x):
+        return (x - self.mean) / (torch.sqrt(self.var) + 1e-8)
 
 class PPOAgent(nn.Module):
     """Single-agent PPO with separate policies for each tank."""
@@ -91,6 +113,10 @@ def train():
     next_obs, _ = env.reset()
     next_obs = torch.tensor(next_obs, dtype=torch.float32).to(device).reshape(num_tanks, obs_dim)
     next_done = torch.zeros(num_tanks).to(device)
+    
+    obs_norm = RunningMeanStd(shape=(num_tanks, obs_dim))
+    obs_norm.update(next_obs)
+    next_obs = obs_norm.normalize(next_obs)
 
     progress_bar = tqdm(range(total_timesteps // batch_size), desc="Training PPO", position=0, leave=True)
 

@@ -143,12 +143,12 @@ class GamingENV:
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
                                                            
-                    if new_dist < old_dist:
-                        self.tanks[i].reward += 0.001 * (old_dist - new_dist)
-                    elif new_dist == old_dist:
-                        self.tanks[i].reward += 0
-                    else:
-                        self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
+                    # if new_dist < old_dist:
+                    #     self.tanks[i].reward += 0.001 * (old_dist - new_dist)
+                    # elif new_dist == old_dist:
+                    #     self.tanks[i].reward += 0
+                    # else:
+                    #     self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
                     
                     self.tanks[i].reward -= 0.0015 * overall_bfs_dist
 
@@ -194,12 +194,12 @@ class GamingENV:
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
                          
-                    if new_dist < old_dist:
-                        self.tanks[i].reward += 0.0015 * (old_dist - new_dist)
-                    elif new_dist == old_dist:
-                        self.tanks[i].reward -= 0.0015
-                    else:
-                        self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
+                    # if new_dist < old_dist:
+                    #     self.tanks[i].reward += 0.0015 * (old_dist - new_dist)
+                    # elif new_dist == old_dist:
+                    #     self.tanks[i].reward -= 0.0015
+                    # else:
+                    #     self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
                     
                     self.tanks[i].reward -= 0.003 * overall_bfs_dist
 
