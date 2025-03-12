@@ -6,6 +6,8 @@ from env.config import *
 from env.sprite import Tank,Bullet,Wall
 from env.maze import generate_maze
 import math
+import time
+from env.bots.strategy_bot import StrategyBot
 
 class GamingENV:
     def __init__(self,mode = "human_play"):
@@ -14,29 +16,34 @@ class GamingENV:
         self.clock = None
         self.reset()
         self.mode = mode
+        self.visualize_traj = VISUALIZE_TRAJ
 
+        self.strategy_bot = None
+        if self.mode == "bot": 
+            self.strategy_bot = StrategyBot(self.tanks[0])  # Control second tank
 
     def reset(self):
         self.walls,self.empty_space = self.constructWall()
         self.tanks = self.setup_tank(tank_configs)
         self.bullets = []
+        self.bullets_trajs = []
         pass
 
     def step(self, actions=None):
         for bullet in self.bullets[:]:
             bullet.move()
 
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                self.running = False
+
+        keys = pygame.key.get_pressed()
+
+        if keys[pygame.K_r]:
+            self.reset()
+        keys = pygame.key.get_pressed()
+
         if self.mode == "human_play":
-            for event in pygame.event.get():
-                if event.type == pygame.QUIT:
-                    self.running = False
-
-            keys = pygame.key.get_pressed()
-
-            if keys[pygame.K_r]:
-                self.reset()
-            keys = pygame.key.get_pressed() 
-
             for tank in self.tanks:
                 # **玩家操作**
                 if tank.keys:
@@ -59,6 +66,29 @@ class GamingENV:
                     if actions[i][2] == 1: tank.shoot()  # **射击**
                     else: pass
                 tank.move() 
+        
+        elif self.mode == "bot": # **BOT 控制**
+            bot_action = self.strategy_bot.get_action()
+            bot_tank = self.tanks[0]
+
+            if bot_action is not None:
+                if bot_action[0] == 2: bot_tank.rotate(1)  # **左转**
+                elif bot_action[0] == 0: bot_tank.rotate(-1)  # **右转**
+                if bot_action[1] == 2: bot_tank.speed = 2  # **前进**
+                elif bot_action[1] == 0: bot_tank.speed = -2  # **后退**
+                else: bot_tank.speed = 0  # **停止** 
+                if bot_action[2] == 1: bot_tank.shoot()  # **射击** 
+                bot_tank.move() 
+
+            for tank in self.tanks[1:]:
+                # **玩家操作**
+                if tank.keys:
+                    if keys[tank.keys["left"]]: tank.rotate(1)  
+                    if keys[tank.keys["right"]]: tank.rotate(-1) 
+                    if keys[tank.keys["up"]]: tank.speed = 2 
+                    elif keys[tank.keys["down"]]: tank.speed = -2  
+                    else: tank.speed = 0  
+                    if keys[tank.keys["shoot"]]: tank.shoot()  
         else:
             for tank in self.tanks:
                     i = self.tanks.index(tank)  # **获取坦克索引**
@@ -70,8 +100,9 @@ class GamingENV:
                     else: tank.speed = 0  # **停止** 
                     if actions[i][2] == 1: tank.shoot()  # **射击**
                     else: pass
-                tank.move() 
+                    tank.move() 
 
+        self.bullets_trajs = [traj for traj in self.bullets_trajs if not traj.update()]
 
         for bullet in self.bullets[:]:
             bullet.move()
@@ -89,6 +120,21 @@ class GamingENV:
             tank.draw()
         for bullet in self.bullets:
             bullet.draw()
+        
+        # draw bullet trajectory
+        keys = pygame.key.get_pressed()
+        if keys[pygame.K_t]:
+            self.visualize_traj = not self.visualize_traj
+            time.sleep(0.1)
+        elif keys[pygame.K_v]:
+            for tanks in self.tanks:
+                tanks.render_aiming = not tanks.render_aiming
+            time.sleep(0.1)
+                
+        
+        if self.visualize_traj:
+            for bullet_traj in self.bullets_trajs:
+                bullet_traj.draw()
 
         pygame.font.init()  # 初始化字体模块
         font = pygame.font.SysFont("Arial", 20)  # 设定字体和大小
@@ -131,4 +177,4 @@ class GamingENV:
                     walls.append(Wall(col * GRID_SIZE, row * GRID_SIZE,self))
                 else:
                     empty_space.append((col * GRID_SIZE,row * GRID_SIZE))
-        return walls,empty_space
+        return [],empty_space
