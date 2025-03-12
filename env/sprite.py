@@ -396,9 +396,9 @@ class Tank:
         new_corners = self.get_corners(angle=new_angle)
 
         # if it will hit walls after rotation, forbidden it.
-        if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
-            self.angle = new_angle
-            self._aiming_reward()
+        #if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
+        self.angle = new_angle
+        self._aiming_reward()
     
     # def preview_trajectory(self):
     #     """Preview the bullet trajectory before shooting"""
