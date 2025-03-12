@@ -18,10 +18,10 @@ class MultiAgentEnv(gym.Env):
         self.action_space = gym.spaces.MultiDiscrete([3, 3, 2] * self.num_tanks)  
 
     def _calculate_obs_dim(self):
-        tank_dim = self.num_tanks * 4 #num_tanks * (x,y,angle,alive) 
-        bullet_dim = self.num_tanks * self.max_bullets_per_tank * 4  # num_tanks * (x,y,dx,dy)
-        wall_dim = self.num_walls * 3 #(x,y,grid_size)
-        return tank_dim + bullet_dim + wall_dim
+        tank_dim = self.num_tanks * 4 #num_tanks * (x,y,angle,alive)  2*4
+        bullet_dim = self.num_tanks * self.max_bullets_per_tank * 4  # num_tanks * (x,y,dx,dy) 2 * 6 * 4
+        wall_dim = self.num_walls * 4 #(x,y,grid_size) 0
+        return (tank_dim + bullet_dim + wall_dim) * self.num_tanks
 
     def reset(self):
         self.game_env.reset()
@@ -34,7 +34,7 @@ class MultiAgentEnv(gym.Env):
 
     def step(self, actions):
         self.training_step += 1
-
+        prev_obs = self._get_observation()
         # parsed_actions = [actions[i * 3:(i + 1) * 3] for i in range(self.num_tanks)]
         self.game_env.step(actions)
         obs = self._get_observation()
@@ -45,20 +45,56 @@ class MultiAgentEnv(gym.Env):
         return obs, rewards, done, False, {}
 
     def _get_observation(self):
-        obs = []
+        """
+        Generate observations for each tank individually.
+        The observation of each tank includes:
+        - The tank's own position (x, y, angle, alive)
+        - Its six bullets (x, y, dx, dy) * 6
+        - Enemy positions and their bullets * enemy num
+        - Wall information (x1, y1, x2, y2 for each wall)
+        
+        Returns:
+        - obs: np.array with shape (tank_num, obs_dim)
+        """
+        observations = []
+        
         for tank in self.game_env.tanks:
-            obs.extend([float(tank.x), float(tank.y), float(tank.angle), float(1 if tank.alive else 0)])
-        for wall in self.game_env.walls:
-            obs.extend([float(wall.x), float(wall.y),float(wall.size)])
-        for tank in self.game_env.tanks:
+            tank_obs = []
+            
+            # Tank's own position and status
+            tank_obs.extend([float(tank.x), float(tank.y), float(tank.angle), float(1 if tank.alive else 0)])
+
+            # Tank's bullets
             active_bullets = [b for b in self.game_env.bullets if b.owner == tank]
-            for bullet in active_bullets[:self.max_bullets_per_tank]:  
-                obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy)])
+            for bullet in active_bullets[:self.max_bullets_per_tank]:
+                tank_obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy)])
             while len(active_bullets) < self.max_bullets_per_tank:
-                obs.extend([-1.0, -1.0, -1.0, -1.0])
-                active_bullets.append(None) 
-        obs = np.array(obs, dtype=np.float32).flatten()
-        return obs
+                tank_obs.extend([-1.0, -1.0, -1.0, -1.0])
+                active_bullets.append(None)
+
+            # Enemy tanks' positions (excluding itself)
+            for other_tank in self.game_env.tanks:
+                if other_tank != tank:
+                    tank_obs.extend([float(other_tank.x), float(other_tank.y), float(other_tank.angle), float(1 if other_tank.alive else 0)])
+
+            # Enemy bullets
+            for other_tank in self.game_env.tanks:
+                if other_tank != tank:
+                    enemy_bullets = [b for b in self.game_env.bullets if b.owner == other_tank]
+                    for bullet in enemy_bullets[:self.max_bullets_per_tank]:
+                        tank_obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy)])
+                    while len(enemy_bullets) < self.max_bullets_per_tank:
+                        tank_obs.extend([0, 0, 0, 0])
+                        enemy_bullets.append(None)
+
+            # Wall information
+            for wall in self.game_env.walls:
+                tank_obs.extend([float(wall.x), float(wall.y), float(wall.x + wall.size), float(wall.y + wall.size)])
+
+            observations.append(tank_obs)
+
+        return np.array(observations, dtype=np.float32)
+
 
     def _calculate_rewards(self):
         return np.array([tank.reward for tank in self.game_env.tanks], dtype=np.float32)
