@@ -141,12 +141,15 @@ class GamingENV:
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
 
                     
+                                                           
                     if new_dist < old_dist:
-                        self.tanks[i].reward += 0.1 * (old_dist - new_dist)
+                        self.tanks[i].reward += 0.001 * (old_dist - new_dist)
                     elif new_dist == old_dist:
                         self.tanks[i].reward += 0
                     else:
-                        self.tanks[i].reward -= 0.15 * (new_dist - old_dist)    
+                        self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
+
+
                     
         # ========== AI ONLY MODE ==========
         else:
@@ -189,12 +192,15 @@ class GamingENV:
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
 
                     
+                                                           
                     if new_dist < old_dist:
-                        self.tanks[i].reward += 0.1 * (old_dist - new_dist)
+                        self.tanks[i].reward += 0.001 * (old_dist - new_dist)
                     elif new_dist == old_dist:
                         self.tanks[i].reward += 0
                     else:
-                        self.tanks[i].reward -= 0.15 * (new_dist - old_dist)   
+                        self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
+
+
                     # print("AFTER: ", self.tanks[i].reward)
         
         self.bullets_trajs = [traj for traj in self.bullets_trajs if not traj.update()]

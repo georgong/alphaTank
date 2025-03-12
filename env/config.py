@@ -31,20 +31,21 @@ tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
 }
 
 #REWARD
-HIT_PENALTY = -80           # punishement of being hit
-TEAM_HIT_PENALTY = -80      # punishment of hitting teamate
-OPPONENT_HIT_REWARD = 80    # reward of hitting enemy
-VICTORY_REWARD = 80    
+HIT_PENALTY = -5          # punishement of being hit
+TEAM_HIT_PENALTY = -5      # punishment of hitting teamate
+OPPONENT_HIT_REWARD = 5    # reward of hitting enemy
+VICTORY_REWARD = 5    
 WALL_HIT_THRESHOLD = 8
 WALL_HIT_STRONG_PENALTY = -1e-2
 WALL_HIT_PENALTY = -1e-2 
-STATIONARY_PENALTY = -5e-2
+STATIONARY_PENALTY = -1e-3
+MOVE_REWARD = 2e-3
 REWARD_DISTANCE = 150     # 进入该范围时生效
 CLOSER_REWARD = 0.5e-1         # 每帧靠近对手的奖励
 CLOSER_REWARD_MAX = 30
 
 TRAJECTORY_HIT_REWARD = 1
-TRAJECTORY_DIST_REWARD = 0.05    # Base reward for good aim
+TRAJECTORY_DIST_REWARD = 0.5    # Base reward for good aim
 TRAJECTORY_DIST_PENALTY = -1    # Base reward for good aim
 TRAJECTORY_FAR_THRESHOLD = 300  # Distance threshold for penalty
 TRAJECTORY_DIST_THRESHOLD = 200 # Distance threshold for reward

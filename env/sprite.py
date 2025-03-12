@@ -341,17 +341,17 @@ class Tank:
             self.x, self.y = new_x, new_y
         self.wall_hits = 0  # **重置撞墙计数**
     
-    def _closer_reward(self):
-        '''Reward #2: getting closer to the opponent'''
-        for opponent in self.sharing_env.tanks:
-                if opponent != self and opponent.alive:
-                    dist_now = math.sqrt((self.x - opponent.x) ** 2 + (self.y - opponent.y) ** 2)
-                    dist_prev = math.sqrt((self.last_x - opponent.x) ** 2 + (self.last_y - opponent.y) ** 2)
-                    # ✅ **只有朝对手移动时才给奖励**
-                    if dist_now < dist_prev:
-                        if self.closer_reward < CLOSER_REWARD_MAX:  # **确保不超过最大值**
-                            self.reward += CLOSER_REWARD
-                            self.closer_reward += CLOSER_REWARD
+    # def _closer_reward(self):
+    #     '''Reward #2: getting closer to the opponent'''
+    #     for opponent in self.sharing_env.tanks:
+    #             if opponent != self and opponent.alive:
+    #                 dist_now = math.sqrt((self.x - opponent.x) ** 2 + (self.y - opponent.y) ** 2)
+    #                 dist_prev = math.sqrt((self.last_x - opponent.x) ** 2 + (self.last_y - opponent.y) ** 2)
+    #                 # ✅ **只有朝对手移动时才给奖励**
+    #                 if dist_now < dist_prev:
+    #                     if self.closer_reward < CLOSER_REWARD_MAX:  # **确保不超过最大值**
+    #                         self.reward += CLOSER_REWARD
+    #                         self.closer_reward += CLOSER_REWARD
 
     def _stationary_penalty(self):
         '''Reward #3: stationary penalty'''
@@ -359,8 +359,13 @@ class Tank:
             self.stationary_steps += 1
             if self.stationary_steps % 10 == 0:  # 每 30 帧不动就扣分
                 self.reward += STATIONARY_PENALTY
+                self.stationary_steps = 0
+            
         else:
-            self.stationary_steps = 0  # **重置不动计数**
+            self.reward += MOVE_REWARD  
+            
+            # Reset the stationary counter since we moved
+            self.stationary_steps = 0
         
         self.last_x, self.last_y = self.x, self.y
 
