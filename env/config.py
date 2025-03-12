@@ -45,10 +45,10 @@ CLOSER_REWARD_MAX = 30
 
 TRAJECTORY_HIT_REWARD = 1
 TRAJECTORY_DIST_REWARD = 0.05    # Base reward for good aim
-TRAJECTORY_DIST_PENALTY = -0.5    # Base reward for good aim
+TRAJECTORY_DIST_PENALTY = -1    # Base reward for good aim
 TRAJECTORY_FAR_THRESHOLD = 300  # Distance threshold for penalty
 TRAJECTORY_DIST_THRESHOLD = 200 # Distance threshold for reward
-TRAJECTORY_AIM_REWARD = 0.001
+TRAJECTORY_AIM_REWARD = 0.005    # Reward for aiming at target
 
 # Keyboard Setting
 VISUALIZE_TRAJ = False

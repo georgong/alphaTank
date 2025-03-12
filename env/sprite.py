@@ -308,9 +308,9 @@ class Tank:
         '''Reward #1: hitting the wall'''
         self._wall_penalty()
         '''Reward #2: getting closer to the opponent'''
-        self._closer_reward()
+        # self._closer_reward()
         '''Reward #3: stationary penalty'''
-        self._wall_penalty()
+        self._stationary_penalty()
         '''Reward #5: aiming reward'''
         self._aiming_reward()
 
@@ -414,27 +414,7 @@ class Tank:
         
     #     return trajectory.trajectory_points[-1]  # Return final position
     
-    def shoot(self):
-        """ shoot bullets with frequncy limit and existing max bullets limits """
-        if not self.alive:
-            return
-
-        current_time = pygame.time.get_ticks()
-
-        # check if the currents bullets exist the maximum (the owern's bullets will be count)
-        active_bullets = [b for b in self.sharing_env.bullets if b.owner == self]
-        if len(active_bullets) >= self.max_bullets:
-            return 
-
-        # check cooling time for fireing
-        if current_time - self.last_shot_time < self.bullet_cooldown:
-            return  # not yet
-
-        # compute the initial place
-        rad = math.radians(self.angle)
-        bullet_x = self.x + 10 * math.cos(rad)
-        bullet_y = self.y - 10 * math.sin(rad)
-
+    def _bullet_trajectory_reward(self, bullet_x, bullet_y):
         trajectory = BulletTrajectory(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
         self.sharing_env.bullets_trajs.append(trajectory)
         
@@ -460,6 +440,55 @@ class Tank:
             distance_factor = (min_distance - TRAJECTORY_FAR_THRESHOLD) / TRAJECTORY_FAR_THRESHOLD
             penalty = TRAJECTORY_DIST_PENALTY * min(distance_factor, 1.0)
             self.reward += penalty
+
+    def shoot(self):
+        """ shoot bullets with frequncy limit and existing max bullets limits """
+        if not self.alive:
+            return
+
+        current_time = pygame.time.get_ticks()
+
+        # check if the currents bullets exist the maximum (the owern's bullets will be count)
+        active_bullets = [b for b in self.sharing_env.bullets if b.owner == self]
+        if len(active_bullets) >= self.max_bullets:
+            return 
+
+        # check cooling time for fireing
+        if current_time - self.last_shot_time < self.bullet_cooldown:
+            return  # not yet
+
+        # compute the initial place
+        rad = math.radians(self.angle)
+        bullet_x = self.x + 10 * math.cos(rad)
+        bullet_y = self.y - 10 * math.sin(rad)
+
+        '''Reward #4: bullet trajectory reward'''
+        self._bullet_trajectory_reward(bullet_x, bullet_y)
+
+        # trajectory = BulletTrajectory(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
+        # self.sharing_env.bullets_trajs.append(trajectory)
+        
+        # # Calculate minimum distance to any opponent
+        # min_distance = float('inf')
+        # for opponent in self.sharing_env.tanks:
+        #     if opponent != self and opponent.alive:
+        #         # Get distance between trajectory end point and opponent center
+        #         end_x, end_y = trajectory.last_position
+        #         dist = math.sqrt((end_x - opponent.x)**2 + (end_y - opponent.y)**2)
+        #         min_distance = min(min_distance, dist)
+        
+        # # Award reward based on distance
+        # if min_distance < TRAJECTORY_DIST_THRESHOLD:
+        #     # Scale reward inversely with distance
+        #     distance_factor = 1 - (min_distance / TRAJECTORY_DIST_THRESHOLD)
+        #     reward = TRAJECTORY_DIST_REWARD * distance_factor
+        #     self.reward += reward
+        
+        # elif min_distance > TRAJECTORY_FAR_THRESHOLD:
+        #     # Apply penalty for shots that end very far from opponents
+        #     distance_factor = (min_distance - TRAJECTORY_FAR_THRESHOLD) / TRAJECTORY_FAR_THRESHOLD
+        #     penalty = TRAJECTORY_DIST_PENALTY * min(distance_factor, 1.0)
+        #     self.reward += penalty
 
         # creates and add bullets
         bullet = Bullet(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
