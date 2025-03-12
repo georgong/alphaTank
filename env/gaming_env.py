@@ -19,6 +19,7 @@ class GamingENV:
         self.path = None
         self.reset()
         self.mode = mode
+        self.run_bfs = 0 
 
 
     def reset(self):
@@ -51,18 +52,17 @@ class GamingENV:
                 # 1) Get BFS path
                 my_pos = tank.get_grid_position() 
                 opponent_pos = self.tanks[1 - i].get_grid_position()
-                self.path = bfs_path(self.grid_map, my_pos,opponent_pos)
-                    
+                if self.run_bfs // 20 == 0:
+                    self.path = bfs_path(self.grid_map, my_pos,opponent_pos)
+                self.run_bfs += 1
                 old_dist = None
                 next_cell = None
                 if self.path is not None and len(self.path) > 1:
                     next_cell = self.path[1]
-                    print("Next Grid:", next_cell)
                     r, c = next_cell
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    old_dist = self.euclidean_distance((tank.y, tank.x), (center_x, center_y))
-                    print("Old Distance:", old_dist)
+                    old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
 
                 # 4) Human controls or AI actions
                 #    (Here we assume the tank is human-controlled if 'tank.keys' is True.)
@@ -108,19 +108,19 @@ class GamingENV:
                 # 6) Check the new distance
                 if next_cell is not None and old_dist is not None:
 
+                    next_cell = self.path[1]
                     r, c = next_cell
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    new_dist = self.euclidean_distance((tank.y, tank.x), (center_x, center_y))
-                    print("New Distance:", new_dist)
+                    new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
+
                     
                     if new_dist < old_dist:
-                        print("add reward")
-                        self.tanks[i].reward += 0.1  # e.g. gained ground
+                        self.tanks[i].reward += 1
                     elif new_dist == old_dist:
                         self.tanks[i].reward += 0
                     else:
-                        self.tanks[i].reward -= 0.1# e.g. moved away or sideways # e.g. gained ground
+                        self.tanks[i].reward -= 1
                     
         # ========== AI ONLY MODE ==========
         else:
@@ -134,17 +134,18 @@ class GamingENV:
                 # 2) BFS path
                 my_pos = tank.get_grid_position() 
                 opponent_pos = self.tanks[1 - i].get_grid_position()
-                self.path = bfs_path(self.grid_map, my_pos,opponent_pos)
+                if self.run_bfs // 20 == 0:
+                    self.path = bfs_path(self.grid_map, my_pos,opponent_pos)
+                self.run_bfs += 1
                 old_dist = None
                 next_cell = None
                 if self.path is not None and len(self.path) > 1:
                     next_cell = self.path[1]
-                    print("Next Grid:", next_cell)
                     r, c = next_cell
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                    print("Old Distance:", old_dist)
+
  
 
 
@@ -173,12 +174,11 @@ class GamingENV:
                     new_dist = self.euclidean_distance(new_pos, next_cell)
                     
                     if new_dist < old_dist:
-                        print('add_reward')
-                        self.tanks[i].reward += 0.01  # e.g. gained ground
+                        self.tanks[i].reward += 1  # e.g. gained ground
                     elif new_dist == old_dist:
                         self.tanks[i].reward += 0
                     else:
-                        self.tanks[i].reward -= 0.01# e.g. moved away or sideways
+                        self.tanks[i].reward -= 1# e.g. moved away or sideways
         # -- Move bullets again or do collision checks if desired --
         for bullet in self.bullets[:]:
             bullet.move()
@@ -204,6 +204,7 @@ class GamingENV:
                     (0, 255, 0),
                     pygame.Rect(r, c, 1, 1)
                 )
+
         pygame.font.init()  # 初始化字体模块
         font = pygame.font.SysFont("Arial", 20)  # 设定字体和大小
 
