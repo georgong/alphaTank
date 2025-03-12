@@ -150,7 +150,7 @@ class GamingENV:
                     else:
                         self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
                     
-                    self.tanks[i].reward -= 0.005 * overall_bfs_dist
+                    self.tanks[i].reward -= 0.0015 * overall_bfs_dist
 
         # ========== AI ONLY MODE ==========
         else:
@@ -195,13 +195,13 @@ class GamingENV:
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
                          
                     if new_dist < old_dist:
-                        self.tanks[i].reward += 0.001 * (old_dist - new_dist)
+                        self.tanks[i].reward += 0.0015 * (old_dist - new_dist)
                     elif new_dist == old_dist:
-                        self.tanks[i].reward += 0
+                        self.tanks[i].reward -= 0.0015
                     else:
                         self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
                     
-                    self.tanks[i].reward -= 0.005 * overall_bfs_dist
+                    self.tanks[i].reward -= 0.003 * overall_bfs_dist
 
                     # print("AFTER: ", self.tanks[i].reward)
         

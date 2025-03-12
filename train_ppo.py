@@ -14,13 +14,13 @@ wandb.init(project="multiagent-ppo", config={
     "learning_rate": 1e-4,
     "gamma": 0.99,
     "gae_lambda": 0.95,
-    "clip_coef": 0.2,
+    "clip_coef": 1.0,
     "ent_coef": 0.01,
     "vf_coef": 0.5,
     "max_grad_norm": 0.3,
     "num_steps": 512,
     "num_epochs": 20,
-    "total_timesteps": 500000
+    "total_timesteps": 200000
 })
 
 class PPOAgent(nn.Module):
@@ -46,7 +46,9 @@ class PPOAgent(nn.Module):
 
     def get_action_and_value(self, x, action=None):
         logits = [layer(x) for layer in self.actor]
-        probs = [Categorical(logits=l) for l in logits]
+        # probs = [Categorical(logits=l) for l in logits]
+        probs = [Categorical(logits=l - torch.logsumexp(l, dim=-1, keepdim=True)) for l in logits]
+
 
         if action is None:
             action = [p.sample() for p in probs]
@@ -68,8 +70,8 @@ def train():
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     agents = [PPOAgent(obs_dim, act_dim).to(device) for _ in range(num_tanks)]
-    # optimizers = [optim.Adam(agent.parameters(), lr=wandb.config.learning_rate, eps=1e-5) for agent in agents]
-    optimizers = [optim.SGD(agent.parameters(), lr=wandb.config.learning_rate, momentum=0.9) for agent in agents]
+    optimizers = [optim.Adam(agent.parameters(), lr=wandb.config.learning_rate, eps=1e-5) for agent in agents]
+    # optimizers = [optim.SGD(agent.parameters(), lr=wandb.config.learning_rate, momentum=0.9) for agent in agents]
 
 
     num_steps = wandb.config.num_steps
@@ -142,6 +144,10 @@ def train():
 
         with torch.no_grad():
             next_values = torch.stack([agents[i].get_value(next_obs[i]) for i in range(num_tanks)]).squeeze(-1)
+            
+            reward_mean = rewards.mean()
+            reward_std = rewards.std() + 1e-8
+            rewards = (rewards - reward_mean) / reward_std
 
             advantages = torch.zeros_like(rewards).to(device)
             lastgaelam = 0
