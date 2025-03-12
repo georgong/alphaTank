@@ -414,7 +414,7 @@ class Tank:
         
     #     return trajectory.trajectory_points[-1]  # Return final position
     
-    def _bullet_trajectory_reward(self, bullet_x, bullet_y):
+    def _bullet_trajectory_reward(self, bullet_x, bullet_y, rad):
         trajectory = BulletTrajectory(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
         self.sharing_env.bullets_trajs.append(trajectory)
         
@@ -463,7 +463,7 @@ class Tank:
         bullet_y = self.y - 10 * math.sin(rad)
 
         '''Reward #4: bullet trajectory reward'''
-        self._bullet_trajectory_reward(bullet_x, bullet_y)
+        self._bullet_trajectory_reward(bullet_x, bullet_y, rad)
 
         # trajectory = BulletTrajectory(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
         # self.sharing_env.bullets_trajs.append(trajectory)
