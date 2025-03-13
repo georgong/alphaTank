@@ -325,13 +325,13 @@ class Tank:
         
         # directly add
         '''Reward #1: hitting the wall'''
-        self._wall_penalty()
+        # self._wall_penalty()
         
         '''Reward #2: getting closer to the opponent'''
         # self._closer_reward()
         
         '''Reward #3: stationary penalty'''
-        self._stationary_penalty()
+        # self._stationary_penalty()
         
         '''Reward #5: aiming reward'''
         self._aiming_reward()
