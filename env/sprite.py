@@ -183,8 +183,8 @@ class Tank:
         self.angle = 0
         self.speed = 0
         self.color = color  # the custom color
-        self.width = 40
-        self.height = 32
+        self.width = 20
+        self.height = 16
         self.alive = True
         self.keys = keys
         self.sharing_env = env

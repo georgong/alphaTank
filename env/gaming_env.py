@@ -20,24 +20,26 @@ class GamingENV:
         self.GRID_SIZE = GRID_SIZE
         self.path = None
         self.maze = None
-        self.reset()
-        self.mode = mode
+        self.mode = mode  # Set mode before reset
         self.last_bfs_dist = [None] * 2
         self.run_bfs = 0
         self.visualize_traj = VISUALIZE_TRAJ
         self.render_bfs = RENDER_BFS
-
+        self.reset_cooldown = 0
         self.strategy_bot = None
-        if self.mode == "bot": 
-            self.strategy_bot = StrategyBot(self.tanks[0])  # Control second tank
+        
+        self.reset()  # Call reset after all attributes are initialized
 
     def reset(self):
         self.walls, self.empty_space = self.constructWall()
         self.tanks = self.setup_tank(tank_configs)
         self.bullets = []
         self.bullets_trajs = []
-        pass
-
+        self.path = None  # Reset BFS path
+        
+        # Reset strategy bot with new tank if in bot mode
+        if self.mode == "bot":
+            self.strategy_bot = StrategyBot(self.tanks[0])
 
     def step(self, actions=None):
         # -- Move all bullets first (unchanged) --
@@ -49,12 +51,60 @@ class GamingENV:
                 self.running = False
 
         keys = pygame.key.get_pressed()
-
-        if keys[pygame.K_r]:
+        
+        # Handle reset with cooldown
+        if self.reset_cooldown > 0:
+            self.reset_cooldown -= 1
+        elif keys[pygame.K_r]:
             self.reset()
-        keys = pygame.key.get_pressed()
+            self.reset_cooldown = 30  # About 0.5 seconds at 60 FPS
 
-        if self.mode == "human_play":
+        if self.mode == "bot":
+            # Get actions from strategy bot for tank 0
+            bot_actions = self.strategy_bot.get_action()
+            
+            # Handle bot tank movements (tank 0)
+            tank = self.tanks[0]
+            # Handle rotation (action[0])
+            if bot_actions[0] == 2:  # Right
+                tank.rotate(-3)
+            elif bot_actions[0] == 0:  # Left
+                tank.rotate(3)
+            
+            # Handle movement (action[1])
+            if bot_actions[1] == 2:  # Forward
+                tank.speed = 5
+            elif bot_actions[1] == 0:  # Backward
+                tank.speed = -5
+            else:
+                tank.speed = 0
+            
+            if bot_actions[2] == 1:  # Shoot
+                tank.shoot()
+
+            # Move the tank after setting speed
+            tank.move()
+
+            # Handle human controls for tank 1
+            human_tank = self.tanks[1]
+            if human_tank.keys:
+                if keys[human_tank.keys["left"]]: human_tank.rotate(3)
+                if keys[human_tank.keys["right"]]: human_tank.rotate(-3)
+                if keys[human_tank.keys["up"]]: human_tank.speed = 5
+                elif keys[human_tank.keys["down"]]: human_tank.speed = -5
+                else: human_tank.speed = 0
+                if keys[human_tank.keys["shoot"]]: human_tank.shoot()
+
+            # Move the human tank
+            human_tank.move()
+
+        elif self.mode == "human_play":
+            keys = pygame.key.get_pressed()
+
+            if keys[pygame.K_r]:
+                self.reset()
+            keys = pygame.key.get_pressed()
+
             for tank in self.tanks:
                 i = self.tanks.index(tank)
                 
@@ -267,15 +317,35 @@ class GamingENV:
             if self.path is not None:
                 self._draw_bfs_path()
 
-        pygame.font.init()  # 初始化字体模块
-        font = pygame.font.SysFont("Arial", 20)  # 设定字体和大小
+        pygame.font.init()
+        font = pygame.font.SysFont("Arial", 20)
 
+        # Draw tank info
+        y_offset = 10
         for i, tank in enumerate(self.tanks):
+            # Draw reward
             reward_text = f"Tank {i+1} (Team {tank.team}) Reward: {tank.reward:.4f}"
-            text_surface = font.render(reward_text, True, (0, 0, 0))  # 黑色文本
-            self.screen.blit(text_surface, (10, 10 + i * 30))  # 依次向下排列
+            text_surface = font.render(reward_text, True, (0, 0, 0))
+            self.screen.blit(text_surface, (10, y_offset))
+            y_offset += 25
 
-        pygame.display.update() 
+            # Draw bot debug info if this is the bot's tank
+            if self.mode == "bot" and i == 0 and hasattr(self, 'strategy_bot'):
+                bot = self.strategy_bot
+                debug_lines = [
+                    f"State: {bot.state}",
+                    f"Stuck Timer: {bot.stuck_timer}",
+                ]
+                if bot.target:
+                    dist = math.sqrt((bot.target.x - tank.x)**2 + (bot.target.y - tank.y)**2)
+                    debug_lines.append(f"Target Distance: {dist:.1f}")
+                
+                for line in debug_lines:
+                    text_surface = font.render(line, True, (0, 0, 0))
+                    self.screen.blit(text_surface, (10, y_offset))
+                    y_offset += 25
+
+        pygame.display.update()
         self.clock.tick(60)
     
     def _draw_bfs_path(self):
