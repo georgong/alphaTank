@@ -29,7 +29,7 @@ wandb.init(
         "max_grad_norm": 0.3,
         "num_steps": 512,
         "num_epochs": 60,
-        "total_timesteps": 200000
+        "total_timesteps": 100000
     }
 )
 
@@ -245,8 +245,9 @@ def train():
             # next_obs = obs_norm.normalize(next_obs)
 
             # Auto-reset after a certain interval or if any tank is done
-            auto_reset_interval = 10000
-            if np.any(done_np) or (global_step % auto_reset_interval == 0 and global_step > 0):
+            auto_reset_interval = 1000
+            reward_threshold = 0.2
+            if np.any(done_np) or (global_step % auto_reset_interval == 0 and global_step > 0) or np.any(reward_np < -reward_threshold):
                 reset_count += 1
                 next_obs, _ = env.reset()
                 next_obs = torch.tensor(next_obs, dtype=torch.float32, device=device).reshape(num_tanks, obs_dim)
@@ -275,6 +276,11 @@ def train():
                 advantages[t] = lastgaelam = (
                     delta + gamma * gae_lambda * (1 - dones[t]) * lastgaelam
                 )
+            # for t in reversed(range(num_steps)):
+            #     next_val = next_values if t == num_steps - 1 else values[t + 1]
+            #     delta = rewards_normalized[t] + gamma * next_val * (1 - dones[t]) - values[t]
+            #     advantages[t] = lastgaelam = delta + gamma * gae_lambda * (1 - dones[t]) * lastgaelam
+
             returns = advantages + values
 
         # Now, for each agent, optimize the policy
