@@ -224,6 +224,14 @@ class Tank:
         self.aiming_counter = 0  # Add counter for consistent aiming
         self.AIMING_FRAMES_THRESHOLD = 17
 
+        # rotation penalty tracking
+        self.total_rotation = 0  # Track accumulated rotation
+        self.last_rotation_pos = (x, y)  # Position where we start tracking rotation
+
+        self.reward_list = []
+
+    def set_reward_list(self, new_reward_list):
+        self.reward_list = new_reward_list
 
     def load_and_colorize_gif(self, gif_path, target_color, size):
         """ 加载 GIF 并调整颜色 & 大小，返回 pygame 兼容的帧列表 """
@@ -333,7 +341,7 @@ class Tank:
         # self._closer_reward()
         
         '''Reward #3: stationary penalty'''
-        # self._stationary_penalty()
+        self._stationary_penalty()
         
         '''Reward #5: aiming reward'''
         self._aiming_reward()
@@ -341,6 +349,25 @@ class Tank:
         '''Reward #6 consistency action reward'''
         # if current_actions is not None:
         #     self._action_consistency_reward(current_actions)
+
+    def _rotate_penalty(self):
+        """Reward #7: Penalize excessive rotation without movement"""
+        # Calculate distance moved since last rotation check
+        dist_moved = math.sqrt(
+            (self.x - self.last_rotation_pos[0])**2 + 
+            (self.y - self.last_rotation_pos[1])**2
+        )
+        # Reset rotation counter if moved enough
+        if dist_moved > ROTATION_RESET_DISTANCE:
+            self.total_rotation = 0
+            self.last_rotation_pos = (self.x, self.y)
+            return 0
+        
+        # Add penalty if rotated too much without moving
+        if self.total_rotation >= ROTATION_THRESHOLD:
+            self.reward += ROTATION_PENALTY
+            self.total_rotation = 0  # Reset after applying penalty
+            self.last_rotation_pos = (self.x, self.y)
 
 
     def _action_consistency_reward(self, current_actions):
@@ -368,11 +395,11 @@ class Tank:
                     # Increase counter for consistent actions
                     self.action_consistency_counter[action_type] += 1
                     # Give reward based on consistency length
-                    if self.action_consistency_counter[action_type] > 4:  # Minimum frames for reward
+                    if self.action_consistency_counter[action_type] > 5:  # Minimum frames for reward
                         total_reward += ACTION_CONSISTENCY_REWARD
                 else:
                     # Penalize frequent action changes
-                    if self.action_consistency_counter[action_type] < 2:  # If changed too quickly
+                    if self.action_consistency_counter[action_type] < 3:  # If changed too quickly
                         total_reward += ACTION_CHANGE_PENALTY
                     # Reset counter for this action type
                     self.action_consistency_counter[action_type] = 0
@@ -454,14 +481,25 @@ class Tank:
         if not self.alive:
             return
 
+        old_angle = self.angle
         new_angle = (self.angle + direction * ROTATION_SPEED) % 360
-        new_corners = self.get_corners(angle=new_angle)
+        angle_diff = abs(new_angle - old_angle)
 
+        if angle_diff > 180:  # Handle angle wrapping
+            angle_diff = 360 - angle_diff
+        
+        # new_corners = self.get_corners(angle=new_angle)
         # if it will hit walls after rotation, forbidden it.
         #if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
         self.angle = new_angle
+
+        self.total_rotation += angle_diff
+        '''Reward #7: rotation penalty'''
+        # self._rotate_penalty()
+
+        '''Reward #5: aiming reward'''
         self._aiming_reward()
-    
+
     # def preview_trajectory(self):
     #     """Preview the bullet trajectory before shooting"""
     #     if not self.alive:

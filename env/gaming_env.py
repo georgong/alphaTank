@@ -12,7 +12,6 @@ import time
 from env.bots.strategy_bot import StrategyBot
 
 
-
 class GamingENV:
     def __init__(self,mode = "human_play"):
         self.screen = None
@@ -20,11 +19,13 @@ class GamingENV:
         self.clock = None
         self.GRID_SIZE = GRID_SIZE
         self.path = None
+        self.maze = None
         self.reset()
         self.mode = mode
         self.last_bfs_dist = [None] * 2
         self.run_bfs = 0
         self.visualize_traj = VISUALIZE_TRAJ
+        self.render_bfs = RENDER_BFS
 
         self.strategy_bot = None
         if self.mode == "bot": 
@@ -60,7 +61,7 @@ class GamingENV:
                 # 1) Get BFS path
                 my_pos = tank.get_grid_position()
                 opponent_pos = self.tanks[1 - i].get_grid_position()
-                self.path = bfs_path(self.grid_map, my_pos, opponent_pos)
+                self.path = bfs_path(self.maze, my_pos, opponent_pos)
 
                 old_dist = None
                 next_cell = None
@@ -164,6 +165,7 @@ class GamingENV:
                 my_pos = tank.get_grid_position() 
                 opponent_pos = self.tanks[1 - i].get_grid_position()
                 self.path = bfs_path(self.grid_map, my_pos,opponent_pos)
+
                 self.run_bfs += 1
                 old_dist = None
                 next_cell = None
@@ -243,14 +245,6 @@ class GamingENV:
             tank.draw()
         for bullet in self.bullets:
             bullet.draw()
-        if self.path != None:
-            
-            for (r, c) in self.path:
-                pygame.draw.rect(
-                    self.screen,
-                    (0, 255, 0),
-                    pygame.Rect(r, c, 1, 1)
-                )
         
         # draw bullet trajectory
         keys = pygame.key.get_pressed()
@@ -261,11 +255,17 @@ class GamingENV:
             for tanks in self.tanks:
                 tanks.render_aiming = not tanks.render_aiming
             time.sleep(0.1)
-                
+        elif keys[pygame.K_b]:
+            self.render_bfs = not self.render_bfs  
+            time.sleep(0.1)
         
         if self.visualize_traj:
             for bullet_traj in self.bullets_trajs:
                 bullet_traj.draw()
+            
+        if self.render_bfs:
+            if self.path is not None:
+                self._draw_bfs_path()
 
         pygame.font.init()  # 初始化字体模块
         font = pygame.font.SysFont("Arial", 20)  # 设定字体和大小
@@ -277,6 +277,36 @@ class GamingENV:
 
         pygame.display.update() 
         self.clock.tick(60)
+    
+    def _draw_bfs_path(self):
+        # Draw path background for better visibility
+        for i in range(len(self.path) - 1):
+            current = self.path[i]
+            next_pos = self.path[i + 1]
+            
+            # Calculate center points of grid cells
+            start_x = current[1] * GRID_SIZE + (GRID_SIZE / 2)
+            start_y = current[0] * GRID_SIZE + (GRID_SIZE / 2)
+            end_x = next_pos[1] * GRID_SIZE + (GRID_SIZE / 2)
+            end_y = next_pos[0] * GRID_SIZE + (GRID_SIZE / 2)
+            
+            # Draw path line
+            pygame.draw.line(
+                self.screen,
+                (50, 200, 50),  # Light green color
+                (start_x, start_y),
+                (end_x, end_y),
+                4  # Line width
+            )
+            
+            # Draw connecting circles at each point
+            pygame.draw.circle(
+                self.screen,
+                (0, 150, 0),  # Darker green for points
+                (int(start_x), int(start_y)),
+                6
+            )
+
 
     def setup_tank(self,tank_configs):
         tanks = []
@@ -305,12 +335,12 @@ class GamingENV:
 
         walls = []
         empty_space = []
-        maze = generate_maze(mazewidth, mazeheight)
+        self.maze = generate_maze(mazewidth, mazeheight)
 
         self.grid_map = [[0]*MAZEWIDTH for _ in range(MAZEHEIGHT)]
         for row in range(mazeheight):
             for col in range(mazewidth):
-                if maze[row, col] == 1:
+                if self.maze[row, col] == 1:
                     walls.append(Wall(col * self.GRID_SIZE, row * self.GRID_SIZE, self))
                 else:
                     empty_space.append((col * self.GRID_SIZE,row * self.GRID_SIZE))
