@@ -280,6 +280,11 @@ class Tank:
         if not self.alive:
             return
         
+        rad = math.radians(self.angle)
+        new_x = self.x + self.speed * math.cos(rad)
+        new_y = self.y - self.speed * math.sin(rad)
+        new_corners = self.get_corners(new_x, new_y)
+        
         # rad = math.radians(self.angle)
         # new_x = self.x + self.speed * math.cos(rad)
         # new_y = self.y - self.speed * math.sin(rad)
@@ -325,13 +330,18 @@ class Tank:
         
         # directly add
         '''Reward #1: hitting the wall'''
-        # self._wall_penalty()
+        # self._wall_penalty(new_x, new_y, new_corners)
+
+        # make sure tank won't go through the wall
+        if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
+            self.x, self.y = new_x, new_y
+        self.wall_hits = 0  # **重置撞墙计数**
         
         '''Reward #2: getting closer to the opponent'''
         # self._closer_reward()
         
         '''Reward #3: stationary penalty'''
-        # self._stationary_penalty()
+        self._stationary_penalty()
         
         '''Reward #5: aiming reward'''
         self._aiming_reward()
@@ -381,26 +391,16 @@ class Tank:
         return total_reward
 
 
-    def _wall_penalty(self): 
-        '''Reward #1: hitting the wall'''      
-        rad = math.radians(self.angle)
-        new_x = self.x + self.speed * math.cos(rad)
-        new_y = self.y - self.speed * math.sin(rad)
-
+    def _wall_penalty(self, new_x, new_y, new_corners): 
+        '''Reward #1: hitting the wall'''
         # calculate the new corners
-        new_corners = self.get_corners(new_x, new_y)
         if any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
             self.wall_hits += 1  # 记录撞墙次数
             if self.wall_hits >= WALL_HIT_THRESHOLD:
                 self.reward += WALL_HIT_STRONG_PENALTY  # **连续撞墙，给予更大惩罚**
             else:
                 self.reward += WALL_HIT_PENALTY  # **单次撞墙，给予普通惩罚**
-            return  # 停止移动       
-
-        # make sure tank won't go through the wall
-        if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
-            self.x, self.y = new_x, new_y
-        self.wall_hits = 0  # **重置撞墙计数**
+            return  # 停止移动
     
     # def _closer_reward(self):
     #     '''Reward #2: getting closer to the opponent'''
