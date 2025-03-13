@@ -98,10 +98,10 @@ class GamingENV:
                     self.run_bfs += 1
                     
                 if tank.keys:
-                    if keys[tank.keys["left"]]: tank.rotate(5)  
-                    if keys[tank.keys["right"]]: tank.rotate(-5) 
-                    if keys[tank.keys["up"]]: tank.speed = 20 
-                    elif keys[tank.keys["down"]]: tank.speed = -20
+                    if keys[tank.keys["left"]]: tank.rotate(1)  
+                    elif keys[tank.keys["right"]]: tank.rotate(-1) 
+                    if keys[tank.keys["up"]]: tank.speed = 4 
+                    elif keys[tank.keys["down"]]: tank.speed = -4
                     else: tank.speed = 0  
                     if keys[tank.keys["shoot"]]: tank.shoot()  
                     
@@ -199,11 +199,11 @@ class GamingENV:
 
                 
                 i = self.tanks.index(tank)  # **获取坦克索引**
-                if actions[i][0] == 2: tank.rotate(5)  # **左转**
-                elif actions[i][0] == 0: tank.rotate(-5)  # **右转**
+                if actions[i][0] == 2: tank.rotate(1)  # **左转**
+                elif actions[i][0] == 0: tank.rotate(-1)  # **右转**
                 else: pass
-                if actions[i][1] == 2: tank.speed = 20  # **前进**
-                elif actions[i][1] == 0: tank.speed = -20  # **后退**
+                if actions[i][1] == 2: tank.speed = 4  # **前进**
+                elif actions[i][1] == 0: tank.speed = -4  # **后退**
                 else: tank.speed = 0  # **停止** 
                 if actions[i][2] == 1: tank.shoot()  # **射击**
                 else: pass

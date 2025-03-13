@@ -20,12 +20,12 @@ wandb.init(
         "gamma": 0.99,
         "gae_lambda": 0.95,
         "clip_coef": 0.2,
-        "ent_coef": 0.01,
+        "ent_coef": 0.05,
         "vf_coef": 0.5,
         "max_grad_norm": 0.3,
         "num_steps": 512,
         "num_epochs": 60,
-        "total_timesteps": 300000
+        "total_timesteps": 200000
     }
 )
 

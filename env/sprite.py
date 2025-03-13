@@ -331,7 +331,7 @@ class Tank:
         
         # directly add
         '''Reward #1: hitting the wall'''
-        # self._wall_penalty(new_x, new_y, new_corners)
+        # self._wall_penalty(new_corners)
 
         # make sure tank won't go through the wall
         if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
@@ -341,10 +341,10 @@ class Tank:
         # self._closer_reward()
         
         '''Reward #3: stationary penalty'''
-        self._stationary_penalty()
+        # self._stationary_penalty()
         
         '''Reward #5: aiming reward'''
-        self._aiming_reward()
+        # self._aiming_reward()
         
         '''Reward #6 consistency action reward'''
         # if current_actions is not None:
