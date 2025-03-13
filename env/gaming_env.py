@@ -90,7 +90,7 @@ class GamingENV:
                                 elif current_bfs_dist >= self.last_bfs_dist[i]:
                                     # BFS distance increased => penalize
                                     distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
-                                    self.tanks[i].reward -= 0.01 * distance_diff
+                                    self.tanks[i].reward -= 0.04 * distance_diff
                         self.last_bfs_dist[i] = current_bfs_dist
 
                     # Increment the BFS step counter
@@ -186,7 +186,7 @@ class GamingENV:
                             elif current_bfs_dist >= self.last_bfs_dist[i]:
                                 # BFS distance increased => penalize
                                 distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
-                                self.tanks[i].reward -= 0.01 * distance_diff
+                                self.tanks[i].reward -= 0.04 * distance_diff
 
 
                         self.last_bfs_dist[i] = current_bfs_dist
