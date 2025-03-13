@@ -164,7 +164,7 @@ class GamingENV:
                 # 2) BFS path
                 my_pos = tank.get_grid_position() 
                 opponent_pos = self.tanks[1 - i].get_grid_position()
-                self.path = bfs_path(self.grid_map, my_pos,opponent_pos)
+                self.path = bfs_path(self.maze, my_pos,opponent_pos)
 
                 self.run_bfs += 1
                 old_dist = None
