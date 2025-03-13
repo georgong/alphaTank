@@ -86,7 +86,7 @@ class GamingENV:
                                     # BFS distance decreased => reward
                                     distance_diff = self.last_bfs_dist[i] - current_bfs_dist
                                     
-                                    self.tanks[i].reward += 0.03 * distance_diff
+                                    self.tanks[i].reward += 0.3 * distance_diff
                                     
                                 elif current_bfs_dist >= self.last_bfs_dist[i]:
                                     # BFS distance increased => penalize
@@ -139,8 +139,6 @@ class GamingENV:
                     current_actions = actions[i]
                 # 5) Now the tank actually moves
                 tank.move(current_actions=current_actions)
-                # 6) Check the new distance
-                if next_cell is not None and old_dist is not None:
 
                 # 5) After move, measure new distance if next_cell is not None
                 if next_cell is not None and old_dist is not None:
@@ -183,7 +181,7 @@ class GamingENV:
                                 # BFS distance decreased => reward
                                 distance_diff = self.last_bfs_dist[i] - current_bfs_dist
                                 
-                                self.tanks[i].reward += 0.03 * distance_diff
+                                self.tanks[i].reward += 0.3 * distance_diff
                                 
                             elif current_bfs_dist >= self.last_bfs_dist[i]:
                                 # BFS distance increased => penalize

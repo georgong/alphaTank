@@ -55,7 +55,7 @@ class Bullet:
             if tank.alive > 0 and tank != self.owner:  # **确保不击中自己**
                 tank_rect = pygame.Rect(tank.x - tank.width // 2, tank.y - tank.height // 2, tank.width, tank.height)
                 if bullet_rect.colliderect(tank_rect):
-                    # tank.alive = False  
+                    tank.alive = False  
                     self.sharing_env.bullets.remove(self)  
                     self.sharing_env.update_reward_by_bullets(self.owner,tank)
                     return
@@ -222,7 +222,7 @@ class Tank:
 
         # aiming reward tracking
         self.aiming_counter = 0  # Add counter for consistent aiming
-        self.AIMING_FRAMES_THRESHOLD = 15
+        self.AIMING_FRAMES_THRESHOLD = 17
 
 
     def load_and_colorize_gif(self, gif_path, target_color, size):
@@ -331,7 +331,7 @@ class Tank:
         # self._closer_reward()
         
         '''Reward #3: stationary penalty'''
-        # self._stationary_penalty()
+        self._stationary_penalty()
         
         '''Reward #5: aiming reward'''
         self._aiming_reward()

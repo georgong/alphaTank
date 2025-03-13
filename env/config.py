@@ -1,7 +1,7 @@
 import pygame
 
 WIDTH, HEIGHT = 770, 770 # 770,770 #环境大小
-MAZEWIDTH, MAZEHEIGHT = 11, 11
+MAZEWIDTH, MAZEHEIGHT = 7, 7
 GRID_SIZE = WIDTH/MAZEWIDTH  # 迷宫的网格大小
 
 # 颜色定义
@@ -31,10 +31,10 @@ tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
 }
 
 #REWARD
-HIT_PENALTY = -10          # punishement of being hit
-TEAM_HIT_PENALTY = -10      # punishment of hitting teamate
-OPPONENT_HIT_REWARD = 10    # reward of hitting enemy
-VICTORY_REWARD = 10    
+HIT_PENALTY = -30          # punishement of being hit
+TEAM_HIT_PENALTY = -30      # punishment of hitting teamate
+OPPONENT_HIT_REWARD = 30    # reward of hitting enemy
+VICTORY_REWARD = 30    
 WALL_HIT_THRESHOLD = 8
 WALL_HIT_STRONG_PENALTY = -1e-2
 WALL_HIT_PENALTY = -1e-2 
