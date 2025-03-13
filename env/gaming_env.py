@@ -22,6 +22,7 @@ class GamingENV:
         self.path = None
         self.reset()
         self.mode = mode
+        self.last_bfs_dist = [None] * 2
         self.run_bfs = 0
         self.visualize_traj = VISUALIZE_TRAJ
 
@@ -58,23 +59,43 @@ class GamingENV:
                 overall_bfs_dist = 0
                 
                 # 1) Get BFS path
-                my_pos = tank.get_grid_position() 
+                my_pos = tank.get_grid_position()
                 opponent_pos = self.tanks[1 - i].get_grid_position()
-                self.path = bfs_path(self.grid_map, my_pos,opponent_pos)
-                self.run_bfs += 1
+                self.path = bfs_path(self.grid_map, my_pos, opponent_pos)
+
                 old_dist = None
                 next_cell = None
-                
+
+                # 2) If we have a BFS path
                 if self.path is not None and len(self.path) > 1:
                     next_cell = self.path[1]
+                    current_bfs_dist = len(self.path)
                     r, c = next_cell
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
+                    
+                    # Get old distance
                     old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                    overall_bfs_dist = len(self.path)
+                    
+                    # 3) Every 20 BFS steps, apply penalty based on path length
+                    if self.run_bfs % 20 == 0:
+                        if self.last_bfs_dist[i] is not None:
+                            # If we have a stored previous distance, compare
+                            if self.last_bfs_dist[i] is not None:
+                                if current_bfs_dist < self.last_bfs_dist[i]:
+                                    # BFS distance decreased => reward
+                                    distance_diff = self.last_bfs_dist[i] - current_bfs_dist
+                                    
+                                    self.tanks[i].reward += 0.03 * distance_diff
+                                    
+                                elif current_bfs_dist >= self.last_bfs_dist[i]:
+                                    # BFS distance increased => penalize
+                                    distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
+                                    self.tanks[i].reward -= 0.01 * distance_diff
+                        self.last_bfs_dist[i] = current_bfs_dist
 
-                # 4) Human controls or AI actions
-                #    (Here we assume the tank is human-controlled if 'tank.keys' is True.)
+                    # Increment the BFS step counter
+                    
                 if tank.keys:
                     if keys[tank.keys["left"]]: tank.rotate(1)  
                     if keys[tank.keys["right"]]: tank.rotate(-1) 
@@ -89,31 +110,10 @@ class GamingENV:
                     1 if keys[tank.keys["shoot"]] else 0  # Shooting
                 ]
 
-                # If the tank is controlled by AI
-                elif actions is not None:
-                    #  elif self.mode == "bot": # **BOT 控制**
-                    # bot_action = self.strategy_bot.get_action()
-                    # bot_tank = self.tanks[0]
-
-                    # if bot_action is not None:
-                    #     if bot_action[0] == 2: bot_tank.rotate(1)  # **左转**
-                    #     elif bot_action[0] == 0: bot_tank.rotate(-1)  # **右转**
-                    #     if bot_action[1] == 2: bot_tank.speed = 2  # **前进**
-                    #     elif bot_action[1] == 0: bot_tank.speed = -2  # **后退**
-                    #     else: bot_tank.speed = 0  # **停止** 
-                    #     if bot_action[2] == 1: bot_tank.shoot()  # **射击** 
-                    #     bot_tank.move() 
-
-                    # for tank in self.tanks[1:]:
-                    #     # **玩家操作**
-                    #     if tank.keys:
-                    #         if keys[tank.keys["left"]]: tank.rotate(1)  
-                    #         if keys[tank.keys["right"]]: tank.rotate(-1) 
-                    #         if keys[tank.keys["up"]]: tank.speed = 2 
-                    #         elif keys[tank.keys["down"]]: tank.speed = -2  
-                    #         else: tank.speed = 0  
-                    #         if keys[tank.keys["shoot"]]: tank.shoot() 
-
+                # -- Human or AI controls (rotate, move, shoot) as you already have. --
+                # e.g., for AI:
+                if actions is not None:
+                    
                     chosen_action = actions[i]  # (rotate, move, shoot)
                     rot_cmd, mov_cmd, shoot_cmd = chosen_action
                     
@@ -122,17 +122,16 @@ class GamingENV:
                         tank.rotate(1)   # left
                     elif rot_cmd == 2:
                         tank.rotate(-1)  # right
-                    else:
-                        pass
-                    
+                    # else, do nothing for rotation
+
                     # Move
                     if mov_cmd == 0:
                         tank.speed = 2   # forward
                     elif mov_cmd == 2:
                         tank.speed = -2  # backward
                     else:
-                        tank.speed = 1   # stop
-                    
+                        tank.speed = 1   # "stop"
+
                     # Shoot
                     if shoot_cmd == 1:
                         tank.shoot()
@@ -143,20 +142,19 @@ class GamingENV:
                 # 6) Check the new distance
                 if next_cell is not None and old_dist is not None:
 
-                    next_cell = self.path[1]
+                # 5) After move, measure new distance if next_cell is not None
+                if next_cell is not None and old_dist is not None:
                     r, c = next_cell
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                                                           
-                    # if new_dist < old_dist:
-                    #     self.tanks[i].reward += 0.001 * (old_dist - new_dist)
-                    # elif new_dist == old_dist:
-                    #     self.tanks[i].reward += 0
-                    # else:
-                    #     self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
-                    
-                    # self.tanks[i].reward -= 0.00005 * overall_bfs_dist
+
+                    if new_dist < old_dist:
+                        self.tanks[i].reward += 0.001 * (old_dist - new_dist)
+                    elif new_dist > old_dist:
+                        self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
+
+            self.run_bfs += 1
 
         # ========== AI ONLY MODE ==========
         else:
@@ -173,11 +171,31 @@ class GamingENV:
                 next_cell = None
                 if self.path is not None and len(self.path) > 1:
                     next_cell = self.path[1]
+                    current_bfs_dist = len(self.path)
                     r, c = next_cell
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                    overall_bfs_dist = len(self.path)
+                    if self.run_bfs % 20 == 0:
+                        # If we have a stored previous distance, compare
+                        if self.last_bfs_dist[i] is not None:
+                            if current_bfs_dist < self.last_bfs_dist[i]:
+                                # BFS distance decreased => reward
+                                distance_diff = self.last_bfs_dist[i] - current_bfs_dist
+                                
+                                self.tanks[i].reward += 0.03 * distance_diff
+                                
+                            elif current_bfs_dist >= self.last_bfs_dist[i]:
+                                # BFS distance increased => penalize
+                                distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
+                                self.tanks[i].reward -= 0.01 * distance_diff
+
+
+                        self.last_bfs_dist[i] = current_bfs_dist
+
+                    # Increment the BFS step counter
+                    self.run_bfs += 1
+
 
                 
                 i = self.tanks.index(tank)  # **获取坦克索引**
@@ -193,23 +211,21 @@ class GamingENV:
                 tank.move(current_actions=current_actions)
 
                 # ### NEW LOGIC ###
-                # 6) Compare new distance
+                                # 5) After move, measure new distance if next_cell is not None
                 if next_cell is not None and old_dist is not None:
-                    next_cell = self.path[1]
                     r, c = next_cell
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                         
-                    # if new_dist < old_dist:
-                    #     self.tanks[i].reward += 0.001 * (old_dist - new_dist)
-                    # elif new_dist == old_dist:
-                    #     self.tanks[i].reward += 0
-                    # else:
-                    #     self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
-                    
-                    # self.tanks[i].reward -= 0.00005 * overall_bfs_dist
-        
+
+                    if new_dist < old_dist:
+                        self.tanks[i].reward += 0.001 * (old_dist - new_dist)
+                    elif new_dist > old_dist:
+                        self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
+
+
+                    # print("AFTER: ", self.tanks[i].reward)
+            self.run_bfs += 1
         self.bullets_trajs = [traj for traj in self.bullets_trajs if not traj.update()]
 
         # -- Move bullets again or do collision checks if desired --
