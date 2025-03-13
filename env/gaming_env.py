@@ -78,7 +78,7 @@ class GamingENV:
                     old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
                     
                     # 3) Every 20 BFS steps, apply penalty based on path length
-                    if self.run_bfs % 20 == 0:
+                    if self.run_bfs % 60 == 0:
                         if self.last_bfs_dist[i] is not None:
                             # If we have a stored previous distance, compare
                             if self.last_bfs_dist[i] is not None:
@@ -86,7 +86,7 @@ class GamingENV:
                                     # BFS distance decreased => reward
                                     distance_diff = self.last_bfs_dist[i] - current_bfs_dist
                                     
-                                    self.tanks[i].reward += 0.03 * distance_diff
+                                    self.tanks[i].reward += 0.06 * distance_diff
                                     
                                 elif current_bfs_dist >= self.last_bfs_dist[i]:
                                     # BFS distance increased => penalize
@@ -98,10 +98,10 @@ class GamingENV:
                     self.run_bfs += 1
                     
                 if tank.keys:
-                    if keys[tank.keys["left"]]: tank.rotate(1)  
-                    if keys[tank.keys["right"]]: tank.rotate(-1) 
-                    if keys[tank.keys["up"]]: tank.speed = 2 
-                    elif keys[tank.keys["down"]]: tank.speed = -2  
+                    if keys[tank.keys["left"]]: tank.rotate(5)  
+                    if keys[tank.keys["right"]]: tank.rotate(-5) 
+                    if keys[tank.keys["up"]]: tank.speed = 20 
+                    elif keys[tank.keys["down"]]: tank.speed = -20
                     else: tank.speed = 0  
                     if keys[tank.keys["shoot"]]: tank.shoot()  
                     
@@ -176,14 +176,14 @@ class GamingENV:
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                    if self.run_bfs % 20 == 0:
+                    if self.run_bfs % 60 == 0:
                         # If we have a stored previous distance, compare
                         if self.last_bfs_dist[i] is not None:
                             if current_bfs_dist < self.last_bfs_dist[i]:
                                 # BFS distance decreased => reward
                                 distance_diff = self.last_bfs_dist[i] - current_bfs_dist
                                 
-                                self.tanks[i].reward += 0.03 * distance_diff
+                                self.tanks[i].reward += 0.06 * distance_diff
                                 
                             elif current_bfs_dist >= self.last_bfs_dist[i]:
                                 # BFS distance increased => penalize
@@ -199,11 +199,11 @@ class GamingENV:
 
                 
                 i = self.tanks.index(tank)  # **获取坦克索引**
-                if actions[i][0] == 2: tank.rotate(1)  # **左转**
-                elif actions[i][0] == 0: tank.rotate(-1)  # **右转**
+                if actions[i][0] == 2: tank.rotate(5)  # **左转**
+                elif actions[i][0] == 0: tank.rotate(-5)  # **右转**
                 else: pass
-                if actions[i][1] == 2: tank.speed = 2  # **前进**
-                elif actions[i][1] == 0: tank.speed = -2  # **后退**
+                if actions[i][1] == 2: tank.speed = 20  # **前进**
+                elif actions[i][1] == 0: tank.speed = -20  # **后退**
                 else: tank.speed = 0  # **停止** 
                 if actions[i][2] == 1: tank.shoot()  # **射击**
                 else: pass
