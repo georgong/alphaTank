@@ -224,6 +224,14 @@ class Tank:
         self.aiming_counter = 0  # Add counter for consistent aiming
         self.AIMING_FRAMES_THRESHOLD = 17
 
+        # rotation penalty tracking
+        self.total_rotation = 0  # Track accumulated rotation
+        self.last_rotation_pos = (x, y)  # Position where we start tracking rotation
+
+        self.reward_list = []
+
+    def set_reward_list(self, new_reward_list):
+        self.reward_list = new_reward_list
 
     def load_and_colorize_gif(self, gif_path, target_color, size):
         """ 加载 GIF 并调整颜色 & 大小，返回 pygame 兼容的帧列表 """
@@ -284,13 +292,6 @@ class Tank:
         new_x = self.x + self.speed * math.cos(rad)
         new_y = self.y - self.speed * math.sin(rad)
         new_corners = self.get_corners(new_x, new_y)
-        
-        # rad = math.radians(self.angle)
-        # new_x = self.x + self.speed * math.cos(rad)
-        # new_y = self.y - self.speed * math.sin(rad)
-
-        # # calculate the new corners
-        # new_corners = self.get_corners(new_x, new_y)
 
         # '''Reward #1: hitting the wall'''
         # if any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
@@ -335,7 +336,6 @@ class Tank:
         # make sure tank won't go through the wall
         if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
             self.x, self.y = new_x, new_y
-        self.wall_hits = 0  # **重置撞墙计数**
         
         '''Reward #2: getting closer to the opponent'''
         # self._closer_reward()
@@ -349,6 +349,26 @@ class Tank:
         '''Reward #6 consistency action reward'''
         # if current_actions is not None:
         #     self._action_consistency_reward(current_actions)
+
+    def _rotate_penalty(self):
+        """Reward #7: Penalize excessive rotation without movement"""
+        # Calculate distance moved since last rotation check
+        dist_moved = math.sqrt(
+            (self.x - self.last_rotation_pos[0])**2 + 
+            (self.y - self.last_rotation_pos[1])**2
+        )
+        # Reset rotation counter if moved enough
+        if dist_moved > ROTATION_RESET_DISTANCE:
+            self.total_rotation = 0
+            self.last_rotation_pos = (self.x, self.y)
+            return 0
+        
+        # Add penalty if rotated too much without moving
+        if self.total_rotation >= ROTATION_THRESHOLD:
+            self.reward += ROTATION_PENALTY
+            self.total_rotation = 0  # Reset after applying penalty
+            self.last_rotation_pos = (self.x, self.y)
+
 
     def _action_consistency_reward(self, current_actions):
         """Reward #6: reward for maintaining consistent actions"""
@@ -375,11 +395,11 @@ class Tank:
                     # Increase counter for consistent actions
                     self.action_consistency_counter[action_type] += 1
                     # Give reward based on consistency length
-                    if self.action_consistency_counter[action_type] > 4:  # Minimum frames for reward
+                    if self.action_consistency_counter[action_type] > 5:  # Minimum frames for reward
                         total_reward += ACTION_CONSISTENCY_REWARD
                 else:
                     # Penalize frequent action changes
-                    if self.action_consistency_counter[action_type] < 2:  # If changed too quickly
+                    if self.action_consistency_counter[action_type] < 3:  # If changed too quickly
                         total_reward += ACTION_CHANGE_PENALTY
                     # Reset counter for this action type
                     self.action_consistency_counter[action_type] = 0
@@ -391,7 +411,7 @@ class Tank:
         return total_reward
 
 
-    def _wall_penalty(self, new_x, new_y, new_corners): 
+    def _wall_penalty(self, new_corners): 
         '''Reward #1: hitting the wall'''
         # calculate the new corners
         if any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
@@ -401,6 +421,7 @@ class Tank:
             else:
                 self.reward += WALL_HIT_PENALTY  # **单次撞墙，给予普通惩罚**
             return  # 停止移动
+        self.wall_hits = 0  # **重置撞墙计数**
     
     # def _closer_reward(self):
     #     '''Reward #2: getting closer to the opponent'''
@@ -460,14 +481,25 @@ class Tank:
         if not self.alive:
             return
 
+        old_angle = self.angle
         new_angle = (self.angle + direction * ROTATION_SPEED) % 360
-        new_corners = self.get_corners(angle=new_angle)
+        angle_diff = abs(new_angle - old_angle)
 
+        if angle_diff > 180:  # Handle angle wrapping
+            angle_diff = 360 - angle_diff
+        
+        # new_corners = self.get_corners(angle=new_angle)
         # if it will hit walls after rotation, forbidden it.
         #if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
         self.angle = new_angle
+
+        self.total_rotation += angle_diff
+        '''Reward #7: rotation penalty'''
+        # self._rotate_penalty()
+
+        '''Reward #5: aiming reward'''
         self._aiming_reward()
-    
+
     # def preview_trajectory(self):
     #     """Preview the bullet trajectory before shooting"""
     #     if not self.alive:

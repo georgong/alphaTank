@@ -1,7 +1,7 @@
 import pygame
 
 WIDTH, HEIGHT = 700, 700 # 770,770 #环境大小
-MAZEWIDTH, MAZEHEIGHT = 7,7
+MAZEWIDTH, MAZEHEIGHT = 7, 7
 GRID_SIZE = WIDTH/MAZEWIDTH  # 迷宫的网格大小
 
 # 颜色定义
@@ -49,8 +49,16 @@ TRAJECTORY_DIST_REWARD = 0.5    # Base reward for good aim
 TRAJECTORY_DIST_PENALTY = -1    # Base reward for good aim
 TRAJECTORY_FAR_THRESHOLD = 300  # Distance threshold for penalty
 TRAJECTORY_DIST_THRESHOLD = 200 # Distance threshold for reward
-TRAJECTORY_AIM_REWARD = 0.005    # Reward for aiming at target
+TRAJECTORY_AIM_REWARD = 0.1    # Reward for aiming at target
+
+ACTION_CONSISTENCY_REWARD = 0.05  # Reward for maintaining consistent actions
+ACTION_CHANGE_PENALTY = -0.005  # Small penalty for changing actions frequently
+
+ROTATION_PENALTY = -0.02  # Penalty for excessive rotation
+ROTATION_THRESHOLD = 40  # Total rotation before penalty (in degrees)
+ROTATION_RESET_DISTANCE = 30  # Distance to move before resetting rotation counter
 
 # Keyboard Setting
 VISUALIZE_TRAJ = False
 RENDER_AIMING = True
+RENDER_BFS = True
