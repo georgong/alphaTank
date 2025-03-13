@@ -19,11 +19,6 @@ class Bullet:
         self.bounces = 0
         self.max_bounces = BULLET_MAX_BOUNCES
 
-        self.reward_list = []
-
-    def set_reward(self):
-        ...
-
     def move(self):
         """ 子弹移动 & 反弹检测（优化防止穿墙） """
         next_x = self.x + self.dx * self.speed
@@ -203,6 +198,7 @@ class Tank:
         self.last_x, self.last_y = x, y  # 记录上一次位置
         self.stationary_steps = 0  # 站立不动的帧数
         self.wall_hits = 0  # 连续撞墙次数
+        self.activate_bullet_trajectory_reward = False
 
         # **加载坦克 GIF 动画，并应用颜色调整**
         self.frames = self.load_and_colorize_gif("env/assets/tank.gif", color, (self.width+3, self.height+3))
@@ -211,6 +207,23 @@ class Tank:
         self.tick = 0  # **计数器**
 
         self.render_aiming = RENDER_AIMING
+
+        # action consistency reward tracking
+        self.previous_actions = {
+            'movement': 1,  # Default no movement
+            'rotation': 1,  # Default no rotation
+            'shooting': 0   # Default no shooting
+        }
+        self.action_consistency_counter = {
+            'movement': 0,
+            'rotation': 0,
+            'shooting': 0
+        }
+
+        # aiming reward tracking
+        self.aiming_counter = 0  # Add counter for consistent aiming
+        self.AIMING_FRAMES_THRESHOLD = 17
+
 
     def load_and_colorize_gif(self, gif_path, target_color, size):
         """ 加载 GIF 并调整颜色 & 大小，返回 pygame 兼容的帧列表 """
@@ -263,7 +276,7 @@ class Tank:
         ]
         return [center + c.rotate(angle) for c in corners]
 
-    def move(self):
+    def move(self, current_actions=None):
         if not self.alive:
             return
         
@@ -312,13 +325,60 @@ class Tank:
         
         # directly add
         '''Reward #1: hitting the wall'''
-        # self._wall_penalty()
+        self._wall_penalty()
+        
         '''Reward #2: getting closer to the opponent'''
         # self._closer_reward()
+        
         '''Reward #3: stationary penalty'''
-        # self._stationary_penalty()
+        self._stationary_penalty()
+        
         '''Reward #5: aiming reward'''
-        # self._aiming_reward()
+        self._aiming_reward()
+        
+        '''Reward #6 consistency action reward'''
+        # if current_actions is not None:
+        #     self._action_consistency_reward(current_actions)
+
+    def _action_consistency_reward(self, current_actions):
+        """Reward #6: reward for maintaining consistent actions"""
+        total_reward = 0
+        
+        # Compare current actions with previous actions
+        action_types = {
+            'movement': current_actions[0],
+            'rotation': current_actions[1],
+            'shooting': current_actions[2]
+        }
+        
+        for action_type, current_value in action_types.items():
+            if (action_type == 'movement' and current_value == 1) or \
+            (action_type == 'rotation' and current_value == 1) or \
+            (action_type == 'shooting' and current_value == 0): 
+                self.action_consistency_counter[action_type] = 0
+                continue
+
+            # right now, we only consider consistency movement
+            # we can add rotation/shooting consistency later
+            if action_type == 'movement':
+                if current_value == self.previous_actions[action_type]:
+                    # Increase counter for consistent actions
+                    self.action_consistency_counter[action_type] += 1
+                    # Give reward based on consistency length
+                    if self.action_consistency_counter[action_type] > 4:  # Minimum frames for reward
+                        total_reward += ACTION_CONSISTENCY_REWARD
+                else:
+                    # Penalize frequent action changes
+                    if self.action_consistency_counter[action_type] < 2:  # If changed too quickly
+                        total_reward += ACTION_CHANGE_PENALTY
+                    # Reset counter for this action type
+                    self.action_consistency_counter[action_type] = 0
+                
+            # Update previous action
+            self.previous_actions[action_type] = current_value
+
+        self.reward += total_reward
+        return total_reward
 
 
     def _wall_penalty(self): 
@@ -358,7 +418,7 @@ class Tank:
         '''Reward #3: stationary penalty'''
         if int(self.x // GRID_SIZE - self.last_x // GRID_SIZE) == 0 and int(self.y // GRID_SIZE - self.last_y // GRID_SIZE) == 0:
             self.stationary_steps += 1
-            if self.stationary_steps % 10 == 0:  # 每 30 帧不动就扣分
+            if self.stationary_steps % 20 == 0:  # 每 30 帧不动就扣分
                 self.reward += STATIONARY_PENALTY
                 self.stationary_steps = 0
             
@@ -386,7 +446,14 @@ class Tank:
         
         # Check if trajectory will hit target
         if trajectory.will_hit_target:
-            self.reward += TRAJECTORY_AIM_REWARD
+            self.aiming_counter += 1
+            if self.aiming_counter >= self.AIMING_FRAMES_THRESHOLD:
+                self.reward += TRAJECTORY_AIM_REWARD
+                self.aiming_counter = 0
+        else:
+            self.aiming_counter = 0
+            
+            # self.activate_bullet_trajectory_reward = True
 
 
     def rotate(self, direction):
@@ -426,10 +493,10 @@ class Tank:
     #     return trajectory.trajectory_points[-1]  # Return final position
     
     def _bullet_trajectory_reward(self, bullet_x, bullet_y, rad):
+        '''Reward #4: bullet trajectory reward'''
         trajectory = BulletTrajectory(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
         self.sharing_env.bullets_trajs.append(trajectory)
         
-        '''Reward #4: bullet trajectory reward'''
         # Calculate minimum distance to any opponent
         min_distance = float('inf')
         for opponent in self.sharing_env.tanks:
@@ -474,7 +541,7 @@ class Tank:
         bullet_y = self.y - 10 * math.sin(rad)
 
         '''Reward #4: bullet trajectory reward'''
-        self._bullet_trajectory_reward(bullet_x, bullet_y, rad)
+        # self._bullet_trajectory_reward(bullet_x, bullet_y, rad)
 
         # trajectory = BulletTrajectory(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
         # self.sharing_env.bullets_trajs.append(trajectory)

@@ -39,7 +39,6 @@ class GamingENV:
 
 
     def step(self, actions=None):
-        
         # -- Move all bullets first (unchanged) --
         for bullet in self.bullets[:]:
             bullet.move()
@@ -87,7 +86,7 @@ class GamingENV:
                                     # BFS distance decreased => reward
                                     distance_diff = self.last_bfs_dist[i] - current_bfs_dist
                                     
-                                    self.tanks[i].reward += 0.03 * distance_diff
+                                    self.tanks[i].reward += 0.3 * distance_diff
                                     
                                 elif current_bfs_dist >= self.last_bfs_dist[i]:
                                     # BFS distance increased => penalize
@@ -104,6 +103,12 @@ class GamingENV:
                     elif keys[tank.keys["down"]]: tank.speed = -2  
                     else: tank.speed = 0  
                     if keys[tank.keys["shoot"]]: tank.shoot()  
+                    
+                    current_actions = [
+                    2 if keys[tank.keys["up"]] else (0 if keys[tank.keys["down"]] else 1),  # Movement
+                    2 if keys[tank.keys["right"]] else (0 if keys[tank.keys["left"]] else 1),  # Rotation
+                    1 if keys[tank.keys["shoot"]] else 0  # Shooting
+                ]
 
                 # -- Human or AI controls (rotate, move, shoot) as you already have. --
                 # e.g., for AI:
@@ -131,8 +136,9 @@ class GamingENV:
                     if shoot_cmd == 1:
                         tank.shoot()
 
-                # 4) Move the tank
-                tank.move()
+                    current_actions = actions[i]
+                # 5) Now the tank actually moves
+                tank.move(current_actions=current_actions)
 
                 # 5) After move, measure new distance if next_cell is not None
                 if next_cell is not None and old_dist is not None:
@@ -175,7 +181,7 @@ class GamingENV:
                                 # BFS distance decreased => reward
                                 distance_diff = self.last_bfs_dist[i] - current_bfs_dist
                                 
-                                self.tanks[i].reward += 0.03 * distance_diff
+                                self.tanks[i].reward += 0.3 * distance_diff
                                 
                             elif current_bfs_dist >= self.last_bfs_dist[i]:
                                 # BFS distance increased => penalize
@@ -199,7 +205,8 @@ class GamingENV:
                 else: tank.speed = 0  # **停止** 
                 if actions[i][2] == 1: tank.shoot()  # **射击**
                 else: pass
-                tank.move()
+                current_actions = actions[i]
+                tank.move(current_actions=current_actions)
 
                 # ### NEW LOGIC ###
                                 # 5) After move, measure new distance if next_cell is not None
@@ -299,6 +306,7 @@ class GamingENV:
         walls = []
         empty_space = []
         maze = generate_maze(mazewidth, mazeheight)
+
         self.grid_map = [[0]*MAZEWIDTH for _ in range(MAZEHEIGHT)]
         for row in range(mazeheight):
             for col in range(mazewidth):
