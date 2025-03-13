@@ -181,7 +181,7 @@ class Tank:
         self.y = y
         self.angle = 0
         self.speed = 0
-        self.color = color
+        self.color = color  # the custom color
         self.width = 20
         self.height = 16
         self.alive = True
