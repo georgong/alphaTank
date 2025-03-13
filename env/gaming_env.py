@@ -38,7 +38,6 @@ class GamingENV:
 
 
     def step(self, actions=None):
-        
         # -- Move all bullets first (unchanged) --
         for bullet in self.bullets[:]:
             bullet.move()
@@ -83,6 +82,12 @@ class GamingENV:
                     elif keys[tank.keys["down"]]: tank.speed = -2  
                     else: tank.speed = 0  
                     if keys[tank.keys["shoot"]]: tank.shoot()  
+                    
+                    current_actions = [
+                    2 if keys[tank.keys["up"]] else (0 if keys[tank.keys["down"]] else 1),  # Movement
+                    2 if keys[tank.keys["right"]] else (0 if keys[tank.keys["left"]] else 1),  # Rotation
+                    1 if keys[tank.keys["shoot"]] else 0  # Shooting
+                ]
 
                 # If the tank is controlled by AI
                 elif actions is not None:
@@ -132,8 +137,9 @@ class GamingENV:
                     if shoot_cmd == 1:
                         tank.shoot()
 
+                    current_actions = actions[i]
                 # 5) Now the tank actually moves
-                tank.move()
+                tank.move(current_actions=current_actions)
                 # 6) Check the new distance
                 if next_cell is not None and old_dist is not None:
 
@@ -150,7 +156,7 @@ class GamingENV:
                     # else:
                     #     self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
                     
-                    self.tanks[i].reward -= 0.0015 * overall_bfs_dist
+                    # self.tanks[i].reward -= 0.00005 * overall_bfs_dist
 
         # ========== AI ONLY MODE ==========
         else:
@@ -183,7 +189,8 @@ class GamingENV:
                 else: tank.speed = 0  # **停止** 
                 if actions[i][2] == 1: tank.shoot()  # **射击**
                 else: pass
-                tank.move()
+                current_actions = actions[i]
+                tank.move(current_actions=current_actions)
 
                 # ### NEW LOGIC ###
                 # 6) Compare new distance
@@ -195,15 +202,13 @@ class GamingENV:
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
                          
                     # if new_dist < old_dist:
-                    #     self.tanks[i].reward += 0.0015 * (old_dist - new_dist)
+                    #     self.tanks[i].reward += 0.001 * (old_dist - new_dist)
                     # elif new_dist == old_dist:
-                    #     self.tanks[i].reward -= 0.0015
+                    #     self.tanks[i].reward += 0
                     # else:
                     #     self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
                     
-                    self.tanks[i].reward -= 0.003 * overall_bfs_dist
-
-                    # print("AFTER: ", self.tanks[i].reward)
+                    # self.tanks[i].reward -= 0.00005 * overall_bfs_dist
         
         self.bullets_trajs = [traj for traj in self.bullets_trajs if not traj.update()]
 
@@ -287,6 +292,7 @@ class GamingENV:
         walls = []
         empty_space = []
         maze = generate_maze(mazewidth, mazeheight)
+
         self.grid_map = [[0]*MAZEWIDTH for _ in range(MAZEHEIGHT)]
         for row in range(mazeheight):
             for col in range(mazewidth):

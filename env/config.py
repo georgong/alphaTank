@@ -1,7 +1,7 @@
 import pygame
 
-WIDTH, HEIGHT = 700, 700 # 770,770 #环境大小
-MAZEWIDTH, MAZEHEIGHT = 7,7
+WIDTH, HEIGHT = 770, 770 # 770,770 #环境大小
+MAZEWIDTH, MAZEHEIGHT = 11, 11
 GRID_SIZE = WIDTH/MAZEWIDTH  # 迷宫的网格大小
 
 # 颜色定义
@@ -31,10 +31,10 @@ tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
 }
 
 #REWARD
-HIT_PENALTY = -5          # punishement of being hit
-TEAM_HIT_PENALTY = -5      # punishment of hitting teamate
-OPPONENT_HIT_REWARD = 5    # reward of hitting enemy
-VICTORY_REWARD = 5    
+HIT_PENALTY = -10          # punishement of being hit
+TEAM_HIT_PENALTY = -10      # punishment of hitting teamate
+OPPONENT_HIT_REWARD = 10    # reward of hitting enemy
+VICTORY_REWARD = 10    
 WALL_HIT_THRESHOLD = 8
 WALL_HIT_STRONG_PENALTY = -1e-2
 WALL_HIT_PENALTY = -1e-2 
@@ -49,7 +49,10 @@ TRAJECTORY_DIST_REWARD = 0.5    # Base reward for good aim
 TRAJECTORY_DIST_PENALTY = -1    # Base reward for good aim
 TRAJECTORY_FAR_THRESHOLD = 300  # Distance threshold for penalty
 TRAJECTORY_DIST_THRESHOLD = 200 # Distance threshold for reward
-TRAJECTORY_AIM_REWARD = 0.005    # Reward for aiming at target
+TRAJECTORY_AIM_REWARD = 0.1    # Reward for aiming at target
+
+ACTION_CONSISTENCY_REWARD = 0.05  # Reward for maintaining consistent actions
+ACTION_CHANGE_PENALTY = -0.005  # Small penalty for changing actions frequently
 
 # Keyboard Setting
 VISUALIZE_TRAJ = False
