@@ -56,7 +56,6 @@ class GamingENV:
         if self.mode == "human_play":
             for tank in self.tanks:
                 i = self.tanks.index(tank)
-                overall_bfs_dist = 0
                 
                 # 1) Get BFS path
                 my_pos = tank.get_grid_position()
@@ -86,7 +85,7 @@ class GamingENV:
                                     # BFS distance decreased => reward
                                     distance_diff = self.last_bfs_dist[i] - current_bfs_dist
                                     
-                                    self.tanks[i].reward += 0.3 * distance_diff
+                                    self.tanks[i].reward += 0.03 * distance_diff
                                     
                                 elif current_bfs_dist >= self.last_bfs_dist[i]:
                                     # BFS distance increased => penalize
@@ -95,6 +94,7 @@ class GamingENV:
                         self.last_bfs_dist[i] = current_bfs_dist
 
                     # Increment the BFS step counter
+                    self.run_bfs += 1
                     
                 if tank.keys:
                     if keys[tank.keys["left"]]: tank.rotate(1)  
@@ -108,7 +108,7 @@ class GamingENV:
                     2 if keys[tank.keys["up"]] else (0 if keys[tank.keys["down"]] else 1),  # Movement
                     2 if keys[tank.keys["right"]] else (0 if keys[tank.keys["left"]] else 1),  # Rotation
                     1 if keys[tank.keys["shoot"]] else 0  # Shooting
-                ]
+                    ]
 
                 # -- Human or AI controls (rotate, move, shoot) as you already have. --
                 # e.g., for AI:
@@ -181,7 +181,7 @@ class GamingENV:
                                 # BFS distance decreased => reward
                                 distance_diff = self.last_bfs_dist[i] - current_bfs_dist
                                 
-                                self.tanks[i].reward += 0.3 * distance_diff
+                                self.tanks[i].reward += 0.03 * distance_diff
                                 
                             elif current_bfs_dist >= self.last_bfs_dist[i]:
                                 # BFS distance increased => penalize
