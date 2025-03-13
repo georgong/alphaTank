@@ -14,6 +14,7 @@ import gym
 # If you're using a custom env, import it here. Otherwise, adapt to your environment.
 from env.gym_env import MultiAgentEnv
 
+
 ############################
 # 1. Initialize Weights & Biases
 ############################
@@ -44,7 +45,6 @@ class RunningMeanStd:
         self.count = torch.tensor(epsilon, dtype=torch.float32, device=device)
 
     def update(self, x: torch.Tensor):
-        # Move x to the same device as the buffers
         x = x.to(self.mean.device)
         batch_mean = x.mean(dim=0)
         batch_var = x.var(dim=0, unbiased=False)
@@ -82,7 +82,6 @@ class PPOAgent(nn.Module):
         )
         
         # Create one actor sub-network per discrete action dimension.
-        # e.g. if act_dim = [4,2,3], we create 3 sets of fc-layers.
         self.actor = nn.ModuleList([
             nn.Sequential(
                 nn.Linear(obs_dim, 64), nn.Tanh(),
@@ -107,15 +106,12 @@ class PPOAgent(nn.Module):
         logits = [layer(x) for layer in self.actor]
         
         # Convert unnormalized logits into Categorical distributions
-        # or we can let PyTorch do stable softmax under the hood, but
-        # often we just pass the raw logits to Categorical(...) 
         probs = [Categorical(logits=l) for l in logits]
 
         # If action is not provided, sample a new action for each head
         if action is None:
             action = [p.sample() for p in probs]
 
-        # Format the action for multi-head scenario
         if isinstance(action, list):
             action_tensor = torch.stack(action, dim=-1)
         else:
@@ -134,27 +130,23 @@ class PPOAgent(nn.Module):
 
         return action_tensor, logprobs, entropy, value
 
+
 ############################
-# 4. Training Loop
+# 4. Training Loop (with GAE–λ fix)
 ############################
 def train():
     # Create environment
-    env = MultiAgentEnv()  # Replace with your own environment if needed
+    env = MultiAgentEnv()  # or your custom environment
     env.render()
 
-    # Each environment has a certain number of tanks
-    num_tanks = env.num_tanks  
-    
-    # The observation space shape for the entire environment is often (num_tanks * obs_per_tank, )
-    # So we get obs_dim by dividing total obs dim by the number of tanks
-    obs_dim = env.observation_space.shape[0] // num_tanks  
-    
-    # Suppose the action space is MultiDiscrete with shape = (num_tanks, 3)
-    # e.g. each tank can choose [direction, shoot/no-shoot, etc.]
-    # We extract the first tank's action distribution shape. 
+    # Number of agents/tanks in your multi-agent env
+    num_tanks = env.num_tanks
+
+    # Single tank obs dimension
+    obs_dim = env.observation_space.shape[0] // num_tanks
+    # Example: if action space is MultiDiscrete
     act_dim = env.action_space.nvec[:3]  
 
-    # Device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # Create one PPOAgent per tank
@@ -165,8 +157,8 @@ def train():
     ]
     
     # Hyperparams
-    num_steps = wandb.config.num_steps       # how many steps of data to collect per "iteration"
-    num_epochs = wandb.config.num_epochs     # how many epochs to optimize each batch
+    num_steps = wandb.config.num_steps
+    num_epochs = wandb.config.num_epochs
     total_timesteps = wandb.config.total_timesteps
     batch_size = num_steps
 
@@ -182,11 +174,10 @@ def train():
 
     # Reset environment
     next_obs, _ = env.reset()
-    # Convert to Tensor on device
     next_obs = torch.tensor(next_obs, dtype=torch.float32, device=device).reshape(num_tanks, obs_dim)
     next_done = torch.zeros(num_tanks, dtype=torch.float32, device=device)
     
-    # Optional: create a RunningMeanStd to track obs normalization
+    # (Optional) RunningMeanStd for obs normalization
     obs_norm = RunningMeanStd(shape=(num_tanks, obs_dim), device=device)
     obs_norm.update(next_obs)
     next_obs = obs_norm.normalize(next_obs)
@@ -196,96 +187,105 @@ def train():
     for iteration in progress_bar:
         reset_count = 0
 
-        # Create storage buffers for the rollout
+        # Storage for rollout
         obs = torch.zeros((num_steps, num_tanks, obs_dim), device=device)
         actions = torch.zeros((num_steps, num_tanks, 3), device=device)
         logprobs = torch.zeros((num_steps, num_tanks, 3), device=device)
         rewards = torch.zeros((num_steps, num_tanks), device=device)
-        dones = torch.zeros((num_steps, num_tanks), device=device)
-        values = torch.zeros((num_steps, num_tanks), device=device)
+
+        # IMPORTANT: we store values/dones for each step + 1 more at the end
+        values = torch.zeros((num_steps + 1, num_tanks), device=device)
+        dones = torch.zeros((num_steps + 1, num_tanks), device=device)
+        
+        # At the start of the batch, compute value for the current observation
+        with torch.no_grad():
+            values[0] = torch.stack(
+                [agents[i].get_value(next_obs[i]) for i in range(num_tanks)]
+            ).squeeze(-1)
+        dones[0] = next_done
 
         # Collect experience for num_steps
         for step in range(num_steps):
             global_step += 1
 
+            # Store current obs
             obs[step] = next_obs
-            dones[step] = next_done
 
-            # Each tank i picks an action from its agent
+            # Choose action using each agent's policy
             with torch.no_grad():
-                # For each agent i, pass that agent the single-tank obs
-                # shape = (1, obs_dim) or just (obs_dim,)
-                actions_list, logprobs_list, _, values_list = zip(*[
+                actions_list, logprobs_list, _, _ = zip(*[
                     agents[i].get_action_and_value(next_obs[i]) for i in range(num_tanks)
                 ])
-
-            # Convert multi-agent outputs into Tensors
             actions_tensor = torch.stack(actions_list, dim=0).to(device)
             logprobs_tensor = torch.stack(logprobs_list, dim=0).to(device)
-            values_tensor = torch.stack(values_list, dim=0).squeeze(-1).to(device)
 
+            # Save actions/logprobs
             actions[step] = actions_tensor
             logprobs[step] = logprobs_tensor
-            values[step] = values_tensor
-            
+
             # Step the environment
             actions_np = actions_tensor.detach().cpu().numpy().astype(int)
             actions_np = actions_np.reshape(env.num_tanks, 3)
-            actions_list = actions_np.tolist()
+            next_obs_np, reward_np, done_np, _, _ = env.step(actions_np.tolist())
 
-            next_obs_np, reward_np, done_np, _, _ = env.step(actions_list)
+            # Store reward
             rewards[step] = torch.tensor(reward_np, dtype=torch.float32, device=device)
+
+            # Convert done array
             next_done = torch.tensor(done_np, dtype=torch.float32, device=device)
-            
+
             # Prepare next_obs
             next_obs = torch.tensor(next_obs_np, dtype=torch.float32, device=device).reshape(num_tanks, obs_dim)
             
-            # You could update normalization after every step (optional):
+            # (Optional) update normalization
             # obs_norm.update(next_obs)
             # next_obs = obs_norm.normalize(next_obs)
+            
+            # Store done in dones[step+1]
+            dones[step+1] = next_done
 
-            # Auto-reset after a certain interval or if any tank is done
+            # If any tank done or we hit auto-reset interval
             auto_reset_interval = 10000
             if np.any(done_np) or (global_step % auto_reset_interval == 0 and global_step > 0):
                 reset_count += 1
                 next_obs, _ = env.reset()
                 next_obs = torch.tensor(next_obs, dtype=torch.float32, device=device).reshape(num_tanks, obs_dim)
-                next_done = torch.zeros(num_tanks, device=device)
+                next_done = torch.zeros(num_tanks, dtype=torch.float32, device=device)
 
-        # One final forward pass for next_values
-        with torch.no_grad():
-            next_values = torch.stack(
-                [agents[i].get_value(next_obs[i]) for i in range(num_tanks)]
-            ).squeeze(-1)
+            # Now compute the *next* value for the next_obs (to store at step+1)
+            with torch.no_grad():
+                values[step+1] = torch.stack(
+                    [agents[i].get_value(next_obs[i]) for i in range(num_tanks)]
+                ).squeeze(-1)
+        
+        # (Optional) normalize the entire batch of rewards
+        reward_mean = rewards.mean()
+        reward_std = rewards.std() + 1e-8
+        rewards_normalized = (rewards - reward_mean) / reward_std
 
-            # Normalize rewards in this batch (optional, but you had it in code)
-            reward_mean = rewards.mean()
-            reward_std = rewards.std() + 1e-8
-            rewards_normalized = (rewards - reward_mean) / reward_std
+        # Compute GAE–λ advantages
+        advantages = torch.zeros_like(rewards, device=device)
+        last_adv = torch.zeros(num_tanks, device=device)
 
-            # GAE-lambda advantage calculation
-            advantages = torch.zeros_like(rewards_normalized, device=device)
-            lastgaelam = 0
-            for t in reversed(range(num_steps)):
-                delta = (
-                    rewards_normalized[t]
-                    + gamma * next_values * (1 - dones[t])
-                    - values[t]
-                )
-                advantages[t] = lastgaelam = (
-                    delta + gamma * gae_lambda * (1 - dones[t]) * lastgaelam
-                )
-            returns = advantages + values
+        for t in reversed(range(num_steps)):
+            # Because we have values[t+1], we can use the correct "next value" 
+            # and the done flag at t+1
+            next_nonterminal = 1.0 - dones[t+1]
+            delta = rewards_normalized[t] + gamma * values[t+1] * next_nonterminal - values[t]
+            advantages[t] = last_adv = delta + gamma * gae_lambda * next_nonterminal * last_adv
 
-        # Now, for each agent, optimize the policy
+        returns = advantages + values[:-1]
+
+        # PPO policy update for each agent
         for i, agent in enumerate(agents):
-            b_obs = obs[:, i].reshape((-1, obs_dim))
-            b_actions = actions[:, i].reshape((-1, 3))
-            b_logprobs = logprobs[:, i].reshape(-1, 3)
-            b_advantages = advantages[:, i].reshape(-1, 1)
-            b_returns = returns[:, i].reshape(-1)
+            # Flatten the batch (num_steps) -> (num_steps, obs_dim), etc.
+            b_obs = obs[:, i].reshape(num_steps, obs_dim)
+            b_actions = actions[:, i].reshape(num_steps, 3)
+            b_logprobs = logprobs[:, i].reshape(num_steps, 3)
+            b_advantages = advantages[:, i].reshape(num_steps, 1)
+            b_returns = returns[:, i].reshape(num_steps)
             
-            # Training epochs for each agent
+            # Multiple training epochs per batch
             for _ in range(num_epochs):
                 _, new_logprobs, entropy, new_values = agent.get_action_and_value(b_obs, b_actions)
                 
@@ -294,12 +294,12 @@ def train():
                 ratio = logratio.exp()
 
                 # Clipped policy objective
-                pg_loss1 = -b_advantages * ratio
-                pg_loss2 = -b_advantages * torch.clamp(ratio, 1 - clip_coef, 1 + clip_coef)
-                pg_loss = torch.max(pg_loss1, pg_loss2).mean()
+                pg_loss_1 = -b_advantages * ratio
+                pg_loss_2 = -b_advantages * torch.clamp(ratio, 1 - clip_coef, 1 + clip_coef)
+                pg_loss = torch.max(pg_loss_1, pg_loss_2).mean()
 
                 # Value loss
-                v_loss = 0.5 * ((new_values - b_returns) ** 2).mean()
+                v_loss = 0.5 * ((new_values.squeeze(-1) - b_returns) ** 2).mean()
 
                 # Entropy
                 entropy_loss = entropy.mean()
@@ -312,7 +312,7 @@ def train():
                 nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
                 optimizers[i].step()
 
-                # Logging (per agent)
+                # Logging
                 wandb.log({
                     f"agent_{i}/reward": rewards[:, i].mean().item(),
                     f"agent_{i}/policy_loss": pg_loss.item(),
@@ -328,7 +328,7 @@ def train():
             for i in range(num_tanks)
         })
 
-    # Save trained models after all iterations
+    # Save trained models
     model_save_dir = "checkpoints"
     os.makedirs(model_save_dir, exist_ok=True)
 
@@ -339,6 +339,7 @@ def train():
 
     env.close()
     wandb.finish()
+
 
 ############################
 # 5. Main Entry Point
