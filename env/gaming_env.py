@@ -3,7 +3,7 @@ import logging
 import pygame
 import numpy as np
 from env.config import *
-from env.sprite import Tank,Bullet,Wall
+from env.sprite import Tank, Bullet, Wall
 from env.maze import generate_maze
 from env.util import *
 from env.bfs import *
@@ -78,7 +78,7 @@ class GamingENV:
                     old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
                     
                     # 3) Every 20 BFS steps, apply penalty based on path length
-                    if self.run_bfs % 60 == 0:
+                    if self.run_bfs % 20 == 0:
                         if self.last_bfs_dist[i] is not None:
                             # If we have a stored previous distance, compare
                             if self.last_bfs_dist[i] is not None:
@@ -98,10 +98,10 @@ class GamingENV:
                     self.run_bfs += 1
                     
                 if tank.keys:
-                    if keys[tank.keys["left"]]: tank.rotate(3)  
-                    if keys[tank.keys["right"]]: tank.rotate(-3) 
-                    if keys[tank.keys["up"]]: tank.speed = 5 
-                    elif keys[tank.keys["down"]]: tank.speed = -5
+                    if keys[tank.keys["left"]]: tank.rotate(5)  
+                    if keys[tank.keys["right"]]: tank.rotate(-5) 
+                    if keys[tank.keys["up"]]: tank.speed = 10 
+                    elif keys[tank.keys["down"]]: tank.speed = -10
                     else: tank.speed = 0  
                     if keys[tank.keys["shoot"]]: tank.shoot()  
                     
@@ -176,7 +176,7 @@ class GamingENV:
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
                     center_y = r * GRID_SIZE + (GRID_SIZE / 2)
                     old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                    if self.run_bfs % 60 == 0:
+                    if self.run_bfs % 20 == 0:
                         # If we have a stored previous distance, compare
                         if self.last_bfs_dist[i] is not None:
                             if current_bfs_dist < self.last_bfs_dist[i]:
@@ -195,15 +195,13 @@ class GamingENV:
 
                     # Increment the BFS step counter
                     self.run_bfs += 1
-
-
                 
                 i = self.tanks.index(tank)  # **获取坦克索引**
-                if actions[i][0] == 2: tank.rotate(3)  # **左转**
-                elif actions[i][0] == 0: tank.rotate(-3)  # **右转**
+                if actions[i][0] == 2: tank.rotate(5)  # **左转**
+                elif actions[i][0] == 0: tank.rotate(-5)  # **右转**
                 else: pass
-                if actions[i][1] == 2: tank.speed = 5  # **前进**
-                elif actions[i][1] == 0: tank.speed = -5  # **后退**
+                if actions[i][1] == 2: tank.speed = 10  # **前进**
+                elif actions[i][1] == 0: tank.speed = -10  # **后退**
                 else: tank.speed = 0  # **停止** 
                 if actions[i][2] == 1: tank.shoot()  # **射击**
                 else: pass
@@ -211,7 +209,7 @@ class GamingENV:
                 tank.move(current_actions=current_actions)
 
                 # ### NEW LOGIC ###
-                                # 5) After move, measure new distance if next_cell is not None
+                # 5) After move, measure new distance if next_cell is not None
                 if next_cell is not None and old_dist is not None:
                     r, c = next_cell
                     center_x = c * GRID_SIZE + (GRID_SIZE / 2)
@@ -219,10 +217,9 @@ class GamingENV:
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
 
                     if new_dist < old_dist:
-                        self.tanks[i].reward += 0.001 * (old_dist - new_dist)
+                        self.tanks[i].reward += 5 * (old_dist - new_dist)
                     elif new_dist > old_dist:
-                        self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
-
+                        self.tanks[i].reward -= 5 * (new_dist - old_dist)
 
                     # print("AFTER: ", self.tanks[i].reward)
             self.run_bfs += 1
@@ -231,7 +228,7 @@ class GamingENV:
         # -- Move bullets again or do collision checks if desired --
         for bullet in self.bullets[:]:
             bullet.move()
-
+            
         
     def render(self):
         if self.screen is None:
