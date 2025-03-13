@@ -24,8 +24,10 @@ wandb.init(
         "vf_coef": 0.5,
         "max_grad_norm": 0.3,
         "num_steps": 512,
-        "num_epochs": 60,
-        "total_timesteps": 300000
+        "num_epochs": 20,
+        "total_timesteps": 100000,
+        "auto_reset_interval": 10000,
+        "neg_reward_threshold": 0.2,
     }
 )
 
@@ -93,7 +95,7 @@ def train():
 
     num_tanks = env.num_tanks
     obs_dim = env.observation_space.shape[0] // num_tanks  
-    act_dim = env.action_space.nvec[:3]  # Assume multi-discrete action space
+    act_dim = env.action_space.nvec[:3]  # assume multi-discrete action space
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
@@ -109,11 +111,11 @@ def train():
     ent_coef = wandb.config.ent_coef
     vf_coef = wandb.config.vf_coef
     max_grad_norm = wandb.config.max_grad_norm
+    auto_reset_interval = wandb.config.auto_reset_interval
+    neg_reward_threshold = wandb.config.neg_reward_threshold
 
     global_step = 0
     start_time = time.time()
-    reset_count = 0  # Track resets
-
     next_obs, _ = env.reset()
     next_obs = torch.tensor(next_obs, dtype=torch.float32, device=device).reshape(num_tanks, obs_dim)
     next_done = torch.zeros(num_tanks, dtype=torch.float32, device=device)
@@ -129,6 +131,7 @@ def train():
         values = torch.zeros((num_steps, num_tanks), device=device)
 
         for step in range(num_steps):
+            reset_count = 0
             global_step += 1
             obs[step] = next_obs
             dones[step] = next_done
@@ -153,7 +156,11 @@ def train():
             next_done = torch.tensor(done_np, dtype=torch.float32, device=device)
             next_obs = torch.tensor(next_obs_np, dtype=torch.float32, device=device).reshape(num_tanks, obs_dim)
 
-            if np.any(done_np) or global_step % 1000 == 0:
+            if (np.any(done_np) or
+                (global_step % auto_reset_interval == 0 and global_step > 0) or
+                np.any(reward_np < -neg_reward_threshold)
+                ):
+                
                 reset_count += 1
                 next_obs, _ = env.reset()
                 next_obs = torch.tensor(next_obs, dtype=torch.float32, device=device).reshape(num_tanks, obs_dim)
@@ -162,11 +169,12 @@ def train():
         with torch.no_grad():
             next_values = torch.stack([agents[i].get_value(next_obs[i]) for i in range(num_tanks)]).squeeze(-1)
             advantages = torch.zeros_like(rewards, device=device)
-            lastgaelam = 0
+            last_gae = 0
 
             for t in reversed(range(num_steps)):
-                delta = rewards[t] + gamma * next_values * (1 - dones[t]) - values[t]
-                advantages[t] = lastgaelam = delta + gamma * gae_lambda * (1 - dones[t]) * lastgaelam
+                delta = rewards[t] + gamma * next_values * (1 - dones[t]) - values[t] # GAE correct
+                last_gae = delta + gamma * gae_lambda * (1 - dones[t]) * last_gae
+                advantages[t] = last_gae
 
             returns = advantages + values
 
@@ -181,7 +189,11 @@ def train():
                 _, new_logprobs, entropy, new_values = agent.get_action_and_value(b_obs, b_actions)
                 logratio = new_logprobs - b_logprobs
                 ratio = logratio.exp()
-                pg_loss = torch.max(-b_advantages * ratio, -b_advantages * torch.clamp(ratio, 1 - clip_coef, 1 + clip_coef)).mean()
+ 
+                pg_loss_1 = -b_advantages * ratio
+                pg_loss_2 = -b_advantages * torch.clamp(ratio, 1 - clip_coef, 1 + clip_coef)
+                pg_loss = torch.max(pg_loss_1, pg_loss_2).mean()
+
                 v_loss = 0.5 * ((new_values - b_returns) ** 2).mean()
                 entropy_loss = entropy.mean()
                 loss = pg_loss - ent_coef * entropy_loss + vf_coef * v_loss
@@ -199,6 +211,17 @@ def train():
                     "iteration": iteration,
                     "env/reset_count": reset_count
                 })
+        
+    model_save_dir = "checkpoints"
+    os.makedirs(model_save_dir, exist_ok=True)
+
+    for i, agent in enumerate(agents):
+        model_path = os.path.join(model_save_dir, f"ppo_agent_{i}.pt")
+        torch.save(agent.state_dict(), model_path)
+        print(f"[INFO] Saved model for Agent {i} at {model_path}")
+
+    env.close()
+    wandb.finish()
 
     env.close()
     wandb.finish()
