@@ -284,13 +284,6 @@ class Tank:
         new_x = self.x + self.speed * math.cos(rad)
         new_y = self.y - self.speed * math.sin(rad)
         new_corners = self.get_corners(new_x, new_y)
-        
-        # rad = math.radians(self.angle)
-        # new_x = self.x + self.speed * math.cos(rad)
-        # new_y = self.y - self.speed * math.sin(rad)
-
-        # # calculate the new corners
-        # new_corners = self.get_corners(new_x, new_y)
 
         # '''Reward #1: hitting the wall'''
         # if any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
@@ -335,13 +328,12 @@ class Tank:
         # make sure tank won't go through the wall
         if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
             self.x, self.y = new_x, new_y
-        self.wall_hits = 0  # **重置撞墙计数**
         
         '''Reward #2: getting closer to the opponent'''
         # self._closer_reward()
         
         '''Reward #3: stationary penalty'''
-        self._stationary_penalty()
+        # self._stationary_penalty()
         
         '''Reward #5: aiming reward'''
         self._aiming_reward()
@@ -349,6 +341,7 @@ class Tank:
         '''Reward #6 consistency action reward'''
         # if current_actions is not None:
         #     self._action_consistency_reward(current_actions)
+
 
     def _action_consistency_reward(self, current_actions):
         """Reward #6: reward for maintaining consistent actions"""
@@ -391,7 +384,7 @@ class Tank:
         return total_reward
 
 
-    def _wall_penalty(self, new_x, new_y, new_corners): 
+    def _wall_penalty(self, new_corners): 
         '''Reward #1: hitting the wall'''
         # calculate the new corners
         if any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
@@ -401,6 +394,7 @@ class Tank:
             else:
                 self.reward += WALL_HIT_PENALTY  # **单次撞墙，给予普通惩罚**
             return  # 停止移动
+        self.wall_hits = 0  # **重置撞墙计数**
     
     # def _closer_reward(self):
     #     '''Reward #2: getting closer to the opponent'''
