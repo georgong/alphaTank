@@ -58,8 +58,8 @@ ROTATION_PENALTY = -2  # Penalty for excessive rotation
 ROTATION_THRESHOLD = 40  # Total rotation before penalty (in degrees)
 ROTATION_RESET_DISTANCE = 30  # Distance to move before resetting rotation counter
 
-CONTROL_CHANGE_PENALTY = -50
-CONTROL_CHANGE_THRESHOLD = 0.6
+CONTROL_CHANGE_PENALTY = -5
+CONTROL_CHANGE_THRESHOLD = 0.5
 
 # Keyboard Setting
 VISUALIZE_TRAJ = False
