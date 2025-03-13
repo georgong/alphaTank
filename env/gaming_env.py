@@ -159,7 +159,7 @@ class GamingENV:
         else:
             for tank in self.tanks:
                 i = self.tanks.index(tank)
-                overall_bfs_dist = 0
+                # overall_bfs_dist = 0
                 
                 # 2) BFS path
                 my_pos = tank.get_grid_position() 
