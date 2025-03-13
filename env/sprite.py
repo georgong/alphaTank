@@ -26,33 +26,33 @@ class Bullet:
 
         bullet_rect = pygame.Rect(next_x, next_y, 5, 5)
 
-        # **存储反弹情况**
+        # 存储反弹情况
         bounce_x, bounce_y = False, False
 
         for wall in self.sharing_env.walls:
             if wall.rect.colliderect(bullet_rect):
-                # **精细化检测**
+                # 精细化检测
                 temp_rect_x = pygame.Rect(self.x + self.dx * self.speed, self.y, 5, 5)
                 temp_rect_y = pygame.Rect(self.x, self.y + self.dy * self.speed, 5, 5)
 
                 if wall.rect.colliderect(temp_rect_x):
-                    bounce_x = True  # **X 方向反弹**
+                    bounce_x = True  # X 方向反弹
                 if wall.rect.colliderect(temp_rect_y):
-                    bounce_y = True  # **Y 方向反弹**
+                    bounce_y = True  # Y 方向反弹
 
-                # **防止墙角反弹错误**
+                # 防止墙角反弹错误
                 if bounce_x and bounce_y:
-                    self.dx, self.dy = -self.dx, -self.dy  # **对角反弹**
+                    self.dx, self.dy = -self.dx, -self.dy  # 对角反弹
                 elif bounce_x:
                     self.dx = -self.dx
                 elif bounce_y:
                     self.dy = -self.dy
 
                 self.bounces += 1
-                break  # **防止同一帧多次反弹**
+                break  # 防止同一帧多次反弹
 
         for tank in self.sharing_env.tanks:
-            if tank.alive > 0 and tank != self.owner:  # **确保不击中自己**
+            if tank.alive > 0 and tank != self.owner:  # 确保不击中自己
                 tank_rect = pygame.Rect(tank.x - tank.width // 2, tank.y - tank.height // 2, tank.width, tank.height)
                 if bullet_rect.colliderect(tank_rect):
                     tank.alive = False  
@@ -62,12 +62,12 @@ class Bullet:
             
 
 
-        # **更新子弹位置**
+        # 更新子弹位置
         self.x += self.dx * self.speed
         self.y += self.dy * self.speed
         self.distance_traveled += self.speed
 
-        # **子弹超出最大反弹次数或距离，删除**
+        # 子弹超出最大反弹次数或距离，删除
         if self.bounces > self.max_bounces or self.distance_traveled > BULLET_MAX_DISTANCE:
             self.sharing_env.bullets.remove(self)
 
@@ -78,8 +78,8 @@ class Bullet:
 class BulletTrajectory(Bullet):
     def __init__(self, x, y, dx, dy, owner, env):
         super().__init__(x, y, dx, dy, owner, env)
-        self.trajectory_points = [(x, y)]  # Store all points of trajectory
-        self.trajectory_data = [(x, y, dx, dy)]  # Store complete state at each point
+        self.trajectory_points = [(x, y)]  # store all points of trajectory
+        self.trajectory_data = [(x, y, dx, dy)]  # store complete state at each point
         self.will_hit_target = False
         self.simulate_complete_trajectory()
         self.last_position = self.trajectory_points[-1]
@@ -93,12 +93,12 @@ class BulletTrajectory(Bullet):
     def simulate_complete_trajectory(self):
         """Simulate the complete trajectory until max distance or bounces"""
         while True:
-            # Simulate next position
+            # simulate next position
             next_x = self.x + self.dx * self.speed
             next_y = self.y + self.dy * self.speed
             bullet_rect = pygame.Rect(next_x, next_y, 5, 5)
             
-            # Check for tank hits
+            # check for tank hits
             for tank in self.sharing_env.tanks:
                 if tank != self.owner and tank.alive:
                     tank_rect = pygame.Rect(
@@ -111,17 +111,17 @@ class BulletTrajectory(Bullet):
                         self.trajectory_points.append((next_x, next_y))
                         self.trajectory_data.append((next_x, next_y, self.dx, self.dy))
                         self.will_hit_target = True
-                        return True  # Trajectory will hit a tank
+                        return True  # trajectory will hit a tank
             
-            # Check for wall bounces
+            # check for wall bounces
             bounce_happened = False
             for wall in self.sharing_env.walls:
                 if wall.rect.colliderect(bullet_rect):
-                    # Store point before bounce
+                    # store point before bounce
                     self.trajectory_points.append((self.x, self.y))
                     self.trajectory_data.append((self.x, self.y, self.dx, self.dy))
                     
-                    # Handle bounce
+                    # handle bounce
                     temp_rect_x = pygame.Rect(self.x + self.dx * self.speed, self.y, 5, 5)
                     temp_rect_y = pygame.Rect(self.x, self.y + self.dy * self.speed, 5, 5)
                     
@@ -146,7 +146,7 @@ class BulletTrajectory(Bullet):
                 self.trajectory_points.append((self.x, self.y))
                 self.trajectory_data.append((self.x, self.y, self.dx, self.dy))
             
-            # Check ending conditions
+            # check ending conditions
             if (self.bounces > self.max_bounces or 
                 self.distance_traveled > BULLET_MAX_DISTANCE):
                 return False
@@ -154,26 +154,25 @@ class BulletTrajectory(Bullet):
     def draw(self):
         """Draw the complete trajectory as a red line"""
         if len(self.trajectory_points) > 1:
-            # Draw trajectory line
+            # draw trajectory line
             pygame.draw.lines(
                 self.sharing_env.screen,
-                (255, 0, 0),  # Red color
-                False,  # Not closed
+                (255, 0, 0),  # red color
+                False,  # not closed
                 self.trajectory_points,
-                2  # Line width
+                2  # line width
             )
 
-            # Draw bounce points as small circles
+            # draw bounce points as small circles
             for i in range(1, len(self.trajectory_data)):
                 if (self.trajectory_data[i][2] != self.trajectory_data[i-1][2] or 
                     self.trajectory_data[i][3] != self.trajectory_data[i-1][3]):
                     pygame.draw.circle(
                         self.sharing_env.screen,
-                        (255, 255, 0),  # Yellow color for bounce points
+                        (255, 255, 0),  # yellow color for bounce points
                         self.trajectory_points[i],
-                        3  # Circle radius
+                        3  # circle radius
             )
-
 
 class Tank:
     def __init__(self, team,x, y, color, keys, env):
@@ -182,9 +181,9 @@ class Tank:
         self.y = y
         self.angle = 0
         self.speed = 0
-        self.color = color  # the custom color
-        self.width = 40
-        self.height = 32
+        self.color = color
+        self.width = 20
+        self.height = 16
         self.alive = True
         self.keys = keys
         self.sharing_env = env
@@ -194,17 +193,17 @@ class Tank:
         self.closer_reward = 0
         self.reward = 0
 
-        # **reward compute**
+        # reward compute
         self.last_x, self.last_y = x, y  # 记录上一次位置
         self.stationary_steps = 0  # 站立不动的帧数
         self.wall_hits = 0  # 连续撞墙次数
         self.activate_bullet_trajectory_reward = False
 
-        # **加载坦克 GIF 动画，并应用颜色调整**
+        # 加载坦克 GIF 动画，并应用颜色调整
         self.frames = self.load_and_colorize_gif("env/assets/tank.gif", color, (self.width+3, self.height+3))
-        self.frame_index = 0  # **当前播放帧**
-        self.frame_rate = 5  # **每 5 帧更新一次**
-        self.tick = 0  # **计数器**
+        self.frame_index = 0  # 当前播放帧
+        self.frame_rate = 5  # 每 5 帧更新一次
+        self.tick = 0
 
         self.render_aiming = RENDER_AIMING
 
@@ -292,44 +291,7 @@ class Tank:
         new_x = self.x + self.speed * math.cos(rad)
         new_y = self.y - self.speed * math.sin(rad)
         new_corners = self.get_corners(new_x, new_y)
-
-        # '''Reward #1: hitting the wall'''
-        # if any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
-        #     self.wall_hits += 1  # 记录撞墙次数
-        #     if self.wall_hits >= WALL_HIT_THRESHOLD:
-        #         self.reward += WALL_HIT_STRONG_PENALTY  # **连续撞墙，给予更大惩罚**
-        #     else:
-        #         self.reward += WALL_HIT_PENALTY  # **单次撞墙，给予普通惩罚**
-        #     return  # 停止移动       
-
-        # make sure tank won't go through the wall
-        # if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
-        #     self.x, self.y = new_x, new_y
-        # self.wall_hits = 0  # **重置撞墙计数**
         
-        # **🏆 计算停留原地的惩罚**  # 记录当前坐标
-        # '''Reward #2: getting closer to the opponent'''
-        # for opponent in self.sharing_env.tanks:
-        #     if opponent != self and opponent.alive:
-        #         dist_now = math.sqrt((self.x - opponent.x) ** 2 + (self.y - opponent.y) ** 2)
-        #         dist_prev = math.sqrt((self.last_x - opponent.x) ** 2 + (self.last_y - opponent.y) ** 2)
-        #         # ✅ **只有朝对手移动时才给奖励**
-        #         if dist_now < dist_prev:
-        #             if self.closer_reward < CLOSER_REWARD_MAX:  # **确保不超过最大值**
-        #                 self.reward += CLOSER_REWARD
-        #                 self.closer_reward += CLOSER_REWARD
-        
-        # '''Reward #3: stationary penalty'''
-        # if abs(self.x - self.last_x) < STATIONARY_EPSILON and abs(self.y - self.last_y) < STATIONARY_EPSILON:
-        #     self.stationary_steps += 1
-        #     if self.stationary_steps % 30 == 0:  # 每 30 帧不动就扣分
-        #         self.reward += STATIONARY_PENALTY
-        # else:
-        #     self.stationary_steps = 0  # **重置不动计数**
-        
-        # self.last_x, self.last_y = self.x, self.y
-        
-        # directly add
         '''Reward #1: hitting the wall'''
         # self._wall_penalty(new_corners)
 
@@ -347,6 +309,7 @@ class Tank:
         # self._aiming_reward()
         
         '''Reward #6 consistency action reward'''
+        self._control_penalty(current_actions)
         # if current_actions is not None:
         #     self._action_consistency_reward(current_actions)
 
@@ -357,13 +320,13 @@ class Tank:
             (self.x - self.last_rotation_pos[0])**2 + 
             (self.y - self.last_rotation_pos[1])**2
         )
-        # Reset rotation counter if moved enough
+        # rotation counter if moved enough
         if dist_moved > ROTATION_RESET_DISTANCE:
             self.total_rotation = 0
             self.last_rotation_pos = (self.x, self.y)
             return 0
         
-        # Add penalty if rotated too much without moving
+        # penalty if rotated too much without moving
         if self.total_rotation >= ROTATION_THRESHOLD:
             self.reward += ROTATION_PENALTY
             self.total_rotation = 0  # Reset after applying penalty
@@ -374,7 +337,7 @@ class Tank:
         """Reward #6: reward for maintaining consistent actions"""
         total_reward = 0
         
-        # Compare current actions with previous actions
+        # compare current actions with previous actions
         action_types = {
             'movement': current_actions[0],
             'rotation': current_actions[1],
@@ -392,19 +355,19 @@ class Tank:
             # we can add rotation/shooting consistency later
             if action_type == 'movement':
                 if current_value == self.previous_actions[action_type]:
-                    # Increase counter for consistent actions
+                    # increase counter for consistent actions
                     self.action_consistency_counter[action_type] += 1
-                    # Give reward based on consistency length
+                    # give reward based on consistency length
                     if self.action_consistency_counter[action_type] > 5:  # Minimum frames for reward
                         total_reward += ACTION_CONSISTENCY_REWARD
                 else:
-                    # Penalize frequent action changes
+                    # penalize frequent action changes
                     if self.action_consistency_counter[action_type] < 3:  # If changed too quickly
                         total_reward += ACTION_CHANGE_PENALTY
-                    # Reset counter for this action type
+                    # reset counter for this action type
                     self.action_consistency_counter[action_type] = 0
                 
-            # Update previous action
+            # update previous action
             self.previous_actions[action_type] = current_value
 
         self.reward += total_reward
@@ -417,23 +380,35 @@ class Tank:
         if any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
             self.wall_hits += 1  # 记录撞墙次数
             if self.wall_hits >= WALL_HIT_THRESHOLD:
-                self.reward += WALL_HIT_STRONG_PENALTY  # **连续撞墙，给予更大惩罚**
+                self.reward += WALL_HIT_STRONG_PENALTY  # 连续撞墙，给予更大惩罚
             else:
-                self.reward += WALL_HIT_PENALTY  # **单次撞墙，给予普通惩罚**
+                self.reward += WALL_HIT_PENALTY  # 单次撞墙，给予普通惩罚
             return  # 停止移动
-        self.wall_hits = 0  # **重置撞墙计数**
+        self.wall_hits = 0  # 重置撞墙计数
     
-    # def _closer_reward(self):
-    #     '''Reward #2: getting closer to the opponent'''
-    #     for opponent in self.sharing_env.tanks:
-    #             if opponent != self and opponent.alive:
-    #                 dist_now = math.sqrt((self.x - opponent.x) ** 2 + (self.y - opponent.y) ** 2)
-    #                 dist_prev = math.sqrt((self.last_x - opponent.x) ** 2 + (self.last_y - opponent.y) ** 2)
-    #                 # ✅ **只有朝对手移动时才给奖励**
-    #                 if dist_now < dist_prev:
-    #                     if self.closer_reward < CLOSER_REWARD_MAX:  # **确保不超过最大值**
-    #                         self.reward += CLOSER_REWARD
-    #                         self.closer_reward += CLOSER_REWARD
+    def _control_penalty(self, current_actions):
+        """ Penalize rapid control changes (i.e., jittery movements, erratic rotation, spamming shots) """
+        penalty = 0
+
+        action_types = {
+            'movement': current_actions[0],
+            'rotation': current_actions[1],
+            'shooting': current_actions[2]
+        }
+
+        for action_type, current_value in action_types.items():
+            if current_value != self.previous_actions[action_type]:
+                self.action_consistency_counter[action_type] += 1
+            else:
+                self.action_consistency_counter[action_type] = 0
+
+            # if an action is changed too frequently, apply penalty
+            if self.action_consistency_counter[action_type] > CONTROL_CHANGE_THRESHOLD:
+                penalty += CONTROL_CHANGE_PENALTY
+
+        self.reward += penalty
+        self.previous_actions = action_types  # update last action state
+        
 
     def _stationary_penalty(self):
         '''Reward #3: stationary penalty'''
@@ -457,15 +432,15 @@ class Tank:
         if not self.alive:
             return 0
         
-        # Calculate initial bullet position and direction
+        # calculate initial bullet position and direction
         rad = math.radians(self.angle)
         bullet_x = self.x + 10 * math.cos(rad)
         bullet_y = self.y - 10 * math.sin(rad)
         
-        # Simulate trajectory
+        # simulate trajectory
         trajectory = BulletTrajectory(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
         
-        # Check if trajectory will hit target
+        # check if trajectory will hit target
         if trajectory.will_hit_target:
             self.aiming_counter += 1
             if self.aiming_counter >= self.AIMING_FRAMES_THRESHOLD:
@@ -499,46 +474,23 @@ class Tank:
 
         '''Reward #5: aiming reward'''
         self._aiming_reward()
-
-    # def preview_trajectory(self):
-    #     """Preview the bullet trajectory before shooting"""
-    #     if not self.alive:
-    #         return
-            
-    #     rad = math.radians(self.angle)
-    #     bullet_x = self.x + 10 * math.cos(rad)
-    #     bullet_y = self.y - 10 * math.sin(rad)
         
-    #     # Create and simulate trajectory
-    #     trajectory = BulletTrajectory(
-    #         bullet_x, 
-    #         bullet_y, 
-    #         math.cos(rad), 
-    #         -math.sin(rad), 
-    #         self, 
-    #         self.sharing_env
-    #     )
-        
-    #     # Draw the trajectory
-    #     trajectory.draw()
-        
-    #     return trajectory.trajectory_points[-1]  # Return final position
     
     def _bullet_trajectory_reward(self, bullet_x, bullet_y, rad):
         '''Reward #4: bullet trajectory reward'''
         trajectory = BulletTrajectory(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
         self.sharing_env.bullets_trajs.append(trajectory)
         
-        # Calculate minimum distance to any opponent
+        # calculate minimum distance to any opponent
         min_distance = float('inf')
         for opponent in self.sharing_env.tanks:
             if opponent != self and opponent.alive:
-                # Get distance between trajectory end point and opponent center
+                # get distance between trajectory end point and opponent center
                 end_x, end_y = trajectory.last_position
                 dist = math.sqrt((end_x - opponent.x)**2 + (end_y - opponent.y)**2)
                 min_distance = min(min_distance, dist)
         
-        # Award reward based on distance
+        # award reward based on distance
         if min_distance < TRAJECTORY_DIST_THRESHOLD:
             # Scale reward inversely with distance
             distance_factor = 1 - (min_distance / TRAJECTORY_DIST_THRESHOLD)
@@ -546,7 +498,7 @@ class Tank:
             self.reward += reward
         
         elif min_distance > TRAJECTORY_FAR_THRESHOLD:
-            # Apply penalty for shots that end very far from opponents
+            # apply penalty for shots that end very far from opponents
             distance_factor = (min_distance - TRAJECTORY_FAR_THRESHOLD) / TRAJECTORY_FAR_THRESHOLD
             penalty = TRAJECTORY_DIST_PENALTY * min(distance_factor, 1.0)
             self.reward += penalty
@@ -571,34 +523,6 @@ class Tank:
         rad = math.radians(self.angle)
         bullet_x = self.x + 10 * math.cos(rad)
         bullet_y = self.y - 10 * math.sin(rad)
-
-        '''Reward #4: bullet trajectory reward'''
-        # self._bullet_trajectory_reward(bullet_x, bullet_y, rad)
-
-        # trajectory = BulletTrajectory(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
-        # self.sharing_env.bullets_trajs.append(trajectory)
-        
-        # # Calculate minimum distance to any opponent
-        # min_distance = float('inf')
-        # for opponent in self.sharing_env.tanks:
-        #     if opponent != self and opponent.alive:
-        #         # Get distance between trajectory end point and opponent center
-        #         end_x, end_y = trajectory.last_position
-        #         dist = math.sqrt((end_x - opponent.x)**2 + (end_y - opponent.y)**2)
-        #         min_distance = min(min_distance, dist)
-        
-        # # Award reward based on distance
-        # if min_distance < TRAJECTORY_DIST_THRESHOLD:
-        #     # Scale reward inversely with distance
-        #     distance_factor = 1 - (min_distance / TRAJECTORY_DIST_THRESHOLD)
-        #     reward = TRAJECTORY_DIST_REWARD * distance_factor
-        #     self.reward += reward
-        
-        # elif min_distance > TRAJECTORY_FAR_THRESHOLD:
-        #     # Apply penalty for shots that end very far from opponents
-        #     distance_factor = (min_distance - TRAJECTORY_FAR_THRESHOLD) / TRAJECTORY_FAR_THRESHOLD
-        #     penalty = TRAJECTORY_DIST_PENALTY * min(distance_factor, 1.0)
-        #     self.reward += penalty
 
         # creates and add bullets
         bullet = Bullet(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
@@ -646,7 +570,6 @@ class Tank:
         """
         return [ int(self.y // GRID_SIZE), int(self.x// GRID_SIZE)]
 
-# Wall 
 class Wall:
     def __init__(self, x, y, env):
         self.GRID_SIZE = GRID_SIZE

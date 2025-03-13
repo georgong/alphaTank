@@ -107,12 +107,12 @@ class MultiAgentEnv(gym.Env):
         return np.array([tank.reward for tank in self.game_env.tanks], dtype=np.float32)
 
     def _check_done(self):
-        #alive_tanks = {tank.team for tank in self.game_env.tanks if tank.alive}
-        if self.training_step < 512:
-            return False
-        else:
-            self.training_step = 0
-            return True
+        alive_tanks = {tank.team for tank in self.game_env.tanks if tank.alive}
+        # if self.training_step < 512:
+        #     return False
+        # else:
+        #     self.training_step = 0
+        #     return True
     
         return len(alive_tanks) <= 1 
 
