@@ -24,10 +24,16 @@ MAX_BULLETS = 6
 BULLET_COOLDOWN = 300 
 STATIONARY_EPSILON = 3
 
+# Map setting
+USE_OCTAGON = True
+
 # Tank control setting
 ROTATION_DEGREE = 5         # ->  2, Right, negative, || 0, left, positive
-TANK_SPEED = 5              # ->  2, Forward, positive || 0, Backward, negative
+TANK_SPEED = 10              # ->  2, Forward, positive || 0, Backward, negative
 
+# Tank Setting
+TANK_WIDTH = 20
+TANK_HEIGHT = 16
 
 tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
     "left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s, "shoot": pygame.K_f
@@ -56,8 +62,8 @@ STATIONARY_PENALTY = -1e-3
 MOVE_REWARD = 2e-3
 
 # BFS Related Reward
-BFS_FORWARD_REWARD = 0.001
-BFS_BACKWARD_PENALTY = 0.0011
+BFS_FORWARD_REWARD = 5 # 0.001
+BFS_BACKWARD_PENALTY = 5 # 0.0011
 BFS_PATH_LEN_REWARD = 0.06
 BFS_PATH_LEN_PENALTY = 0.04
 
@@ -79,7 +85,7 @@ ROTATION_THRESHOLD = 20  # Total rotation before penalty (in degrees)
 ROTATION_RESET_DISTANCE = 50  # Distance to move before resetting rotation counter
 
 # Control Penalty
-CONTROL_CHANGE_PENALTY = -0.5
+CONTROL_CHANGE_PENALTY = -2
 CONTROL_CHANGE_THRESHOLD = 0.5
 
 

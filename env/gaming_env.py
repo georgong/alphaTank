@@ -407,7 +407,11 @@ class GamingENV:
 
         walls = []
         empty_space = []
-        self.maze = generate_maze(mazewidth, mazeheight)
+        if USE_OCTAGON:
+            self.maze = np.ones((mazeheight, mazewidth), dtype=int)
+            self.maze[1:-1, 1:-1] = 0
+        else:
+            self.maze = generate_maze(mazewidth, mazeheight)
 
         self.grid_map = [[0]*MAZEWIDTH for _ in range(MAZEHEIGHT)]
         for row in range(mazeheight):

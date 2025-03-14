@@ -182,8 +182,8 @@ class Tank:
         self.angle = 0
         self.speed = 0
         self.color = color  # the custom color
-        self.width = 20
-        self.height = 16
+        self.width = TANK_WIDTH
+        self.height = TANK_HEIGHT
         self.alive = True
         self.keys = keys
         self.sharing_env = env
@@ -309,9 +309,10 @@ class Tank:
         # self._aiming_reward()
         
         '''Reward #6 consistency action reward'''
-        self._control_penalty(current_actions)
         # if current_actions is not None:
-        #     self._action_consistency_reward(current_actions)
+        #     self._control_penalty(current_actions)
+
+        #   self._action_consistency_reward(current_actions)
 
     def _rotate_penalty(self):
         """Reward #7: Penalize excessive rotation without movement"""
@@ -473,7 +474,7 @@ class Tank:
         # self._rotate_penalty()
 
         '''Reward #5: aiming reward'''
-        self._aiming_reward()
+        # self._aiming_reward()
         
     
     def _bullet_trajectory_reward(self, bullet_x, bullet_y, rad):
