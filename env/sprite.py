@@ -182,8 +182,8 @@ class Tank:
         self.angle = 0
         self.speed = 0
         self.color = color  # the custom color
-        self.width = 20
-        self.height = 16
+        self.width = TANK_WIDTH
+        self.height = TANK_HEIGHT
         self.alive = True
         self.keys = keys
         self.sharing_env = env
@@ -221,7 +221,6 @@ class Tank:
 
         # aiming reward tracking
         self.aiming_counter = 0  # Add counter for consistent aiming
-        self.AIMING_FRAMES_THRESHOLD = 17
 
         # rotation penalty tracking
         self.total_rotation = 0  # Track accumulated rotation
@@ -293,7 +292,7 @@ class Tank:
         new_corners = self.get_corners(new_x, new_y)
         
         '''Reward #1: hitting the wall'''
-        # self._wall_penalty(new_x, new_y, new_corners)
+        # self._wall_penalty(new_corners)
 
         # make sure tank won't go through the wall
         if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
@@ -309,9 +308,10 @@ class Tank:
         self._aiming_reward()
         
         '''Reward #6 consistency action reward'''
-        # self._control_penalty(current_actions)
-        # if current_actions is not None:
-        #     self._action_consistency_reward(current_actions)
+        if current_actions is not None:
+            self._control_penalty(current_actions)
+
+        #   self._action_consistency_reward(current_actions)
 
     def _rotate_penalty(self):
         """Reward #7: Penalize excessive rotation without movement"""
@@ -443,7 +443,7 @@ class Tank:
         # check if trajectory will hit target
         if trajectory.will_hit_target:
             self.aiming_counter += 1
-            if self.aiming_counter >= self.AIMING_FRAMES_THRESHOLD:
+            if self.aiming_counter >= AIMING_FRAMES_THRESHOLD:
                 self.reward += TRAJECTORY_AIM_REWARD
                 self.aiming_counter = 0
         else:
