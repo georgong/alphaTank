@@ -75,7 +75,7 @@ class MultiAgentEnv(gym.Env):
             for bullet in active_bullets[:self.max_bullets_per_tank]:
                 tank_obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy)])
             while len(active_bullets) < self.max_bullets_per_tank:
-                tank_obs.extend([-99, -99, 0, 0])
+                tank_obs.extend([0, 0, 0, 0])
                 active_bullets.append(None)
 
             # Enemy tanks' positions (excluding itself)
@@ -91,7 +91,7 @@ class MultiAgentEnv(gym.Env):
                     for bullet in enemy_bullets[:self.max_bullets_per_tank]:
                         tank_obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy)])
                     while len(enemy_bullets) < self.max_bullets_per_tank:
-                        tank_obs.extend([-99, -99, 0, 0])
+                        tank_obs.extend([0, 0, 0, 0])
                         enemy_bullets.append(None)
 
             # Wall information
