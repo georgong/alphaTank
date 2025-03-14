@@ -17,7 +17,7 @@ GRAY = (100, 100, 100)
 '''-----------------GAME SETTING-----------------'''
 EPSILON = 0.01  
 ROTATION_SPEED = 1
-BULLET_SPEED = 5
+BULLET_SPEED = 1
 BULLET_MAX_BOUNCES = 2
 BULLET_MAX_DISTANCE = 400 #ensure random action would kill tank
 MAX_BULLETS = 6

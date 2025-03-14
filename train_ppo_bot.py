@@ -24,7 +24,7 @@ wandb.init(
         "max_grad_norm": 0.3,
         "num_steps": 512,
         "num_epochs": 20,
-        "total_timesteps": 100000,
+        "total_timesteps": 200000,
         "auto_reset_interval": 20000,
         "neg_reward_threshold": 0.1,
         "training_agent_index": 0,  # Only train agent 0, agent 1 is handled by the environment
@@ -90,7 +90,7 @@ class PPOAgent(nn.Module):
         return action_tensor, logprobs, entropy, value
 
 def train():
-    env = MultiAgentEnv(mode='bot')
+    env = MultiAgentEnv(mode='bot_agent')
     env.render()
 
     num_tanks = env.num_tanks

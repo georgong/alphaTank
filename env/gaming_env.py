@@ -38,7 +38,7 @@ class GamingENV:
         self.path = None  # Reset BFS path
         
         # Reset strategy bot with new tank if in bot mode
-        if self.mode == "bot":
+        if self.mode == "bot" or self.mode == "bot_agent":
             self.strategy_bot = StrategyBot(self.tanks[0])
 
     def step(self, actions=None):
@@ -103,6 +103,58 @@ class GamingENV:
 
             # Move the human tank
             human_tank.move(current_actions)
+        
+        elif self.mode == "bot_agent":
+            # Get actions from strategy bot for tank 0
+            bot_actions = self.strategy_bot.get_action()
+            
+            # Handle bot tank movements (tank 0)
+            tank = self.tanks[0]
+            # Handle rotation (action[0])
+            if bot_actions[0] == 2:  # Right
+                tank.rotate(-ROTATION_DEGREE)
+            elif bot_actions[0] == 0:  # Left
+                tank.rotate(ROTATION_DEGREE)
+            
+            # Handle movement (action[1])
+            if bot_actions[1] == 2:  # Forward
+                tank.speed = TANK_SPEED
+            elif bot_actions[1] == 0:  # Backward
+                tank.speed = -TANK_SPEED
+            else:
+                tank.speed = 0
+            
+            if bot_actions[2] == 1:  # Shoot
+                tank.shoot()
+
+            # Move the tank after setting speed
+            tank.move(bot_actions)
+
+            # Handle agent controls tank 1
+            if actions is not None:
+                tank = self.tanks[1]
+                rot_cmd, mov_cmd, shoot_cmd = actions[0]
+
+                # Rotate
+                if rot_cmd == 0:
+                    tank.rotate(ROTATION_DEGREE)   # left
+                elif rot_cmd == 2:
+                    tank.rotate(-ROTATION_DEGREE)  # right
+                # else, do nothing for rotation
+
+                # Move
+                if mov_cmd == 0:
+                    tank.speed = TANK_SPEED   # forward
+                elif mov_cmd == 2:
+                    tank.speed = -TANK_SPEED  # backward
+                else:
+                    tank.speed = 1   # "stop"
+
+                # Shoot
+                if shoot_cmd == 1:
+                    tank.shoot()
+            # 5) Now the tank actually moves
+            tank.move(current_actions=actions[0])
 
         elif self.mode == "human_play":
             keys = pygame.key.get_pressed()
