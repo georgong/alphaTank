@@ -2,6 +2,9 @@ import pygame
 
 WIDTH, HEIGHT = 770,770 #环境大小
 MAZEWIDTH, MAZEHEIGHT = 11, 11
+assert WIDTH % MAZEWIDTH == 0, "MAZEWIDTH must divide WIDTH"
+assert WIDTH % MAZEHEIGHT == 0, "MAZEHEIGHT must divide HEIGTH"
+
 GRID_SIZE = WIDTH/MAZEWIDTH  # 迷宫的网格大小
 
 # 颜色定义
@@ -51,6 +54,12 @@ WALL_HIT_PENALTY = -1e-2
 # Stationary Penalty
 STATIONARY_PENALTY = -1e-3
 MOVE_REWARD = 2e-3
+
+# BFS Related Reward
+BFS_FORWARD_REWARD = 0.001
+BFS_BACKWARD_PENALTY = 0.0011
+BFS_PATH_LEN_REWARD = 0.06
+BFS_PATH_LEN_PENALTY = 0.04
 
 # Bullet Trajectory Reward/Penalty
 TRAJECTORY_HIT_REWARD = 1

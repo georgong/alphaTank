@@ -142,12 +142,12 @@ class GamingENV:
                                     # BFS distance decreased => reward
                                     distance_diff = self.last_bfs_dist[i] - current_bfs_dist
                                     
-                                    self.tanks[i].reward += 0.06 * distance_diff
+                                    self.tanks[i].reward += BFS_PATH_LEN_REWARD * distance_diff
                                     
                                 elif current_bfs_dist >= self.last_bfs_dist[i]:
                                     # BFS distance increased => penalize
                                     distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
-                                    self.tanks[i].reward -= 0.04 * distance_diff
+                                    self.tanks[i].reward -= BFS_PATH_LEN_PENALTY * distance_diff
                         self.last_bfs_dist[i] = current_bfs_dist
 
                     # Increment the BFS step counter
@@ -205,9 +205,9 @@ class GamingENV:
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
 
                     if new_dist < old_dist:
-                        self.tanks[i].reward += 0.001 * (old_dist - new_dist)
+                        self.tanks[i].reward += BFS_FORWARD_REWARD * (old_dist - new_dist)
                     elif new_dist > old_dist:
-                        self.tanks[i].reward -= 0.0011 * (new_dist - old_dist)
+                        self.tanks[i].reward -= BFS_BACKWARD_PENALTY * (new_dist - old_dist)
 
             self.run_bfs += 1
 
@@ -239,12 +239,12 @@ class GamingENV:
                                 # BFS distance decreased => reward
                                 distance_diff = self.last_bfs_dist[i] - current_bfs_dist
                                 
-                                self.tanks[i].reward += 0.06 * distance_diff
+                                self.tanks[i].reward += BFS_PATH_LEN_REWARD * distance_diff
                                 
                             elif current_bfs_dist >= self.last_bfs_dist[i]:
                                 # BFS distance increased => penalize
                                 distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
-                                self.tanks[i].reward -= 0.04 * distance_diff
+                                self.tanks[i].reward -= BFS_PATH_LEN_PENALTY * distance_diff
 
 
                         self.last_bfs_dist[i] = current_bfs_dist
@@ -273,11 +273,10 @@ class GamingENV:
                     new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
 
                     if new_dist < old_dist:
-                        self.tanks[i].reward += 5 * (old_dist - new_dist)
+                        self.tanks[i].reward += BFS_FORWARD_REWARD * (old_dist - new_dist)
                     elif new_dist > old_dist:
-                        self.tanks[i].reward -= 5 * (new_dist - old_dist)
+                        self.tanks[i].reward -= BFS_BACKWARD_PENALTY * (new_dist - old_dist)
 
-                    # print("AFTER: ", self.tanks[i].reward)
             self.run_bfs += 1
         self.bullets_trajs = [traj for traj in self.bullets_trajs if not traj.update()]
 
