@@ -25,10 +25,17 @@ def run_play():
         env.render()
         env.step()
 
+def run_bot():
+    """Runs the environment in AI mode."""
+    env = GamingENV(mode="bot")
+    while env.running:
+        env.render()
+        env.step() 
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run MultiAgentEnv in either play or random mode.")
-    parser.add_argument("--mode", type=str, choices=["play", "random"], required=True, help="Select 'play' or 'random' mode.")
+    parser.add_argument("--mode", type=str, choices=["play", "random", "bot"], required=True, help="Select 'play' or 'random' mode.")
 
     args = parser.parse_args()
 
@@ -36,3 +43,5 @@ if __name__ == "__main__":
         run_play()
     elif args.mode == "random":
         run_random()
+    elif args.mode == "bot":
+        run_bot()

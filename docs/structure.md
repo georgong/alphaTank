@@ -54,6 +54,12 @@ This section describes the **configurable parameters** used in the game environm
 | `Tank1` | `TeamA` | `GREEN` | `WASD` (Move), `F` (Shoot) |
 | `Tank2` | `TeamB` | `RED` | `Arrow Keys` (Move), `Space` (Shoot) |
 
+#### **Keyboard Controls**
+| **Functionality** | **Controls** |
+|---------|---------|
+| **visualize bullet trajectory**  | `t` |
+| **visualize aiming** | `v` |
+
 ---
 
 ### **Reward System (Reinforcement Learning)**
@@ -63,6 +69,11 @@ This section describes the **configurable parameters** used in the game environm
 | `TEAM_HIT_PENALTY` | `-20` | **Penalty for hitting a teammate** |
 | `OPPONENT_HIT_REWARD` | `+30` | **Reward for hitting an enemy** |
 | `VICTORY_REWARD` | `+50` | **Reward for winning the game** |
+
+Reward Function
+- **Wall Hit Penalty**: Applied when the tank hits a wall. A stronger penalty is applied for consecutive hits. 
+- **Closer Reward**: Applied when the tank moves closer to an opponent.
+- **Stationary Penalty**: Applied when the tank remains stationary for a certain number of frames.
 
 ---
 

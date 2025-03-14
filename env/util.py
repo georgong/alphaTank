@@ -45,3 +45,19 @@ def obb_vs_aabb(obb_corners, aabb_rect):
         if is_separating_axis(axis, obb_corners, aabb_corners):
             return False  # 存在分离轴，无碰撞
     return True  # 所有轴都重叠，有碰撞
+
+def angle_to_vector(angle, speed, r=1):
+    """将角度拆分为 dx, dy 两个分量"""
+    angle_rad = math.radians(angle)  # 角度转换为弧度
+    dx = speed * r * math.cos(angle_rad)
+    dy = speed * r * math.sin(angle_rad)
+    return dx, dy
+
+def corner_to_xy(tank):
+    corner1,corner2,corner3,corner4 = tank.get_corners()
+    return float(corner1.x), float(corner1.y), float(corner2.x), float(corner2.y), float(corner3.x), float(corner3.y), float(corner4.x), float(corner4.y)
+
+def euclidean_distance(cell_a, cell_b):
+    (r1, c1) = cell_a
+    (r2, c2) = cell_b
+    return math.sqrt((r1 - r2) ** 2 + (c1 - c2) ** 2)
