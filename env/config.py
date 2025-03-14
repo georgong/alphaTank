@@ -54,11 +54,11 @@ TRAJECTORY_AIM_REWARD = 0.1    # Reward for aiming at target
 ACTION_CONSISTENCY_REWARD = 0.05  # Reward for maintaining consistent actions
 ACTION_CHANGE_PENALTY = -0.005  # Small penalty for changing actions frequently
 
-ROTATION_PENALTY = -2  # Penalty for excessive rotation
-ROTATION_THRESHOLD = 40  # Total rotation before penalty (in degrees)
-ROTATION_RESET_DISTANCE = 30  # Distance to move before resetting rotation counter
+ROTATION_PENALTY = -10  # Penalty for excessive rotation
+ROTATION_THRESHOLD = 20  # Total rotation before penalty (in degrees)
+ROTATION_RESET_DISTANCE = 50  # Distance to move before resetting rotation counter
 
-CONTROL_CHANGE_PENALTY = -5
+CONTROL_CHANGE_PENALTY = -2
 CONTROL_CHANGE_THRESHOLD = 0.5
 
 # Keyboard Setting

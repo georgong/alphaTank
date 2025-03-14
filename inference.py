@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from env.gym_env import MultiAgentEnv
-from train_ppo import PPOAgent
+from train_ppo import PPOAgent, RunningMeanStd
 
 def load_agents(env, device):
     """Loads trained agents from the saved models."""
@@ -29,15 +29,19 @@ def run_inference():
 
     obs, _ = env.reset()
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
+    obs_dim = env.observation_space.shape[0] // len(agents)
+    obs_norm = RunningMeanStd(shape=(env.num_tanks, obs_dim), device=device)
 
     while True:
         with torch.no_grad():
+            obs_norm.update(obs)
+            obs = obs_norm.normalize(obs)
             actions_list = [
                 agent.get_action_and_value(obs[i])[0].cpu().numpy().tolist()
                 for i, agent in enumerate(agents)
             ]
 
-        next_obs_np, reward_np, done_np, _, _ = env.step(actions_list)
+        next_obs_np, _, done_np, _, _ = env.step(actions_list)
         obs = torch.tensor(next_obs_np, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
 
         if np.any(done_np):
