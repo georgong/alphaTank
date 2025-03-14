@@ -303,14 +303,14 @@ class Tank:
         # self._closer_reward()
         
         '''Reward #3: stationary penalty'''
-        # self._stationary_penalty()
+        self._stationary_penalty()
         
         '''Reward #5: aiming reward'''
-        # self._aiming_reward()
+        self._aiming_reward()
         
         '''Reward #6 consistency action reward'''
-        # if current_actions is not None:
-        #     self._control_penalty(current_actions)
+        if current_actions is not None:
+            self._control_penalty(current_actions)
 
         #   self._action_consistency_reward(current_actions)
 
@@ -474,7 +474,7 @@ class Tank:
         # self._rotate_penalty()
 
         '''Reward #5: aiming reward'''
-        # self._aiming_reward()
+        self._aiming_reward()
         
     
     def _bullet_trajectory_reward(self, bullet_x, bullet_y, rad):
