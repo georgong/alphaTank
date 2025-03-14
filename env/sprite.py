@@ -407,7 +407,7 @@ class Tank:
                 penalty += CONTROL_CHANGE_PENALTY
 
         self.reward += penalty
-        self.previous_actions = action_types  # update last action state
+        self.previous_actions = action_types
         
 
     def _stationary_penalty(self):

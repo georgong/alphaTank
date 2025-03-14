@@ -83,7 +83,7 @@ class GamingENV:
                 tank.shoot()
 
             # Move the tank after setting speed
-            tank.move()
+            tank.move(bot_actions)
 
             # Handle human controls for tank 1
             human_tank = self.tanks[1]
@@ -94,9 +94,15 @@ class GamingENV:
                 elif keys[human_tank.keys["down"]]: human_tank.speed = -5
                 else: human_tank.speed = 0
                 if keys[human_tank.keys["shoot"]]: human_tank.shoot()
+            
+            current_actions = [
+            2 if keys[tank.keys["up"]] else (0 if keys[tank.keys["down"]] else 1),  # Movement
+            2 if keys[tank.keys["right"]] else (0 if keys[tank.keys["left"]] else 1),  # Rotation
+            1 if keys[tank.keys["shoot"]] else 0  # Shooting
+            ]
 
             # Move the human tank
-            human_tank.move()
+            human_tank.move(current_actions)
 
         elif self.mode == "human_play":
             keys = pygame.key.get_pressed()
@@ -209,7 +215,7 @@ class GamingENV:
         else:
             for tank in self.tanks:
                 i = self.tanks.index(tank)
-                overall_bfs_dist = 0
+                # overall_bfs_dist = 0
                 
                 # 2) BFS path
                 my_pos = tank.get_grid_position() 
