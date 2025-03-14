@@ -25,7 +25,7 @@ BULLET_COOLDOWN = 300
 STATIONARY_EPSILON = 3
 
 # Map setting
-USE_OCTAGON = True
+USE_OCTAGON = False # 八角笼斗
 
 # Tank control setting
 ROTATION_DEGREE = 5         # ->  2, Right, negative, || 0, left, positive
@@ -43,14 +43,12 @@ tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
 }}
 }
 
-
-
 '''----------------REWARD CONFIG----------------'''
 # Victory Reward
-HIT_PENALTY = -5          # punishement of being hit
+HIT_PENALTY = -50          # punishement of being hit
 TEAM_HIT_PENALTY = -5      # punishment of hitting teamate
-OPPONENT_HIT_REWARD = 5    # reward of hitting enemy
-VICTORY_REWARD = 5    
+OPPONENT_HIT_REWARD = 50   # reward of hitting enemy
+VICTORY_REWARD = 50
 
 # Wall Hit Penalty
 WALL_HIT_THRESHOLD = 8

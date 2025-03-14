@@ -399,28 +399,82 @@ class GamingENV:
                 if tank.alive:
                     tank.reward += VICTORY_REWARD
 
+    # def constructWall(self):
+    #     # define constant variables
+    #     mazewidth = MAZEWIDTH
+    #     mazeheight = MAZEHEIGHT
 
+    #     walls = []
+    #     empty_space = []
+    #     if USE_OCTAGON:
+    #         self.maze = np.ones((mazeheight, mazewidth), dtype=int)
+    #         self.maze[1:-1, 1:-1] = 0
+    #     else:
+    #         self.maze = generate_maze(mazewidth, mazeheight)
+
+    #     self.grid_map = [[0]*MAZEWIDTH for _ in range(MAZEHEIGHT)]
+    #     for row in range(mazeheight):
+    #         for col in range(mazewidth):
+    #             if self.maze[row, col] == 1:
+    #                 walls.append(Wall(col * self.GRID_SIZE, row * self.GRID_SIZE, self))
+    #             else:
+    #                 empty_space.append((col * self.GRID_SIZE,row * self.GRID_SIZE))
+    #     return walls,empty_space
+    
+    
     def constructWall(self):
-        # define constant variables
+        """
+        Creates a battlefield-style map with cover instead of a random maze.
+        """
         mazewidth = MAZEWIDTH
         mazeheight = MAZEHEIGHT
 
         walls = []
         empty_space = []
+
         if USE_OCTAGON:
             self.maze = np.ones((mazeheight, mazewidth), dtype=int)
-            self.maze[1:-1, 1:-1] = 0
+            self.maze[1:-1, 1:-1] = 0  # Keep open space in the middle
         else:
-            self.maze = generate_maze(mazewidth, mazeheight)
+            # Create a battlefield layout instead of a maze
+            self.maze = np.zeros((mazeheight, mazewidth), dtype=int)
 
-        self.grid_map = [[0]*MAZEWIDTH for _ in range(MAZEHEIGHT)]
+            # 1. Border walls (players can't escape)
+            self.maze[0, :] = 1  # Top border
+            self.maze[-1, :] = 1  # Bottom border
+            self.maze[:, 0] = 1  # Left border
+            self.maze[:, -1] = 1  # Right border
+
+            # 2. Central covers (midfield obstacles)
+            center_x, center_y = mazewidth // 2, mazeheight // 2
+            self.maze[center_y, center_x] = 1
+            self.maze[center_y - 1, center_x] = 1
+            self.maze[center_y + 1, center_x] = 1
+            self.maze[center_y, center_x - 1] = 1
+            self.maze[center_y, center_x + 1] = 1
+
+            # 3. Side covers (Tactical areas)
+            cover_positions = [
+                (2, 3), (2, 4), (2, 5), (2, 6), (2, 7),  # Top-left cover
+                (mazewidth - 3, 3), (mazewidth - 3, 4), (mazewidth - 3, 5), (mazewidth - 3, 6), (mazewidth - 3, 7),  # Bottom-left cover
+                (4, 8), (5, 8), (6, 8),  # Right-side vertical cover
+                (4, 2), (5, 2), (6, 2),  # Left-side vertical cover
+            ]
+
+            for (r, c) in cover_positions:
+                self.maze[r, c] = 1
+
+        # Convert the grid into wall objects
+        self.grid_map = [[0] * mazewidth for _ in range(mazeheight)]
         for row in range(mazeheight):
             for col in range(mazewidth):
                 if self.maze[row, col] == 1:
                     walls.append(Wall(col * self.GRID_SIZE, row * self.GRID_SIZE, self))
                 else:
-                    empty_space.append((col * self.GRID_SIZE,row * self.GRID_SIZE))
-        return walls,empty_space
+                    empty_space.append((col * self.GRID_SIZE, row * self.GRID_SIZE))
+
+        return walls, empty_space
+
     
 
     def euclidean_distance(self, cell_a, cell_b):

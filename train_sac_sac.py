@@ -24,7 +24,6 @@ wandb.init(project="multiagent-sac", config={
     "max_grad_norm": 5.0
 })
 
-
 class Actor(nn.Module):
     def __init__(self, obs_dim, act_dim):
         super().__init__()

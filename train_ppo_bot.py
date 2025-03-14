@@ -90,7 +90,7 @@ class PPOAgent(nn.Module):
         return action_tensor, logprobs, entropy, value
 
 def train():
-    env = MultiAgentEnv(mode='bot')
+    env = MultiAgentEnv(mode='bot') # bot is part of the environment
     env.render()
 
     num_tanks = env.num_tanks
@@ -138,16 +138,13 @@ def train():
         for step in range(num_steps):
             global_step += 1
             
-            # Normalize observations for our agent
             obs_norm = RunningMeanStd(shape=(obs_dim,), device=device)
             obs_norm.update(next_obs[training_agent_index].unsqueeze(0))
             normalized_obs = obs_norm.normalize(next_obs[training_agent_index].unsqueeze(0)).squeeze(0)
             
-            # Store the observation and done flag for the training agent
             obs[step] = normalized_obs
             dones[step] = next_done[training_agent_index]
 
-            # Get action from our agent
             with torch.no_grad():
                 action_tensor, logprob_tensor, _, value_tensor = agent.get_action_and_value(normalized_obs)
                 actions[step] = action_tensor
