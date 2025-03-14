@@ -67,15 +67,15 @@ class GamingENV:
             tank = self.tanks[0]
             # Handle rotation (action[0])
             if bot_actions[0] == 2:  # Right
-                tank.rotate(-3)
+                tank.rotate(-ROTATION_DEGREE)
             elif bot_actions[0] == 0:  # Left
-                tank.rotate(3)
+                tank.rotate(ROTATION_DEGREE)
             
             # Handle movement (action[1])
             if bot_actions[1] == 2:  # Forward
-                tank.speed = 5
+                tank.speed = TANK_SPEED
             elif bot_actions[1] == 0:  # Backward
-                tank.speed = -5
+                tank.speed = -TANK_SPEED
             else:
                 tank.speed = 0
             
@@ -88,10 +88,10 @@ class GamingENV:
             # Handle human controls for tank 1
             human_tank = self.tanks[1]
             if human_tank.keys:
-                if keys[human_tank.keys["left"]]: human_tank.rotate(3)
-                if keys[human_tank.keys["right"]]: human_tank.rotate(-3)
-                if keys[human_tank.keys["up"]]: human_tank.speed = 5
-                elif keys[human_tank.keys["down"]]: human_tank.speed = -5
+                if keys[human_tank.keys["left"]]: human_tank.rotate(ROTATION_DEGREE)
+                if keys[human_tank.keys["right"]]: human_tank.rotate(-ROTATION_DEGREE)
+                if keys[human_tank.keys["up"]]: human_tank.speed = TANK_SPEED
+                elif keys[human_tank.keys["down"]]: human_tank.speed = -TANK_SPEED
                 else: human_tank.speed = 0
                 if keys[human_tank.keys["shoot"]]: human_tank.shoot()
             
@@ -154,10 +154,10 @@ class GamingENV:
                     self.run_bfs += 1
                     
                 if tank.keys:
-                    if keys[tank.keys["left"]]: tank.rotate(1)  
-                    elif keys[tank.keys["right"]]: tank.rotate(-1) 
-                    if keys[tank.keys["up"]]: tank.speed = 4 
-                    elif keys[tank.keys["down"]]: tank.speed = -4
+                    if keys[tank.keys["left"]]: tank.rotate(ROTATION_DEGREE)  
+                    elif keys[tank.keys["right"]]: tank.rotate(-ROTATION_DEGREE) 
+                    if keys[tank.keys["up"]]: tank.speed = TANK_SPEED 
+                    elif keys[tank.keys["down"]]: tank.speed = -TANK_SPEED
                     else: tank.speed = 0  
                     if keys[tank.keys["shoot"]]: tank.shoot()  
                     
@@ -176,16 +176,16 @@ class GamingENV:
                     
                     # Rotate
                     if rot_cmd == 0:
-                        tank.rotate(1)   # left
+                        tank.rotate(ROTATION_DEGREE)   # left
                     elif rot_cmd == 2:
-                        tank.rotate(-1)  # right
+                        tank.rotate(-ROTATION_DEGREE)  # right
                     # else, do nothing for rotation
 
                     # Move
                     if mov_cmd == 0:
-                        tank.speed = 2   # forward
+                        tank.speed = TANK_SPEED   # forward
                     elif mov_cmd == 2:
-                        tank.speed = -2  # backward
+                        tank.speed = -TANK_SPEED  # backward
                     else:
                         tank.speed = 1   # "stop"
 
@@ -253,11 +253,11 @@ class GamingENV:
                     self.run_bfs += 1
                 
                 i = self.tanks.index(tank)  # **获取坦克索引**
-                if actions[i][0] == 2: tank.rotate(1)  # **左转**
-                elif actions[i][0] == 0: tank.rotate(-1)  # **右转**
+                if actions[i][0] == 0: tank.rotate(ROTATION_DEGREE)  # **左转**
+                elif actions[i][0] == 2: tank.rotate(-ROTATION_DEGREE)  # **右转**
                 else: pass
-                if actions[i][1] == 2: tank.speed = 4  # **前进**
-                elif actions[i][1] == 0: tank.speed = -4  # **后退**
+                if actions[i][1] == 2: tank.speed = TANK_SPEED  # **前进**
+                elif actions[i][1] == 0: tank.speed = -TANK_SPEED  # **后退**
                 else: tank.speed = 0  # **停止** 
                 if actions[i][2] == 1: tank.shoot()  # **射击**
                 else: pass
