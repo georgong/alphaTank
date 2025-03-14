@@ -1,5 +1,5 @@
 # **🚀 Alpha Tank - Multi-Agent Tank Battle**
-**Alpha Tank** is a **multi-agent tank battle** game built with **Pygame** and designed for **Reinforcement Learning (RL) training**
+**Alpha Tank** is a **multi-agent tank battle** game built with Pygame and designed for Reinforcement Learning (RL) training. We want to create a **fully customizable RL pipeline** (from environment to learning algorithms) as a deomstartion of showcasing how RL may learn from their opponents (depends on who, maybe another RL agent (i.e. PPO, SAC) or an intelligent bot (i.e. BFS bot, A* bot)) and use their charcteristics, along with the environement setup, to fight againts them and optimzie the reward.
 
 ## **🛠 Installation**
 ### **1️⃣ Create a Conda Environment**
@@ -24,14 +24,12 @@ pip install -r requirements.txt
 - Press **`R`** to reset the game.
 - **Bullets will bounce off walls**
 
-```python
-python play_env.py --mode play
-```
----
 
 ## **🤖 Random Action Rendering**
 ```python
+python play_env.py --mode play
 python play_env.py --mode random
+python play_env.py --mode bot
 ```
 
 ---
@@ -40,7 +38,13 @@ python play_env.py --mode random
 ```python
 python train_ppo_bot.py
 python train_ppo_ppo.py
-python train_sac_sac.py
+```
+
+---
+## **🤖 Inference Rendering**
+```python
+python inference.py --mode bot
+python inference.py --mode agent
 ```
 
 ---
