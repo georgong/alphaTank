@@ -24,7 +24,7 @@ wandb.init(
         "max_grad_norm": 0.3,
         "num_steps": 512,
         "num_epochs": 20,
-        "total_timesteps": 200000,
+        "total_timesteps": 100000,
         "auto_reset_interval": 20000,
         "neg_reward_threshold": 0.1,
         "training_agent_index": 1,  # Only train agent 1, agent 0 is handled by the environment (bot)
@@ -159,7 +159,7 @@ def train():
             next_obs_np, reward_np, done_np, _, _ = env.step(actions_np)
             
             rewards[step] = torch.tensor(reward_np[training_agent_index], dtype=torch.float32, device=device)
-            next_done[training_agent_index] = torch.tensor(done_np, dtype=torch.float32, device=device)
+            next_done[training_agent_index] = torch.tensor(done_np, dtype=torch.float32, device=device) # done is shared across agents
             next_obs = torch.tensor(next_obs_np, dtype=torch.float32, device=device).reshape(num_tanks, obs_dim)
 
             if (np.any(done_np) or

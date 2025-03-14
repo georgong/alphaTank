@@ -54,7 +54,7 @@ class GamingENV:
         for buff_pos in self.buff_zones:
             buff_rect = pygame.Rect(buff_pos[0], buff_pos[1], GRID_SIZE * 3.5, GRID_SIZE * 3.5)
             if tank_rect.colliderect(buff_rect) and BUFF_ON:
-                print(f'\nTank {tank.team} got buffed!')
+                # print(f'\nTank {tank.team} got buffed!')
                 tank.max_bullets = 30
                 break
         else:
@@ -63,7 +63,7 @@ class GamingENV:
         for debuff_pos in self.debuff_zones:
             debuff_rect = pygame.Rect(debuff_pos[0], debuff_pos[1], GRID_SIZE * 3.5, GRID_SIZE * 3.5)
             if tank_rect.colliderect(debuff_rect) and DEBUFF_ON:
-                print(f'\nTank {tank.team} got debuffed!')
+                # print(f'\nTank {tank.team} got debuffed!')
                 tank.max_bullets = 1  
                 break
         else:
@@ -163,11 +163,12 @@ class GamingENV:
             # Move the tank after setting speed
             tank.move(bot_actions)
 
-            # Handle agent controls tank 1
+            # Handle agent controls tank 1, convineient for more actions
             if actions is not None:
+                # print(actions)
                 tank = self.tanks[1]
                 self.check_buff_debuff(tank)
-                rot_cmd, mov_cmd, shoot_cmd = actions[0]
+                rot_cmd, mov_cmd, shoot_cmd = actions[1] # actions[0] shoul always be [0,0,0]
 
                 # Rotate
                 if rot_cmd == 0:
@@ -187,8 +188,9 @@ class GamingENV:
                 # Shoot
                 if shoot_cmd == 1:
                     tank.shoot()
+            
             # 5) Now the tank actually moves
-            tank.move(current_actions=actions[0])
+            tank.move(current_actions=actions[1])
 
         elif self.mode == "human_play":
             keys = pygame.key.get_pressed()
