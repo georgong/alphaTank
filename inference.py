@@ -16,7 +16,7 @@ def load_agents(env, device, mode='agent'):
         if mode=='agent':
             model_path = f"checkpoints/ppo_agent_{i}.pt"
         elif mode=='bot':
-            model_path = f"checkpoints/ppo_agent_bot.pt"
+            model_path = f"good_checkpoints/ppo_agent_bot.pt"
         agent.load_state_dict(torch.load(model_path, map_location=device))
         agent.eval() 
         print(f"[INFO] Loaded model for Agent {i} from {model_path}")

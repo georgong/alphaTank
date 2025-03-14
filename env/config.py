@@ -1,6 +1,6 @@
 import pygame
 
-WIDTH, HEIGHT = 770,770 #环境大小
+WIDTH, HEIGHT = 770, 770 #环境大小
 MAZEWIDTH, MAZEHEIGHT = 11, 11
 assert WIDTH % MAZEWIDTH == 0, "MAZEWIDTH must divide WIDTH"
 assert WIDTH % MAZEHEIGHT == 0, "MAZEHEIGHT must divide HEIGTH"
@@ -19,17 +19,27 @@ EPSILON = 0.01
 ROTATION_SPEED = 1
 BULLET_SPEED = 1
 BULLET_MAX_BOUNCES = 2
-BULLET_MAX_DISTANCE = 400 #ensure random action would kill tank
+BULLET_MAX_DISTANCE = 400
 MAX_BULLETS = 6
 BULLET_COOLDOWN = 300 
 STATIONARY_EPSILON = 3
 
+'''-----------------BULLET DOUEDGE SETTING-----------------'''
+# EPSILON = 0.01  
+# ROTATION_SPEED = 1
+# BULLET_SPEED = 1
+# BULLET_MAX_BOUNCES = 20
+# BULLET_MAX_DISTANCE = 600
+# MAX_BULLETS = 30
+# BULLET_COOLDOWN = 300 
+# STATIONARY_EPSILON = 3
+
 # Map setting
-USE_OCTAGON = False # 八角笼斗
+USE_OCTAGON = True # 八角笼斗
 
 # Tank control setting
 ROTATION_DEGREE = 5         # ->  2, Right, negative, || 0, left, positive
-TANK_SPEED = 10              # ->  2, Forward, positive || 0, Backward, negative
+TANK_SPEED = 20              # ->  2, Forward, positive || 0, Backward, negative
 
 # Tank Setting
 TANK_WIDTH = 30
