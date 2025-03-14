@@ -13,7 +13,7 @@ from env.bots.strategy_bot import StrategyBot
 
 
 class GamingENV:
-    def __init__(self, mode="human_play"):
+    def __init__(self, mode="human_play", type="train"):
         self.screen = None
         self.running = True
         self.clock = None
@@ -21,6 +21,7 @@ class GamingENV:
         self.path = None
         self.maze = None
         self.mode = mode  # Set mode before reset
+        self.type = type
         self.last_bfs_dist = [None] * 2
         self.run_bfs = 0
         self.visualize_traj = VISUALIZE_TRAJ
@@ -168,7 +169,8 @@ class GamingENV:
                 # print(actions)
                 tank = self.tanks[1]
                 self.check_buff_debuff(tank)
-                rot_cmd, mov_cmd, shoot_cmd = actions[1] # actions[0] shoul always be [0,0,0]
+                correct_index = 1 if self.type == "train" else 0
+                rot_cmd, mov_cmd, shoot_cmd = actions[correct_index] # actions[0] shoul always be [0,0,0], inference only have one list
 
                 # Rotate
                 if rot_cmd == 0:
@@ -190,7 +192,7 @@ class GamingENV:
                     tank.shoot()
             
             # 5) Now the tank actually moves
-            tank.move(current_actions=actions[1])
+            tank.move(current_actions=actions[correct_index])
 
         elif self.mode == "human_play":
             keys = pygame.key.get_pressed()

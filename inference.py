@@ -28,7 +28,7 @@ def run_inference(mode):
     """Runs a trained PPO model in the environment."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if mode == 'bot':
-        env = MultiAgentEnv(mode='bot_agent')
+        env = MultiAgentEnv(mode='bot_agent', type='inference')
     elif mode == 'agent':
         env = MultiAgentEnv()
     env.render()

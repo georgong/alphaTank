@@ -90,7 +90,7 @@ class PPOAgent(nn.Module):
         return action_tensor, logprobs, entropy, value
 
 def train():
-    env = MultiAgentEnv(mode='bot_agent')
+    env = MultiAgentEnv(mode='bot_agent', type='train')
     env.render()
 
     num_tanks = env.num_tanks
