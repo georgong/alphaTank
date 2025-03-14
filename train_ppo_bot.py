@@ -9,12 +9,11 @@ import torch.optim as optim
 import wandb
 from tqdm import tqdm
 from torch.distributions.categorical import Categorical
-import gym
 
 from env.gym_env import MultiAgentEnv
 
 wandb.init(
-    project="multiagent-ppo",
+    project="singleagent-ppo",
     config={
         "learning_rate": 3e-4,
         "gamma": 0.99,
@@ -28,6 +27,7 @@ wandb.init(
         "total_timesteps": 100000,
         "auto_reset_interval": 20000,
         "neg_reward_threshold": 0.1,
+        "training_agent_index": 0,  # Only train agent 0, agent 1 is handled by the environment
     }
 )
 
@@ -90,17 +90,19 @@ class PPOAgent(nn.Module):
         return action_tensor, logprobs, entropy, value
 
 def train():
-    env = MultiAgentEnv()
+    env = MultiAgentEnv(mode='bot')
     env.render()
 
     num_tanks = env.num_tanks
     obs_dim = env.observation_space.shape[0] // num_tanks  
     act_dim = env.action_space.nvec[:3]  # assume multi-discrete action space
-
+    
+    training_agent_index = wandb.config.training_agent_index
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    agents = [PPOAgent(obs_dim, act_dim).to(device) for _ in range(num_tanks)]
-    optimizers = [optim.Adam(agent.parameters(), lr=wandb.config.learning_rate, eps=1e-5) for agent in agents]
+    # only the training agent
+    agent = PPOAgent(obs_dim, act_dim).to(device)
+    optimizer = optim.Adam(agent.parameters(), lr=wandb.config.learning_rate, eps=1e-5)
 
     num_steps = wandb.config.num_steps
     num_epochs = wandb.config.num_epochs
@@ -125,47 +127,47 @@ def train():
     for iteration in progress_bar:
         reset_count = 0
         
-        obs = torch.zeros((num_steps, num_tanks, obs_dim), device=device)
-        
-        actions = torch.zeros((num_steps, num_tanks, 3), device=device)
-        logprobs = torch.zeros((num_steps, num_tanks, 3), device=device)
-        rewards = torch.zeros((num_steps, num_tanks), device=device)
-        dones = torch.zeros((num_steps + 1, num_tanks), device=device)
-        values = torch.zeros((num_steps + 1, num_tanks), device=device)
+        # only track data for the agent we're training
+        obs = torch.zeros((num_steps, obs_dim), device=device)
+        actions = torch.zeros((num_steps, 3), device=device)
+        logprobs = torch.zeros((num_steps, 3), device=device)
+        rewards = torch.zeros(num_steps, device=device)
+        dones = torch.zeros(num_steps + 1, device=device)
+        values = torch.zeros(num_steps + 1, device=device)
 
         for step in range(num_steps):
             global_step += 1
             
-            obs_norm = RunningMeanStd(shape=(num_tanks, obs_dim), device=device)
-            obs_norm.update(next_obs)
-            next_obs = obs_norm.normalize(next_obs)
+            # Normalize observations for our agent
+            obs_norm = RunningMeanStd(shape=(obs_dim,), device=device)
+            obs_norm.update(next_obs[training_agent_index].unsqueeze(0))
+            normalized_obs = obs_norm.normalize(next_obs[training_agent_index].unsqueeze(0)).squeeze(0)
             
-            obs[step] = next_obs
-            dones[step] = next_done
+            # Store the observation and done flag for the training agent
+            obs[step] = normalized_obs
+            dones[step] = next_done[training_agent_index]
 
+            # Get action from our agent
             with torch.no_grad():
-                actions_list, logprobs_list, _, values_list = zip(*[
-                    agents[i].get_action_and_value(next_obs[i]) for i in range(num_tanks)
-                ])
-
-            actions_tensor = torch.stack(actions_list, dim=0).to(device)
-            logprobs_tensor = torch.stack(logprobs_list, dim=0).to(device)
-            values_tensor = torch.stack(values_list, dim=0).squeeze(-1).to(device)
-
-            actions[step] = actions_tensor
-            logprobs[step] = logprobs_tensor
-            values[step] = values_tensor
-
-            actions_np = actions_tensor.cpu().numpy().astype(int).reshape(env.num_tanks, 3).tolist()
+                action_tensor, logprob_tensor, _, value_tensor = agent.get_action_and_value(normalized_obs)
+                actions[step] = action_tensor
+                logprobs[step] = logprob_tensor
+                values[step] = value_tensor.squeeze(-1)
+            
+            # For the trained agent, use our neural network's action
+            # For the opponent agent, the environment will handle it internally
+            actions_np = [[0, 0, 0] for _ in range(num_tanks)]
+            actions_np[training_agent_index] = action_tensor.cpu().numpy().astype(int).tolist()
+            
             next_obs_np, reward_np, done_np, _, _ = env.step(actions_np)
-
-            rewards[step] = torch.tensor(reward_np, dtype=torch.float32, device=device)
-            next_done = torch.tensor(done_np, dtype=torch.float32, device=device)
+            
+            rewards[step] = torch.tensor(reward_np[training_agent_index], dtype=torch.float32, device=device)
+            next_done[training_agent_index] = torch.tensor(done_np, dtype=torch.float32, device=device)
             next_obs = torch.tensor(next_obs_np, dtype=torch.float32, device=device).reshape(num_tanks, obs_dim)
 
             if (np.any(done_np) or
                 (global_step % auto_reset_interval == 0 and global_step > 0) or
-                np.any(reward_np < -neg_reward_threshold)
+                np.any(np.array(reward_np) < -neg_reward_threshold)
                 ):
                 
                 reset_count += 1
@@ -173,81 +175,66 @@ def train():
                 next_obs = torch.tensor(next_obs, dtype=torch.float32, device=device).reshape(num_tanks, obs_dim)
                 next_done = torch.zeros(num_tanks, device=device)
 
-        # with torch.no_grad():
-        #     next_values = torch.stack([agents[i].get_value(next_obs[i]) for i in range(num_tanks)]).squeeze(-1)
-        #     advantages = torch.zeros_like(rewards, device=device)
-        #     last_gae = 0
-
-        #     for t in reversed(range(num_steps)):
-        #         delta = rewards[t] + gamma * next_values * (1 - dones[t]) - values[t] # GAE correct
-        #         last_gae = delta + gamma * gae_lambda * (1 - dones[t]) * last_gae
-        #         advantages[t] = last_gae
-
-        #     returns = advantages + values
-        
-        # GAE computed once, vectorized operaytion
         with torch.no_grad():
-            values[-1] = torch.stack([agents[i].get_value(next_obs[i]) for i in range(num_tanks)]).squeeze(-1)
-
+            next_value = agent.get_value(normalized_obs).squeeze(-1)
+            values[num_steps] = next_value
+            
             advantages = torch.zeros_like(rewards, device=device)
             last_gae = 0
 
             for t in reversed(range(num_steps)):
                 next_non_terminal = 1.0 - dones[t+1]
-                delta = rewards[t] + gamma * values[t+1] * next_non_terminal - values[t] # δ_t = r_t +γ(1−d_{t+1})V(s_{t+1}) − V(s_t)
-                last_gae = delta + gamma * gae_lambda * next_non_terminal * last_gae # A_t = δ_t + γλ(1−d_{t+1})A_{t+1}
-
+                delta = rewards[t] + gamma * values[t+1] * next_non_terminal - values[t]
+                last_gae = delta + gamma * gae_lambda * next_non_terminal * last_gae
                 advantages[t] = last_gae
             
             advantages = (advantages - advantages.mean()) / (advantages.std() + 1e-8)
-            
             returns = advantages + values[:-1]
             
+        b_obs = obs
+        b_actions = actions
+        b_logprobs = logprobs
+        b_advantages = advantages.reshape(-1, 1)
+        b_returns = returns
+        b_values = values[:-1]
+
+        for _ in range(num_epochs):
+            _, new_logprobs, entropy, new_values = agent.get_action_and_value(b_obs, b_actions)
             
-        for i, agent in enumerate(agents):
-            b_obs = obs[:, i].reshape((-1, obs_dim))
-            b_actions = actions[:, i].reshape((-1, 3))
-            b_logprobs = logprobs[:, i].reshape(-1, 3)
-            b_advantages = advantages[:, i].reshape(-1, 1)
-            b_returns = returns[:, i].reshape(-1)
-            b_values = values[:-1, i].reshape(-1)
+            logratio = new_logprobs - b_logprobs
+            ratio = torch.exp(logratio.sum(dim=1, keepdim=True).clamp(-10, 10))
+            
+            pg_loss_1 = -b_advantages * ratio
+            pg_loss_2 = -b_advantages * torch.clamp(ratio, 1 - clip_coef, 1 + clip_coef)
+            pg_loss = torch.max(pg_loss_1, pg_loss_2).mean()
 
-            for _ in range(num_epochs):
-                _, new_logprobs, entropy, new_values = agent.get_action_and_value(b_obs, b_actions)
-                logratio = new_logprobs - b_logprobs
-                ratio = torch.exp(logratio.clamp(-10, 10))
- 
-                pg_loss_1 = -b_advantages * ratio
-                pg_loss_2 = -b_advantages * torch.clamp(ratio, 1 - clip_coef, 1 + clip_coef)
-                pg_loss = torch.max(pg_loss_1, pg_loss_2).mean()
+            v_loss = 0.5 * ((new_values.squeeze() - b_returns) ** 2).mean()
+            
+            entropy_loss = entropy.mean()
+            
+            loss = pg_loss - ent_coef * entropy_loss + vf_coef * v_loss
 
-                v_loss = 0.5 * ((new_values - b_returns) ** 2).mean()
-                entropy_loss = entropy.mean()
-                loss = pg_loss - ent_coef * entropy_loss + vf_coef * v_loss
-
-                optimizers[i].zero_grad()
-                loss.backward()
-                nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
-                optimizers[i].step()
-
-                wandb.log({
-                    f"agent_{i}/reward": rewards[:, i].mean().item(),
-                    f"agent_{i}/policy_loss": pg_loss.item(),
-                    f"agent_{i}/value_loss": v_loss.item(),
-                    f"agent_{i}/entropy_loss": entropy_loss.item(),
-                    # f"agent_{i}/approx_kl": (ratio - 1 - logratio.sum(dim=1)).mean().item(),
-                    f"agent_{i}/explained_variance": 1 - ((b_returns - b_values) ** 2).mean() / b_returns.var(),
-                    "iteration": iteration,
-                    "env/reset_count": reset_count
-                })
+            optimizer.zero_grad()
+            loss.backward()
+            nn.utils.clip_grad_norm_(agent.parameters(), max_grad_norm)
+            optimizer.step()
+            
+            wandb.log({
+                "agent/reward": rewards.mean().item(),
+                "agent/policy_loss": pg_loss.item(),
+                "agent/value_loss": v_loss.item(),
+                "agent/entropy_loss": entropy_loss.item(),
+                "agent/explained_variance": 1 - ((b_returns - b_values) ** 2).mean() / b_returns.var(),
+                "iteration": iteration,
+                "env/reset_count": reset_count
+            })
         
     model_save_dir = "checkpoints"
     os.makedirs(model_save_dir, exist_ok=True)
-
-    for i, agent in enumerate(agents):
-        model_path = os.path.join(model_save_dir, f"ppo_agent_{i}.pt")
-        torch.save(agent.state_dict(), model_path)
-        print(f"[INFO] Saved model for Agent {i} at {model_path}")
+    
+    model_path = os.path.join(model_save_dir, "ppo_agent_bot.pt")
+    torch.save(agent.state_dict(), model_path)
+    print(f"[INFO] Saved trained agent model at {model_path}")
 
     env.close()
     wandb.finish()

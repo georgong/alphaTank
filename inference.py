@@ -1,7 +1,7 @@
 import torch
 import numpy as np
 from env.gym_env import MultiAgentEnv
-from train_ppo import PPOAgent, RunningMeanStd
+from train_ppo_ppo import PPOAgent, RunningMeanStd
 
 def load_agents(env, device):
     """Loads trained agents from the saved models."""
@@ -12,7 +12,7 @@ def load_agents(env, device):
     agents = [PPOAgent(obs_dim, act_dim).to(device) for _ in range(num_tanks)]
     
     for i, agent in enumerate(agents):
-        model_path = f"checkpoints/ppo_agent_{i}.pt"
+        model_path = f"checkpoints/ppo_agent.pt"
         agent.load_state_dict(torch.load(model_path, map_location=device))
         agent.eval() 
         print(f"[INFO] Loaded model for Agent {i} from {model_path}")
@@ -22,7 +22,7 @@ def load_agents(env, device):
 def run_inference():
     """Runs a trained PPO model in the environment."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    env = MultiAgentEnv()
+    env = MultiAgentEnv(mode='bot')
     env.render()
 
     agents = load_agents(env, device)

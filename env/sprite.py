@@ -309,7 +309,7 @@ class Tank:
         self._aiming_reward()
         
         '''Reward #6 consistency action reward'''
-        self._control_penalty(current_actions)
+        # self._control_penalty(current_actions)
         # if current_actions is not None:
         #     self._action_consistency_reward(current_actions)
 

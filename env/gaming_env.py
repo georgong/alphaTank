@@ -13,7 +13,7 @@ from env.bots.strategy_bot import StrategyBot
 
 
 class GamingENV:
-    def __init__(self,mode = "human_play"):
+    def __init__(self, mode="human_play"):
         self.screen = None
         self.running = True
         self.clock = None
