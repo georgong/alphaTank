@@ -32,8 +32,8 @@ ROTATION_DEGREE = 5         # ->  2, Right, negative, || 0, left, positive
 TANK_SPEED = 10              # ->  2, Forward, positive || 0, Backward, negative
 
 # Tank Setting
-TANK_WIDTH = 20
-TANK_HEIGHT = 16
+TANK_WIDTH = 30
+TANK_HEIGHT = 24
 
 tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
     "left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s, "shoot": pygame.K_f
@@ -73,7 +73,10 @@ TRAJECTORY_DIST_REWARD = 0.5    # Base reward for good aim
 TRAJECTORY_DIST_PENALTY = -1    # Base reward for good aim
 TRAJECTORY_FAR_THRESHOLD = 300  # Distance threshold for penalty
 TRAJECTORY_DIST_THRESHOLD = 200 # Distance threshold for reward
+
+# Aim Reward
 TRAJECTORY_AIM_REWARD = 0.1    # Reward for aiming at target
+AIMING_FRAMES_THRESHOLD = 17
 
 # Action Consistency Reward
 ACTION_CONSISTENCY_REWARD = 0.05  # Reward for maintaining consistent actions

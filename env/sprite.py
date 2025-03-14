@@ -221,7 +221,6 @@ class Tank:
 
         # aiming reward tracking
         self.aiming_counter = 0  # Add counter for consistent aiming
-        self.AIMING_FRAMES_THRESHOLD = 17
 
         # rotation penalty tracking
         self.total_rotation = 0  # Track accumulated rotation
@@ -444,7 +443,7 @@ class Tank:
         # check if trajectory will hit target
         if trajectory.will_hit_target:
             self.aiming_counter += 1
-            if self.aiming_counter >= self.AIMING_FRAMES_THRESHOLD:
+            if self.aiming_counter >= AIMING_FRAMES_THRESHOLD:
                 self.reward += TRAJECTORY_AIM_REWARD
                 self.aiming_counter = 0
         else:
