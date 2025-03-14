@@ -99,6 +99,10 @@ ROTATION_RESET_DISTANCE = 50  # Distance to move before resetting rotation count
 CONTROL_CHANGE_PENALTY = -2
 CONTROL_CHANGE_THRESHOLD = 0.5
 
+# Buff & Debuff
+BUFF_ON = True
+DEBUFF_ON = True
+
 
 
 '''-----------KEYBOARD SETTING-----------'''

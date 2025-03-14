@@ -27,7 +27,7 @@ wandb.init(
         "total_timesteps": 200000,
         "auto_reset_interval": 20000,
         "neg_reward_threshold": 0.1,
-        "training_agent_index": 0,  # Only train agent 0, agent 1 is handled by the environment
+        "training_agent_index": 1,  # Only train agent 1, agent 0 is handled by the environment (bot)
     }
 )
 
