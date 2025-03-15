@@ -12,6 +12,8 @@ from torch.distributions.categorical import Categorical
 import gym
 
 from env.gym_env import MultiAgentEnv
+from ppo_ppo_model import PPOAgent_PPO, RunningMeanStd
+from inference import run_inference_with_video
 
 wandb.init(
     project="multiagent-ppo",
@@ -31,63 +33,63 @@ wandb.init(
     }
 )
 
-class RunningMeanStd:
-    """Tracks mean and variance for online normalization."""
-    def __init__(self, shape, epsilon=1e-4, device="cpu"):
-        self.mean = torch.zeros(shape, dtype=torch.float32, device=device)
-        self.var = torch.ones(shape, dtype=torch.float32, device=device)
-        self.count = torch.tensor(epsilon, dtype=torch.float32, device=device)
+# class RunningMeanStd:
+#     """Tracks mean and variance for online normalization."""
+#     def __init__(self, shape, epsilon=1e-4, device="cpu"):
+#         self.mean = torch.zeros(shape, dtype=torch.float32, device=device)
+#         self.var = torch.ones(shape, dtype=torch.float32, device=device)
+#         self.count = torch.tensor(epsilon, dtype=torch.float32, device=device)
 
-    def update(self, x: torch.Tensor):
-        # Move x to the same device as the buffers
-        x = x.to(self.mean.device)
-        batch_mean = x.mean(dim=0)
-        batch_var = x.var(dim=0, unbiased=False)
-        batch_count = x.shape[0]
+#     def update(self, x: torch.Tensor):
+#         # Move x to the same device as the buffers
+#         x = x.to(self.mean.device)
+#         batch_mean = x.mean(dim=0)
+#         batch_var = x.var(dim=0, unbiased=False)
+#         batch_count = x.shape[0]
 
-        delta = batch_mean - self.mean
-        total_count = self.count + batch_count
+#         delta = batch_mean - self.mean
+#         total_count = self.count + batch_count
 
-        self.mean += delta * batch_count / total_count
-        self.var += (batch_var * batch_count + delta**2 * self.count * batch_count / total_count) / total_count
-        self.count = total_count
+#         self.mean += delta * batch_count / total_count
+#         self.var += (batch_var * batch_count + delta**2 * self.count * batch_count / total_count) / total_count
+#         self.count = total_count
 
-    def normalize(self, x: torch.Tensor):
-        x = x.to(self.mean.device)
-        return (x - self.mean) / (torch.sqrt(self.var) + 1e-8)
+#     def normalize(self, x: torch.Tensor):
+#         x = x.to(self.mean.device)
+#         return (x - self.mean) / (torch.sqrt(self.var) + 1e-8)
 
-class PPOAgent(nn.Module):
-    def __init__(self, obs_dim, act_dim):
-        super().__init__()
-        self.critic = nn.Sequential(
-            nn.Linear(obs_dim, 64), nn.Tanh(),
-            nn.Linear(64, 64), nn.Tanh(),
-            nn.Linear(64, 1)
-        )
-        self.actor = nn.ModuleList([
-            nn.Sequential(
-                nn.Linear(obs_dim, 64), nn.Tanh(),
-                nn.Linear(64, 64), nn.Tanh(),
-                nn.Linear(64, act)
-            ) for act in act_dim
-        ])
+# class PPOAgent(nn.Module):
+#     def __init__(self, obs_dim, act_dim):
+#         super().__init__()
+#         self.critic = nn.Sequential(
+#             nn.Linear(obs_dim, 64), nn.Tanh(),
+#             nn.Linear(64, 64), nn.Tanh(),
+#             nn.Linear(64, 1)
+#         )
+#         self.actor = nn.ModuleList([
+#             nn.Sequential(
+#                 nn.Linear(obs_dim, 64), nn.Tanh(),
+#                 nn.Linear(64, 64), nn.Tanh(),
+#                 nn.Linear(64, act)
+#             ) for act in act_dim
+#         ])
 
-    def get_value(self, x: torch.Tensor):
-        return self.critic(x)
+#     def get_value(self, x: torch.Tensor):
+#         return self.critic(x)
 
-    def get_action_and_value(self, x: torch.Tensor, action=None):
-        logits = [layer(x) for layer in self.actor]
-        probs = [Categorical(logits=l) for l in logits]
+#     def get_action_and_value(self, x: torch.Tensor, action=None):
+#         logits = [layer(x) for layer in self.actor]
+#         probs = [Categorical(logits=l) for l in logits]
 
-        if action is None:
-            action = [p.sample() for p in probs]
+#         if action is None:
+#             action = [p.sample() for p in probs]
 
-        action_tensor = torch.stack(action, dim=-1) if isinstance(action, list) else action
-        logprobs = torch.stack([p.log_prob(a) for p, a in zip(probs, action_tensor.unbind(dim=-1))], dim=-1)
-        entropy = torch.stack([p.entropy() for p in probs], dim=-1)
-        value = self.critic(x)
+#         action_tensor = torch.stack(action, dim=-1) if isinstance(action, list) else action
+#         logprobs = torch.stack([p.log_prob(a) for p, a in zip(probs, action_tensor.unbind(dim=-1))], dim=-1)
+#         entropy = torch.stack([p.entropy() for p in probs], dim=-1)
+#         value = self.critic(x)
 
-        return action_tensor, logprobs, entropy, value
+#         return action_tensor, logprobs, entropy, value
 
 def train():
     env = MultiAgentEnv()
@@ -99,7 +101,7 @@ def train():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    agents = [PPOAgent(obs_dim, act_dim).to(device) for _ in range(num_tanks)]
+    agents = [PPOAgent_PPO(obs_dim, act_dim).to(device) for _ in range(num_tanks)]
     optimizers = [optim.Adam(agent.parameters(), lr=wandb.config.learning_rate, eps=1e-5) for agent in agents]
 
     num_steps = wandb.config.num_steps
@@ -228,6 +230,9 @@ def train():
                     "iteration": iteration,
                     "env/reset_count": reset_count
                 })
+
+        if iteration % 50 == 0 and iteration > 1:
+            _model_inference(agents, iteration)
         
     model_save_dir = "checkpoints"
     os.makedirs(model_save_dir, exist_ok=True)
@@ -239,6 +244,26 @@ def train():
 
     env.close()
     wandb.finish()
+
+def _model_inference(agents, iteration):
+    print(f'inference check at {iteration} iteration')
+    model_save_dir = "epoch_checkpoints/ppo_ppo"
+    os.makedirs(model_save_dir, exist_ok=True)
+    model_paths = []
+    for agent_idx, agent in enumerate(agents):
+        model_path = os.path.join(model_save_dir, f"ppo_agent_{agent_idx}_epoch_{iteration}.pt")
+        model_paths.append(model_path)
+        torch.save(agent.state_dict(), model_path)
+
+    video_path = run_inference_with_video(mode='agent', epoch_checkpoint=iteration, model_paths=model_paths)
+    
+    # Log video to wandb
+    if video_path and os.path.exists(video_path):
+        wandb.log({
+            "game_video": wandb.Video(video_path, fps=30, format="mp4"),
+            "iteration": iteration
+        })
+        print(f"[INFO] Video uploaded to wandb at iteration {iteration}")
 
 if __name__ == "__main__":
     train()
