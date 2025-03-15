@@ -9,11 +9,11 @@ from env.util import *
 from env.bfs import *
 import math
 import time
-from env.bots.strategy_bot import StrategyBot
+from env.bots.bot_factory import BotFactory
 
 
 class GamingENV:
-    def __init__(self, mode="human_play", type="train"):
+    def __init__(self, mode="human_play", type="train", bot_type="smart"):
         self.screen = None
         self.running = True
         self.clock = None
@@ -22,12 +22,13 @@ class GamingENV:
         self.maze = None
         self.mode = mode  # Set mode before reset
         self.type = type
+        self.bot_type = bot_type
         self.last_bfs_dist = [None] * 2
         self.run_bfs = 0
         self.visualize_traj = VISUALIZE_TRAJ
         self.render_bfs = RENDER_BFS
         self.reset_cooldown = 0
-        self.strategy_bot = None
+        self.bot = None
         
         self.buff_zones = [] 
         self.debuff_zones = []
@@ -41,9 +42,9 @@ class GamingENV:
         self.bullets_trajs = []
         self.path = None  # Reset BFS path
         
-        # Reset strategy bot with new tank if in bot mode
+        # Reset bot with new tank if in bot mode
         if self.mode == "bot" or self.mode == "bot_agent":
-            self.strategy_bot = StrategyBot(self.tanks[0])
+            self.bot = BotFactory.create_bot(self.bot_type, self.tanks[0])
         
         self.buff_zones = random.sample(self.empty_space, 2) if BUFF_ON else []
         self.debuff_zones = random.sample(self.empty_space, 2) if DEBUFF_ON else []
@@ -90,8 +91,8 @@ class GamingENV:
             self.reset_cooldown = 30  # About 0.5 seconds at 60 FPS
 
         if self.mode == "bot":
-            # Get actions from strategy bot for tank 0
-            bot_actions = self.strategy_bot.get_action()
+            # Get actions from bot for tank 0
+            bot_actions = self.bot.get_action()
             
             # Handle bot tank movements (tank 0)
             tank = self.tanks[0]
@@ -129,17 +130,17 @@ class GamingENV:
                 if keys[human_tank.keys["shoot"]]: human_tank.shoot()
             
             current_actions = [
-            2 if keys[tank.keys["up"]] else (0 if keys[tank.keys["down"]] else 1),  # Movement
-            2 if keys[tank.keys["right"]] else (0 if keys[tank.keys["left"]] else 1),  # Rotation
-            1 if keys[tank.keys["shoot"]] else 0  # Shooting
+                2 if keys[tank.keys["up"]] else (0 if keys[tank.keys["down"]] else 1),  # Movement
+                2 if keys[tank.keys["right"]] else (0 if keys[tank.keys["left"]] else 1),  # Rotation
+                1 if keys[tank.keys["shoot"]] else 0  # Shooting
             ]
 
             # Move the human tank
             human_tank.move(current_actions)
         
         elif self.mode == "bot_agent":
-            # Get actions from strategy bot for tank 0
-            bot_actions = self.strategy_bot.get_action()
+            # Get actions from bot for tank 0
+            bot_actions = self.bot.get_action()
             
             # Handle bot tank movements (tank 0)
             tank = self.tanks[0]
@@ -435,8 +436,8 @@ class GamingENV:
             y_offset += 25
 
             # Draw bot debug info if this is the bot's tank
-            if self.mode == "bot" and i == 0 and hasattr(self, 'strategy_bot'):
-                bot = self.strategy_bot
+            if self.mode == "bot" and i == 0 and hasattr(self, 'bot'):
+                bot = self.bot
                 debug_lines = [
                     f"State: {bot.state}",
                     f"Stuck Timer: {bot.stuck_timer}",
