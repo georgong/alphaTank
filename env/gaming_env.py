@@ -469,7 +469,7 @@ class GamingENV:
 
         # Draw scoreboard at the bottom
         if self.font:
-            score_text = f"(Red) Tank1 {self.score[0]} : {self.score[1]} Tank2 (Green)"
+            score_text = f"Green-Bot {self.score[0]} : {self.score[1]} Red-Agent"
             text_surface = self.font.render(score_text, True, (0, 0, 0))  # Black text
             text_rect = text_surface.get_rect()
             text_rect.centerx = self.screen.get_rect().centerx
