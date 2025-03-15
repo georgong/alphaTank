@@ -3,3 +3,5 @@ __pycache__/
 videos/
 wandb/
 checkpoints/
+recordings/
+epoch_checkpoints/

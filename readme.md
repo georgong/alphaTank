@@ -2,7 +2,7 @@
 **Alpha Tank** is a **multi-agent tank battle** game built with Pygame and designed for Reinforcement Learning (RL) training. We want to create a **fully customizable RL pipeline** (from environment to learning algorithms) as a deomstartion of showcasing how RL may learn from their opponents (depends on who, maybe another RL agent (i.e. PPO, SAC) or an intelligent bot (i.e. BFS bot, A* bot)) and use their charcteristics, along with the environement setup, to fight againts them and optimzie the reward.
 
 <p align="center">
-  <img src="assets/demo.gif" width="400"/>
+  <img src="docs/assets/demo.gif" width="400"/>
 </p>
 
 ## **🛠 Installation**
@@ -25,9 +25,19 @@ pip install -r requirements.txt
 | **Player 1** | `WASD` | `F` | `R` |
 | **Player 2** | `Arrow Keys` | `Space` | `R` |
 
-- Press **`R`** to reset the game.
 - **Bullets will bounce off walls**
 
+```python
+python play_env.py --mode play
+```
+
+### ⌨️**Keyboard controls**
+- Press **`R`** to reset the game.
+- Press **`V`** to enable/disable visualizing the tank aiming direction.
+- Press **`T`** to enable/disable visualizing the bullet trajectory.
+- Press **`B`** to enable/disable visualizing the BFS shortest path.
+
+---
 
 ## **🤖 Random Action Rendering**
 ```python

@@ -38,8 +38,8 @@ STATIONARY_EPSILON = 3
 USE_OCTAGON = True # 八角笼斗
 
 # Tank control setting
-ROTATION_DEGREE = 5         # ->  2, Right, negative, || 0, left, positive
-TANK_SPEED = 20              # ->  2, Forward, positive || 0, Backward, negative
+ROTATION_DEGREE = 8         # ->  2, Right, negative, || 0, left, positive
+TANK_SPEED = 10              # ->  2, Forward, positive || 0, Backward, negative
 
 # Tank Setting
 TANK_WIDTH = 30
@@ -58,7 +58,7 @@ tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
 HIT_PENALTY = -50          # punishement of being hit
 TEAM_HIT_PENALTY = -5      # punishment of hitting teamate
 OPPONENT_HIT_REWARD = 50   # reward of hitting enemy
-VICTORY_REWARD = 50
+VICTORY_REWARD = 100
 
 # Wall Hit Penalty
 WALL_HIT_THRESHOLD = 0

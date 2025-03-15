@@ -527,6 +527,9 @@ class Tank:
         bullet = Bullet(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
         self.sharing_env.bullets.append(bullet)
 
+        trajectory = BulletTrajectory(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
+        self.sharing_env.bullets_trajs.append(trajectory)
+
         # **更新射击时间**
         self.last_shot_time = current_time
 
