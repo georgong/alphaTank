@@ -24,10 +24,6 @@ def run_bot_match(bot1_type, bot2_type):
     """Runs a match between two bots."""
     env = GamingENV(mode="bot_vs_bot")  # New mode for bot vs bot
     
-    # Track number of wins for each bot
-    bot1_wins = 0
-    bot2_wins = 0
-    
     # Initialize bots for the first time
     bot1, bot2 = initialize_bots(env, bot1_type, bot2_type)
     
@@ -63,15 +59,11 @@ def run_bot_match(bot1_type, bot2_type):
             
             # Check if round ended (a tank was destroyed)
             if initial_tank1_alive and not env.tanks[0].alive:
-                bot2_wins += 1
-                print(f"Score - {bot1_type}: {bot1_wins}, {bot2_type}: {bot2_wins}")
                 env.reset()
                 pygame.time.wait(500)  # Give a small delay for stability
                 bot1, bot2 = initialize_bots(env, bot1_type, bot2_type)
                 break
             elif initial_tank2_alive and not env.tanks[1].alive:
-                bot1_wins += 1
-                print(f"Score - {bot1_type}: {bot1_wins}, {bot2_type}: {bot2_wins}")
                 env.reset()
                 pygame.time.wait(500)  # Give a small delay for stability
                 bot1, bot2 = initialize_bots(env, bot1_type, bot2_type)
