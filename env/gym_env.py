@@ -6,10 +6,10 @@ from env.gaming_env import GamingENV
 from env.util import angle_to_vector,corner_to_xy
 
 class MultiAgentEnv(gym.Env):
-    def __init__(self, mode="agent", type='train'):
+    def __init__(self, mode="agent", type='train', bot_type='smart'):
         super().__init__()
         self.training_step = 0
-        self.game_env = GamingENV(mode=mode, type=type)
+        self.game_env = GamingENV(mode=mode, type=type, bot_type=bot_type)
         self.num_tanks = len(self.game_env.tanks)
         self.num_walls = len(self.game_env.walls)
         self.max_bullets_per_tank = 6 
