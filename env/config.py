@@ -17,7 +17,7 @@ GRAY = (100, 100, 100)
 '''-----------------GAME SETTING-----------------'''
 EPSILON = 0.01  
 ROTATION_SPEED = 1
-BULLET_SPEED = 1
+BULLET_SPEED = 3
 BULLET_MAX_BOUNCES = 2
 BULLET_MAX_DISTANCE = 400
 MAX_BULLETS = 6
@@ -61,19 +61,19 @@ OPPONENT_HIT_REWARD = 50   # reward of hitting enemy
 VICTORY_REWARD = 50
 
 # Wall Hit Penalty
-WALL_HIT_THRESHOLD = 8
-WALL_HIT_STRONG_PENALTY = -1e-2
-WALL_HIT_PENALTY = -1e-2 
+WALL_HIT_THRESHOLD = 0
+WALL_HIT_STRONG_PENALTY = 0
+WALL_HIT_PENALTY = 0
 
 # Stationary Penalty
-STATIONARY_PENALTY = -1e-3
-MOVE_REWARD = 2e-3
+STATIONARY_PENALTY = 0
+MOVE_REWARD = 0
 
 # BFS Related Reward
-BFS_FORWARD_REWARD = 5 # 0.001
-BFS_BACKWARD_PENALTY = 5 # 0.0011
-BFS_PATH_LEN_REWARD = 0.06
-BFS_PATH_LEN_PENALTY = 0.04
+BFS_FORWARD_REWARD = 0
+BFS_BACKWARD_PENALTY = 0
+BFS_PATH_LEN_REWARD = 0
+BFS_PATH_LEN_PENALTY = 0
 
 # Bullet Trajectory Reward/Penalty
 TRAJECTORY_HIT_REWARD = 1
@@ -83,20 +83,20 @@ TRAJECTORY_FAR_THRESHOLD = 300  # Distance threshold for penalty
 TRAJECTORY_DIST_THRESHOLD = 200 # Distance threshold for reward
 
 # Aim Reward
-TRAJECTORY_AIM_REWARD = 0.1    # Reward for aiming at target
+TRAJECTORY_AIM_REWARD = 0    # Reward for aiming at target
 AIMING_FRAMES_THRESHOLD = 17
 
 # Action Consistency Reward
-ACTION_CONSISTENCY_REWARD = 0.05  # Reward for maintaining consistent actions
-ACTION_CHANGE_PENALTY = -0.005  # Small penalty for changing actions frequently
+ACTION_CONSISTENCY_REWARD = 0  # Reward for maintaining consistent actions
+ACTION_CHANGE_PENALTY = 0  # Small penalty for changing actions frequently
 
 # Rotation Penalty
-ROTATION_PENALTY = -10  # Penalty for excessive rotation
+ROTATION_PENALTY = 0  # Penalty for excessive rotation
 ROTATION_THRESHOLD = 20  # Total rotation before penalty (in degrees)
 ROTATION_RESET_DISTANCE = 50  # Distance to move before resetting rotation counter
 
 # Control Penalty
-CONTROL_CHANGE_PENALTY = -2
+CONTROL_CHANGE_PENALTY = 0
 CONTROL_CHANGE_THRESHOLD = 0.5
 
 # Buff & Debuff
