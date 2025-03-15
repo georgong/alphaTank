@@ -192,6 +192,8 @@ class Tank:
         self.last_shot_time = 0
         self.closer_reward = 0
         self.reward = 0
+        self.in_debuff_zone = 0
+        self.in_buff_zone = 0
 
         # reward compute
         self.last_x, self.last_y = x, y  # 记录上一次位置

@@ -23,7 +23,11 @@ class MultiAgentEnv(gym.Env):
         tank_dim = self.num_tanks * 13 #num_tanks * (x,y,angle,alive)  2*4
         bullet_dim = self.num_tanks * self.max_bullets_per_tank * 4  # num_tanks * (x,y,dx,dy) 2 * 6 * 4
         wall_dim = self.num_walls * 4 #(x,y,grid_size) 0
-        return (tank_dim + bullet_dim + wall_dim) * self.num_tanks
+        buff_zone_dim = len(self.game_env.buff_zones) * 2  # (x, y)
+        debuff_zone_dim = len(self.game_env.debuff_zones) * 2  # (x, y)
+        # print(f"Calculated obs_dim: {(tank_dim + bullet_dim + wall_dim + buff_zone_dim + debuff_zone_dim)}")
+        in_buff_zone_dim = 2
+        return (tank_dim + bullet_dim + wall_dim + buff_zone_dim + debuff_zone_dim + in_buff_zone_dim) * self.num_tanks
 
     def reset(self):
         self.game_env.reset()
@@ -97,6 +101,18 @@ class MultiAgentEnv(gym.Env):
             # Wall information
             for wall in self.game_env.walls:
                 tank_obs.extend([float(wall.x), float(wall.y), float(wall.x + wall.size), float(wall.y + wall.size)])
+
+            # Buff Zone Information
+            for buff_zone in self.game_env.buff_zones:
+                tank_obs.extend([float(buff_zone[0]), float(buff_zone[1])])
+
+            # Debuff Zone Information
+            for debuff_zone in self.game_env.debuff_zones:
+                tank_obs.extend([float(debuff_zone[0]), float(debuff_zone[1])])
+
+            # Tank's Current Buff/Debuff Status
+            tank_obs.append(1 if tank.in_buff_zone else 0)
+            tank_obs.append(1 if tank.in_debuff_zone else 0)
 
             observations.append(tank_obs)
 
