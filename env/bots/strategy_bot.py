@@ -3,10 +3,11 @@ import numpy as np
 from env.config import *
 from env.sprite import BulletTrajectory
 from env.bfs import bfs_path
+from env.bots.base_bot import BaseBot
 
-class StrategyBot:
+class SmartStrategyBot(BaseBot):
     def __init__(self, tank):
-        self.tank = tank
+        super().__init__(tank)
         self.target = None
         self.state = "searching"  # States: searching, aiming, shooting
         self.rotation_direction = 1

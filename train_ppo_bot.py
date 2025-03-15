@@ -1,6 +1,7 @@
 import os
 import time
 import numpy as np
+import argparse
 
 import torch
 import torch.nn as nn
@@ -11,25 +12,28 @@ from tqdm import tqdm
 from torch.distributions.categorical import Categorical
 
 from env.gym_env import MultiAgentEnv
+from env.bots.bot_factory import BotFactory
 
-wandb.init(
-    project="singleagent-ppo",
-    config={
-        "learning_rate": 3e-4,
-        "gamma": 0.99,
-        "gae_lambda": 0.95,
-        "clip_coef": 0.1,
-        "ent_coef": 0.02,
-        "vf_coef": 0.3,
-        "max_grad_norm": 0.3,
-        "num_steps": 512,
-        "num_epochs": 20,
-        "total_timesteps": 200000,
-        "auto_reset_interval": 20000,
-        "neg_reward_threshold": 0.1,
-        "training_agent_index": 1,  # Only train agent 1, agent 0 is handled by the environment (bot)
-    }
-)
+def setup_wandb(bot_type):
+    wandb.init(
+        project="singleagent-ppo",
+        config={
+            "learning_rate": 3e-4,
+            "gamma": 0.99,
+            "gae_lambda": 0.95,
+            "clip_coef": 0.1,
+            "ent_coef": 0.02,
+            "vf_coef": 0.3,
+            "max_grad_norm": 0.3,
+            "num_steps": 512,
+            "num_epochs": 20,
+            "total_timesteps": 100000,
+            "auto_reset_interval": 20000,
+            "neg_reward_threshold": 0.1,
+            "training_agent_index": 1,  # Only train agent 1, agent 0 is handled by the environment (bot)
+            "opponent_bot_type": bot_type,  # Track which bot we're training against
+        }
+    )
 
 class RunningMeanStd:
     """Tracks mean and variance for online normalization."""
@@ -89,8 +93,9 @@ class PPOAgent(nn.Module):
 
         return action_tensor, logprobs, entropy, value
 
-def train():
-    env = MultiAgentEnv(mode='bot_agent', type='train')
+def train(bot_type):
+    setup_wandb(bot_type)
+    env = MultiAgentEnv(mode='bot_agent', type='train', bot_type=bot_type)
     env.render()
 
     num_tanks = env.num_tanks
@@ -229,7 +234,7 @@ def train():
     model_save_dir = "checkpoints"
     os.makedirs(model_save_dir, exist_ok=True)
     
-    model_path = os.path.join(model_save_dir, "ppo_agent_bot.pt")
+    model_path = os.path.join(model_save_dir, f"ppo_agent_vs_{bot_type}.pt")
     torch.save(agent.state_dict(), model_path)
     print(f"[INFO] Saved trained agent model at {model_path}")
 
@@ -237,4 +242,9 @@ def train():
     wandb.finish()
 
 if __name__ == "__main__":
-    train()
+    parser = argparse.ArgumentParser(description="Train PPO agent against a specific bot type")
+    parser.add_argument("--bot-type", type=str, choices=list(BotFactory.BOT_TYPES.keys()), default="smart",
+                      help="Select bot type to train against. Options: " + ", ".join(BotFactory.BOT_TYPES.keys()))
+    
+    args = parser.parse_args()
+    train(args.bot_type)

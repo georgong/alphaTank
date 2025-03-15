@@ -1,6 +1,10 @@
 # **🚀 Alpha Tank - Multi-Agent Tank Battle**
 **Alpha Tank** is a **multi-agent tank battle** game built with Pygame and designed for Reinforcement Learning (RL) training. We want to create a **fully customizable RL pipeline** (from environment to learning algorithms) as a deomstartion of showcasing how RL may learn from their opponents (depends on who, maybe another RL agent (i.e. PPO, SAC) or an intelligent bot (i.e. BFS bot, A* bot)) and use their charcteristics, along with the environement setup, to fight againts them and optimzie the reward.
 
+<p align="center">
+  <img src="assets/demo.gif" width="400"/>
+</p>
+
 ## **🛠 Installation**
 ### **1️⃣ Create a Conda Environment**
 ```bash
@@ -34,16 +38,27 @@ python play_env.py --mode bot
 
 ---
 
-## **🚀 Training A PPO/SAC Agent**
+## **🤖 Bot Arena**
+We support a variety of "intelligent" (manual crafted strategy) bot/expert to tarin our learning agent, run the following to see bots fighting aaginst each other (choose from `smart`, `random`, `aggressive`, `defensive`, `dodge`):
+
 ```python
-python train_ppo_bot.py
+python bot_arena.py --bot1 defensive  --bot2 dodge
+```
+
+---
+
+## **🚀 Training A PPO/SAC Agent**
+When training, choose **bot type** from `smart`, `random`, `aggressive`, `defensive`, `dodge`.
+```python
+python train_ppo_bot.py --bot-type smart
 python train_ppo_ppo.py
 ```
 
 ---
-## **🤖 Inference Rendering**
+## **🚀 Inference Rendering**
+When inference, choose **bot type** from `smart`, `random`, `aggressive`, `defensive`, `dodge`.
 ```python
-python inference.py --mode bot
+python inference.py --mode bot --bot-type smart
 python inference.py --mode agent
 ```
 

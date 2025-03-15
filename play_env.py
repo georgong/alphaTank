@@ -2,6 +2,7 @@ import argparse
 import numpy as np
 from env.gym_env import MultiAgentEnv
 from env.gaming_env import GamingENV
+from env.bots.bot_factory import BotFactory
 
 def run_random():
     """Runs the environment with randomly sampled actions."""
@@ -19,23 +20,25 @@ def run_random():
 
 
 def run_play():
-    """Runs the environment in manual play mode."""
-    env = GamingENV()
+    """Runs the environment in human play mode."""
+    env = GamingENV(mode="human_play")
     while env.running:
         env.render()
         env.step()
 
-def run_bot():
-    """Runs the environment in AI mode."""
-    env = GamingENV(mode="bot")
+def run_bot(bot_type):
+    """Runs the environment in AI mode with specified bot type."""
+    env = GamingENV(mode="bot", bot_type=bot_type)
     while env.running:
         env.render()
-        env.step() 
+        env.step()
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run MultiAgentEnv in either play or random mode.")
-    parser.add_argument("--mode", type=str, choices=["play", "random", "bot"], required=True, help="Select 'play' or 'random' mode.")
+    parser = argparse.ArgumentParser(description="Run MultiAgentEnv in either play, random, or bot mode.")
+    parser.add_argument("--mode", type=str, choices=["play", "random", "bot"], required=True, help="Select 'play', 'random', or 'bot' mode.")
+    parser.add_argument("--bot-type", type=str, choices=list(BotFactory.BOT_TYPES.keys()), default="smart", 
+                      help="Select bot type when using bot mode. Options: " + ", ".join(BotFactory.BOT_TYPES.keys()))
 
     args = parser.parse_args()
 
@@ -44,4 +47,4 @@ if __name__ == "__main__":
     elif args.mode == "random":
         run_random()
     elif args.mode == "bot":
-        run_bot()
+        run_bot(args.bot_type)
