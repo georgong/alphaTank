@@ -175,16 +175,17 @@ class BulletTrajectory(Bullet):
             )
 
 class Tank:
-    def __init__(self, team,x, y, color, keys, env):
+    def __init__(self, team, x, y, color, keys, env):
         self.team = team
         self.x = x
         self.y = y
-        self.angle = 0
+        self.angle = random.randint(0, 360)  # Initialize with random angle
         self.speed = 0
-        self.color = color  # the custom color
+        self.color = color
         self.width = TANK_WIDTH
         self.height = TANK_HEIGHT
         self.alive = True
+        self.last_alive = True
         self.keys = keys
         self.sharing_env = env
         self.max_bullets = MAX_BULLETS
