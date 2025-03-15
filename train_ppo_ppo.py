@@ -16,7 +16,7 @@ from models.ppo_ppo_model import PPOAgent_PPO, RunningMeanStd
 from inference import run_inference_with_video
 
 wandb.init(
-    project="multiagent-ppo",
+    project="multiagent-ppo-ppo",
     config={
         "learning_rate": 3e-4,
         "gamma": 0.99,
