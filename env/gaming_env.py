@@ -52,20 +52,24 @@ class GamingENV:
     def check_buff_debuff(self, tank):
         tank_rect = pygame.Rect(tank.x - tank.width // 2, tank.y - tank.height // 2, tank.width, tank.height)
         
+        tank.in_buff_zone = False
         for buff_pos in self.buff_zones:
             buff_rect = pygame.Rect(buff_pos[0], buff_pos[1], GRID_SIZE * 3.5, GRID_SIZE * 3.5)
             if tank_rect.colliderect(buff_rect) and BUFF_ON:
                 # print(f'\nTank {tank.team} got buffed!')
                 tank.max_bullets = 30
+                tank.in_buff_zone = True
                 break
         else:
             tank.max_bullets = MAX_BULLETS
         
+        tank.in_debuff_zone = False
         for debuff_pos in self.debuff_zones:
             debuff_rect = pygame.Rect(debuff_pos[0], debuff_pos[1], GRID_SIZE * 3.5, GRID_SIZE * 3.5)
             if tank_rect.colliderect(debuff_rect) and DEBUFF_ON:
                 # print(f'\nTank {tank.team} got debuffed!')
                 tank.max_bullets = 1  
+                tank.in_debuff_zone = True
                 break
         else:
             tank.max_bullets = MAX_BULLETS
@@ -642,8 +646,6 @@ class GamingENV:
 
         return walls, empty_space
 
-
-    
 
     def euclidean_distance(self, cell_a, cell_b):
         (r1, c1) = cell_a
