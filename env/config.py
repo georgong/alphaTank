@@ -17,7 +17,7 @@ GRAY = (100, 100, 100)
 '''-----------------GAME SETTING-----------------'''
 EPSILON = 0.01  
 ROTATION_SPEED = 1
-BULLET_SPEED = 1
+BULLET_SPEED = 3
 BULLET_MAX_BOUNCES = 2
 BULLET_MAX_DISTANCE = 400
 MAX_BULLETS = 6
@@ -38,8 +38,8 @@ STATIONARY_EPSILON = 3
 USE_OCTAGON = True # 八角笼斗
 
 # Tank control setting
-ROTATION_DEGREE = 5         # ->  2, Right, negative, || 0, left, positive
-TANK_SPEED = 20              # ->  2, Forward, positive || 0, Backward, negative
+ROTATION_DEGREE = 8         # ->  2, Right, negative, || 0, left, positive
+TANK_SPEED = 10              # ->  2, Forward, positive || 0, Backward, negative
 
 # Tank Setting
 TANK_WIDTH = 30

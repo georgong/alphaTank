@@ -153,7 +153,6 @@ class BulletTrajectory(Bullet):
     
     def draw(self):
         """Draw the complete trajectory as a red line"""
-        print('draw traj', self.x, self.y)
         if len(self.trajectory_points) > 1:
             # draw trajectory line
             pygame.draw.lines(
