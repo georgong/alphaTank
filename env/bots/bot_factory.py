@@ -1,5 +1,5 @@
 from env.bots.strategy_bot import SmartStrategyBot
-from env.bots.simple_bots import RandomBot, AggressiveBot, DefensiveBot
+from env.bots.simple_bots import RandomBot, AggressiveBot, DefensiveBot, DodgeBot
 
 class BotFactory:
     """Factory class to create different types of bots"""
@@ -8,7 +8,8 @@ class BotFactory:
         'smart': SmartStrategyBot,
         'random': RandomBot,
         'aggressive': AggressiveBot,
-        'defensive': DefensiveBot
+        'defensive': DefensiveBot,
+        'dodge': DodgeBot
     }
     
     @staticmethod
