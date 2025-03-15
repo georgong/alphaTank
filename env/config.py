@@ -58,7 +58,7 @@ tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
 HIT_PENALTY = -50          # punishement of being hit
 TEAM_HIT_PENALTY = -5      # punishment of hitting teamate
 OPPONENT_HIT_REWARD = 50   # reward of hitting enemy
-VICTORY_REWARD = 50
+VICTORY_REWARD = 100
 
 # Wall Hit Penalty
 WALL_HIT_THRESHOLD = 0
