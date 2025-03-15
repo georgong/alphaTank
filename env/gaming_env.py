@@ -33,6 +33,9 @@ class GamingENV:
         self.buff_zones = [] 
         self.debuff_zones = []
         
+        self.score = [0, 0]  # Track scores for tank1 and tank2
+        self.font = None  # Will be initialized in render
+        
         self.reset()  # Call reset after all attributes are initialized
 
     def reset(self):
@@ -49,7 +52,10 @@ class GamingENV:
         self.buff_zones = random.sample(self.empty_space, 2) if BUFF_ON else []
         self.debuff_zones = random.sample(self.empty_space, 2) if DEBUFF_ON else []
 
-    
+        if self.font is None:
+            pygame.font.init()
+            self.font = pygame.font.Font(None, 36)  # None uses default system font
+
     def check_buff_debuff(self, tank):
         tank_rect = pygame.Rect(tank.x - tank.width // 2, tank.y - tank.height // 2, tank.width, tank.height)
         
@@ -381,6 +387,12 @@ class GamingENV:
         for bullet in self.bullets[:]:
             bullet.move()
             
+        # Update scores when tanks are destroyed
+        for tank in self.tanks:
+            if not tank.alive and tank.last_alive:  # Tank was just destroyed
+                opponent_idx = 0 if self.tanks.index(tank) == 1 else 1
+                self.score[opponent_idx] += 1
+            tank.last_alive = tank.alive  # Track previous alive state
         
     def render(self):
         if self.screen is None:
@@ -455,7 +467,16 @@ class GamingENV:
                     self.screen.blit(text_surface, (10, y_offset))
                     y_offset += 25
 
-        pygame.display.update()
+        # Draw scoreboard at the bottom
+        if self.font:
+            score_text = f"(Red) Tank1 {self.score[0]} : {self.score[1]} Tank2 (Green)"
+            text_surface = self.font.render(score_text, True, (0, 0, 0))  # Black text
+            text_rect = text_surface.get_rect()
+            text_rect.centerx = self.screen.get_rect().centerx
+            text_rect.bottom = self.screen.get_rect().bottom - 10
+            self.screen.blit(text_surface, text_rect)
+        
+        pygame.display.flip()
         self.clock.tick(60)
     
     def _draw_bfs_path(self):
@@ -492,7 +513,12 @@ class GamingENV:
         tanks = []
         for team_name,tank_config in tank_configs.items():
             x,y = self.empty_space[np.random.choice(range(len(self.empty_space)))]
-            tanks.append(Tank(tank_config["team"],x+self.GRID_SIZE/2,y+self.GRID_SIZE/2,tank_config["color"],tank_config["keys"],env = self))
+            tanks.append(Tank(tank_config["team"],
+                            x+self.GRID_SIZE/2,
+                            y+self.GRID_SIZE/2,
+                            tank_config["color"],
+                            tank_config["keys"],
+                            env=self))
         return tanks
     
     def update_reward_by_bullets(self,shooter,victim):
