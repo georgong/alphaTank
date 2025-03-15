@@ -25,9 +25,19 @@ pip install -r requirements.txt
 | **Player 1** | `WASD` | `F` | `R` |
 | **Player 2** | `Arrow Keys` | `Space` | `R` |
 
-- Press **`R`** to reset the game.
 - **Bullets will bounce off walls**
 
+```python
+python play_env.py --mode play
+```
+
+### ⌨️**Keyboard controls**
+- Press **`R`** to reset the game.
+- Press **`V`** to enable/disable visualizing the tank aiming direction.
+- Press **`T`** to enable/disable visualizing the bullet trajectory.
+- Press **`B`** to enable/disable visualizing the BFS shortest path.
+
+---
 
 ## **🤖 Random Action Rendering**
 ```python
