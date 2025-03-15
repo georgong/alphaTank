@@ -11,7 +11,7 @@ import os
 from env.bots.bot_factory import BotFactory
 import pygame
 
-def load_agents(env, device, mode='agent', bot_type='smart', model_paths=None):
+def load_agents(env, device, mode='agent', bot_type='smart', model_paths=None, demo=False):
     """Loads trained agents from the saved models."""
     num_tanks = env.num_tanks  
     obs_dim = env.observation_space.shape[0] // num_tanks  
@@ -34,7 +34,10 @@ def load_agents(env, device, mode='agent', bot_type='smart', model_paths=None):
             if mode=='agent':
                 model_path = f"checkpoints/ppo_agent_{i}.pt"
             elif mode=='bot':
-                model_path = f"checkpoints/ppo_agent_vs_{bot_type}.pt"
+                if demo:
+                    model_path = f"demo_checkpoints/ppo_agent_vs_{bot_type}.pt"
+                else:
+                    model_path = f"checkpoints/ppo_agent_vs_{bot_type}.pt"
 
             agent.load_state_dict(torch.load(model_path, map_location=device))
             agent.eval()
@@ -109,7 +112,7 @@ def run_inference_with_video(mode, epoch_checkpoint=None, model_paths=None):
             return vidoe_path
         
         
-def run_inference(mode, bot_type='smart'):
+def run_inference(mode, bot_type='smart', demo=False):
     """Runs a trained PPO model in the environment."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if mode == 'bot':
@@ -118,7 +121,7 @@ def run_inference(mode, bot_type='smart'):
         env = MultiAgentEnv()
     env.render()
 
-    agents = load_agents(env, device, mode=mode, bot_type=bot_type)
+    agents = load_agents(env, device, mode=mode, bot_type=bot_type, demo=demo)
 
     obs, _ = env.reset()
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
@@ -177,10 +180,11 @@ if __name__ == "__main__":
     parser.add_argument("--mode", type=str, choices=["agent", "bot"], required=True, help="Select 'agent vs agent' or 'agent vs bot' mode.")
     parser.add_argument("--bot-type", type=str, choices=list(BotFactory.BOT_TYPES.keys()), default="smart",
                       help="Select bot type when using bot mode. Options: " + ", ".join(BotFactory.BOT_TYPES.keys()))
+    parser.add_argument("--demo", type=bool, choices=[True, False], default=False, help="Choose True of False")
 
     args = parser.parse_args()
 
     if args.mode == "agent":
         run_inference("agent")
     elif args.mode == "bot":
-        run_inference("bot", args.bot_type)
+        run_inference("bot", args.bot_type, args.demo)

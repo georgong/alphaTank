@@ -73,6 +73,10 @@ python inference.py --mode agent
 ```
 
 ---
-### **Run a Pretrained AI Model**
-#### Coming Soon
+### **🚀 Run a Pretrained AI Model**
+Run oretrain model against bot:
+
+```python
+python inference.py --mode bot --bot-type aggressive --demo True
+```
 ---
