@@ -2,8 +2,8 @@ import argparse
 import torch
 import numpy as np
 from env.gym_env import MultiAgentEnv
-from ppo_ppo_model import PPOAgent_PPO, RunningMeanStd
-from ppo_bot_model import PPOAgent_bot, RunningMeanStd
+from models.ppo_ppo_model import PPOAgent_PPO, RunningMeanStd
+from models.ppo_bot_model import PPOAgent_bot, RunningMeanStd
 
 import imageio
 from datetime import datetime
@@ -56,7 +56,7 @@ def _record_inference(mode, epoch_checkpoint, frames):
     return video_path
 
 
-def run_inference_with_video(mode, bot_type='smart', epoch_checkpoint=None, model_paths=None):
+def run_inference_with_video(mode, epoch_checkpoint=None, model_paths=None):
     # for inference while training
     MAX_STEPS = 200 if epoch_checkpoint is not None else float('inf')
     step_count = 0
@@ -65,14 +65,60 @@ def run_inference_with_video(mode, bot_type='smart', epoch_checkpoint=None, mode
     """Runs a trained PPO model in the environment."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if mode == 'bot':
-        env = MultiAgentEnv(mode='bot_agent', type='inference', bot_type=bot_type)
+        env = MultiAgentEnv(mode='bot_agent')
     elif mode == 'agent':
         env = MultiAgentEnv()
     env.render()
 
     agents = load_agents(
         env, device, mode=mode, model_paths=model_paths
-    , bot_type=bot_type)
+    )
+
+    obs, _ = env.reset()
+    obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
+    obs_dim = env.observation_space.shape[0] // len(agents)
+    obs_norm = RunningMeanStd(shape=(env.num_tanks, obs_dim), device=device)
+
+    while True:
+        with torch.no_grad():
+            obs_norm.update(obs)
+            obs = obs_norm.normalize(obs)
+            actions_list = [
+                agent.get_action_and_value(obs[i])[0].cpu().numpy().tolist()
+                for i, agent in enumerate(agents)
+            ]
+
+        next_obs_np, _, done_np, _, _ = env.step(actions_list)
+        obs = torch.tensor(next_obs_np, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
+
+        if np.any(done_np):
+            print("[INFO] Environment reset triggered.")
+            obs, _ = env.reset()
+            obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
+        
+        env.render()
+
+        # for inference during training time
+        frame_array = env.render(mode='rgb_array')
+        frame_array = frame_array.transpose([1, 0, 2]) 
+        frames.append(frame_array)
+
+        step_count += 1
+        if step_count > MAX_STEPS:
+            vidoe_path = _record_inference(mode, epoch_checkpoint, frames)
+            return vidoe_path
+        
+        
+def run_inference(mode, bot_type='smart'):
+    """Runs a trained PPO model in the environment."""
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    if mode == 'bot':
+        env = MultiAgentEnv(mode='bot_agent', type='inference', bot_type=bot_type)
+    elif mode == 'agent':
+        env = MultiAgentEnv()
+    env.render()
+
+    agents = load_agents(env, device, mode=mode, bot_type=bot_type)
 
     obs, _ = env.reset()
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
@@ -102,11 +148,28 @@ def run_inference_with_video(mode, bot_type='smart', epoch_checkpoint=None, mode
         next_obs_np, _, done_np, _, _ = env.step(actions_list)
         obs = torch.tensor(next_obs_np, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
 
-        if np.any(done_np):
-            print("[INFO] Environment reset triggered.")
-            obs, _ = env.reset()
-            obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
-        
+        if mode == 'agent':
+            if np.any(done_np):
+                print("[INFO] Environment reset triggered.")
+                obs, _ = env.reset()
+                obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
+            
+        if mode == 'bot':
+            if np.any(done_np):
+                if initial_tank0_alive and not env.game_env.tanks[0].alive:
+                    agent_wins += 1
+                    print(f"Score - {bot_type}: {bot_wins}, Agent: {agent_wins}")
+                    
+                elif initial_tank1_alive and not env.game_env.tanks[1].alive:
+                    bot_wins += 1
+                    print(f"Score - {bot_type}: {bot_wins}, Agent: {agent_wins}")
+
+                else: # tie
+                    print(f"Score - {bot_type}: {bot_wins}, Agent: {agent_wins}: Ties")
+                
+                obs, _ = env.reset()
+                obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
+                
         env.render()
 
 if __name__ == "__main__":
