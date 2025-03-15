@@ -17,7 +17,7 @@ from models.ppo_bot_model import PPOAgent_bot, RunningMeanStd
 
 def setup_wandb(bot_type):
     wandb.init(
-        project="singleagent-ppo",
+        project="multiagent-ppo-bot",
         config={
             "learning_rate": 3e-4,
             "gamma": 0.99,

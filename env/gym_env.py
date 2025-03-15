@@ -20,14 +20,26 @@ class MultiAgentEnv(gym.Env):
         self.action_space = gym.spaces.MultiDiscrete([3, 3, 2] * self.num_tanks)  
 
     def _calculate_obs_dim(self):
-        tank_dim = self.num_tanks * 13 #num_tanks * (x,y,angle,alive)  2*4
-        bullet_dim = self.num_tanks * self.max_bullets_per_tank * 4  # num_tanks * (x,y,dx,dy) 2 * 6 * 4
-        wall_dim = self.num_walls * 4 #(x,y,grid_size) 0
-        buff_zone_dim = len(self.game_env.buff_zones) * 2  # (x, y)
-        debuff_zone_dim = len(self.game_env.debuff_zones) * 2  # (x, y)
-        # print(f"Calculated obs_dim: {(tank_dim + bullet_dim + wall_dim + buff_zone_dim + debuff_zone_dim)}")
+        
+        agent_tank_dim =  13
+        
+        enemy_tank_dim = (self.num_tanks - 1) * 16
+        
+        agent_bullet_dim =  self.max_bullets_per_tank * 4
+        
+        enemy_bullet_dim =  (self.num_tanks - 1) * self.max_bullets_per_tank * 7
+        
+        wall_dim = self.num_walls * 4
+        
+        buff_zone_dim = len(self.game_env.buff_zones) * 2
+        
+        debuff_zone_dim = len(self.game_env.debuff_zones) * 2
+        
         in_buff_zone_dim = 2
-        return (tank_dim + bullet_dim + wall_dim + buff_zone_dim + debuff_zone_dim + in_buff_zone_dim) * self.num_tanks
+        
+        # print(agent_tank_dim, enemy_tank_dim, agent_bullet_dim, enemy_bullet_dim, wall_dim, buff_zone_dim, debuff_zone_dim, in_buff_zone_dim)
+        
+        return (agent_tank_dim + enemy_tank_dim + agent_bullet_dim + enemy_bullet_dim + wall_dim + buff_zone_dim + debuff_zone_dim + in_buff_zone_dim) * self.num_tanks
 
     def reset(self):
         self.game_env.reset()
@@ -72,49 +84,63 @@ class MultiAgentEnv(gym.Env):
             tank_obs = []
             dx,dy = angle_to_vector(float(tank.angle),float(tank.speed))
             # Tank's own position and status
-            tank_obs.extend([float(tank.x), float(tank.y), *corner_to_xy(tank), float(dx), float(dy), float(1 if tank.alive else 0)])
+            tank_obs.extend([float(tank.x), float(tank.y), *corner_to_xy(tank), float(dx), float(dy), float(1 if tank.alive else 0)]) # 5 + 8
+
 
             # Tank's bullets
             active_bullets = [b for b in self.game_env.bullets if b.owner == tank]
             for bullet in active_bullets[:self.max_bullets_per_tank]:
-                tank_obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy)])
+                tank_obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy)]) # 4
             while len(active_bullets) < self.max_bullets_per_tank:
                 tank_obs.extend([0, 0, 0, 0])
                 active_bullets.append(None)
+                
 
-            # Enemy tanks' positions (excluding itself)
-            for other_tank in self.game_env.tanks:
-                if other_tank != tank:
-                    dx,dy = angle_to_vector(float(tank.angle),float(tank.speed))
-                    tank_obs.extend([float(other_tank.x), float(other_tank.y), *corner_to_xy(other_tank), float(dx), float(dy), float(1 if other_tank.alive else 0)])
-
-            # Enemy bullets
+            # Enemy bullets & distances
             for other_tank in self.game_env.tanks:
                 if other_tank != tank:
                     enemy_bullets = [b for b in self.game_env.bullets if b.owner == other_tank]
                     for bullet in enemy_bullets[:self.max_bullets_per_tank]:
-                        tank_obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy)])
+                        rel_x = bullet.x - tank.x
+                        rel_y = bullet.y - tank.y
+                        distance = np.sqrt(rel_x**2 + rel_y**2)
+                        tank_obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy), rel_x, rel_y, distance]) # 7
                     while len(enemy_bullets) < self.max_bullets_per_tank:
-                        tank_obs.extend([0, 0, 0, 0])
+                        tank_obs.extend([0, 0, 0, 0, 0, 0, 0])
                         enemy_bullets.append(None)
 
+            
+            # Enemy tanks' positions & pairwise distances (exclude current tank)
+            # min_enemy_dist = float('inf')
+            for other_tank in self.game_env.tanks:
+                if other_tank != tank:
+                    rel_x = other_tank.x - tank.x
+                    rel_y = other_tank.y - tank.y
+                    distance = np.sqrt(rel_x**2 + rel_y**2)
+                    # min_enemy_dist = min(min_enemy_dist, distance)
+                    
+                    dx, dy = angle_to_vector(float(other_tank.angle), float(other_tank.speed))
+                    tank_obs.extend([float(other_tank.x), float(other_tank.y), rel_x, rel_y, distance, *corner_to_xy(other_tank), float(dx), float(dy), float(1 if other_tank.alive else 0)]) # 8 + 8
+                
             # Wall information
-            for wall in self.game_env.walls:
-                tank_obs.extend([float(wall.x), float(wall.y), float(wall.x + wall.size), float(wall.y + wall.size)])
+            for wall in self.game_env.walls: # 40
+                tank_obs.extend([float(wall.x), float(wall.y), float(wall.x + wall.size), float(wall.y + wall.size)]) # 4
 
             # Buff Zone Information
-            for buff_zone in self.game_env.buff_zones:
-                tank_obs.extend([float(buff_zone[0]), float(buff_zone[1])])
+            for buff_zone in self.game_env.buff_zones: # 4
+                tank_obs.extend([float(buff_zone[0]), float(buff_zone[1])]) # 2
 
             # Debuff Zone Information
-            for debuff_zone in self.game_env.debuff_zones:
-                tank_obs.extend([float(debuff_zone[0]), float(debuff_zone[1])])
+            for debuff_zone in self.game_env.debuff_zones: # 4
+                tank_obs.extend([float(debuff_zone[0]), float(debuff_zone[1])]) # 2
 
             # Tank's Current Buff/Debuff Status
             tank_obs.append(1 if tank.in_buff_zone else 0)
             tank_obs.append(1 if tank.in_debuff_zone else 0)
-
-            observations.append(tank_obs)
+            
+            # print(len(tank_obs)) # 265
+            
+            observations.append(tank_obs)   # obs is 265 dim each * 2
 
         return np.array(observations, dtype=np.float32)
 
