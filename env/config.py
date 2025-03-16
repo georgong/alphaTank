@@ -17,7 +17,7 @@ GRAY = (100, 100, 100)
 '''-----------------GAME SETTING-----------------'''
 EPSILON = 0.01  
 ROTATION_SPEED = 1
-BULLET_SPEED = 3
+BULLET_SPEED = 1
 BULLET_MAX_BOUNCES = 2
 BULLET_MAX_DISTANCE = 400
 MAX_BULLETS = 6
@@ -35,7 +35,7 @@ STATIONARY_EPSILON = 3
 # STATIONARY_EPSILON = 3
 
 # Map setting
-USE_OCTAGON = True # 八角笼斗
+USE_OCTAGON = False # 八角笼斗
 
 # Tank control setting
 ROTATION_DEGREE = 8         # ->  2, Right, negative, || 0, left, positive
@@ -54,6 +54,8 @@ tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
 }
 
 '''----------------REWARD CONFIG----------------'''
+# We should not post too much constraint/reward on the agent, let it learn by itself
+
 # Victory Reward
 HIT_PENALTY = -50          # punishement of being hit
 TEAM_HIT_PENALTY = -5      # punishment of hitting teamate
@@ -76,11 +78,14 @@ BFS_PATH_LEN_REWARD = 0
 BFS_PATH_LEN_PENALTY = 0
 
 # Bullet Trajectory Reward/Penalty
-TRAJECTORY_HIT_REWARD = 1
-TRAJECTORY_DIST_REWARD = 0.5    # Base reward for good aim
-TRAJECTORY_DIST_PENALTY = -1    # Base reward for good aim
-TRAJECTORY_FAR_THRESHOLD = 300  # Distance threshold for penalty
+TRAJECTORY_HIT_REWARD = 20
+TRAJECTORY_DIST_REWARD = 5 # Base reward for good aim
+TRAJECTORY_DIST_PENALTY = -5 # Base reward for good aim
+TRAJECTORY_FAR_THRESHOLD = 300 # Distance threshold for penalty
 TRAJECTORY_DIST_THRESHOLD = 200 # Distance threshold for reward
+
+#Dodge Reward
+DODGE_FACTOR  = 0.01
 
 # Aim Reward
 TRAJECTORY_AIM_REWARD = 0    # Reward for aiming at target

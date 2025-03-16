@@ -118,7 +118,7 @@ def run_inference(mode, bot_type='smart', demo=False):
     if mode == 'bot':
         env = MultiAgentEnv(mode='bot_agent', type='inference', bot_type=bot_type)
     elif mode == 'agent':
-        env = MultiAgentEnv()
+        env = MultiAgentEnv(type='inference')
     env.render()
 
     agents = load_agents(env, device, mode=mode, bot_type=bot_type, demo=demo)
@@ -140,14 +140,14 @@ def run_inference(mode, bot_type='smart', demo=False):
             if mode == 'bot':
                 actions_list = [
                     agent.get_action_and_value(obs[i])[0].cpu().numpy().tolist()
-                    for i, agent in enumerate(agents[1:])
+                    for i, agent in enumerate(agents)
                 ]
             elif mode == 'agent':
                 actions_list = [
                     agent.get_action_and_value(obs[i])[0].cpu().numpy().tolist()
                     for i, agent in enumerate(agents)
                 ]
-
+        
         next_obs_np, _, done_np, _, _ = env.step(actions_list)
         obs = torch.tensor(next_obs_np, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
 

@@ -26,15 +26,15 @@ def setup_wandb(bot_type):
             "learning_rate": 3e-4,
             "gamma": 0.99,
             "gae_lambda": 0.95,
-            "clip_coef": 0.1,
-            "ent_coef": 0.02,
+            "clip_coef": 0.2,
+            "ent_coef": 0.01,
             "vf_coef": 0.3,
             "max_grad_norm": 0.3,
             "num_steps": 512,
-            "num_epochs": 20,
-            "total_timesteps": 100000,
-            "auto_reset_interval": 20000,
-            "neg_reward_threshold": 0.1,
+            "num_epochs": 60,
+            "total_timesteps": 300000,
+            "auto_reset_interval": 10000,
+            "neg_reward_threshold": 0,
             "training_agent_index": 1,  # Only train agent 1, agent 0 is handled by the environment (bot)
             "opponent_bot_type": bot_type,  # Track which bot we're training against
         }
@@ -203,7 +203,7 @@ def _model_inference_bot(agents, iteration, bot_type=None):
         torch.save(agent.state_dict(), model_path)
 
     video_path = run_inference_with_video(
-        mode='bot', bot_type=bot_type, epoch_checkpoint=iteration, model_paths=model_paths, MAX_STEP=MAX_STEP
+        mode='bot', bot_type=bot_type, epoch_checkpoint=iteration, model_paths=model_paths, MAX_STEPS=MAX_STEP
     )
     
     # Log video to wandb
