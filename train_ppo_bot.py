@@ -22,15 +22,15 @@ def setup_wandb(bot_type):
             "learning_rate": 3e-4,
             "gamma": 0.99,
             "gae_lambda": 0.95,
-            "clip_coef": 0.1,
-            "ent_coef": 0.02,
-            "vf_coef": 0.3,
+            "clip_coef": 0.2,
+            "ent_coef": 0.01,
+            "vf_coef": 0.5,
             "max_grad_norm": 0.3,
             "num_steps": 512,
-            "num_epochs": 20,
-            "total_timesteps": 100000,
-            "auto_reset_interval": 20000,
-            "neg_reward_threshold": 0.1,
+            "num_epochs": 60,
+            "total_timesteps": 500000,
+            "auto_reset_interval": 10000,
+            "neg_reward_threshold": 0,
             "training_agent_index": 1,  # Only train agent 1, agent 0 is handled by the environment (bot)
             "opponent_bot_type": bot_type,  # Track which bot we're training against
         }
