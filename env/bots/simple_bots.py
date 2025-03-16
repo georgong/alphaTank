@@ -49,9 +49,9 @@ class AggressiveBot(BaseBot):
     """A bot that relentlessly pursues and shoots at the opponent （战斗，爽！）"""
     def __init__(self, tank):
         super().__init__(tank)
-        self.aim_threshold = 10  # Very forgiving aim threshold for constant shooting
+        self.aim_threshold = 15  # Very forgiving aim threshold for constant shooting
         self.move_threshold = 45  # Wider threshold for movement
-        self.min_distance = GRID_SIZE * 0.5  # Stop approaching at this distance
+        self.min_distance = GRID_SIZE * 1  # Stop approaching at this distance
         self.state = "pursuing"  # Add state for debug display
         self.stuck_timer = 0  # Add stuck timer for debug display
         self.target = None  # Add target for debug display
@@ -100,8 +100,8 @@ class AggressiveBot(BaseBot):
             rotation = self.aim_at_target(target.x, target.y)
             actions[0] = 2 if rotation > 0 else (0 if rotation < 0 else 1)
             
-            # Always shoot when aimed well
-            if angle_diff < self.aim_threshold:
+            # Only shoot when aimed well AND within minimum distance
+            if angle_diff < self.aim_threshold and dist <= self.min_distance:
                 actions[2] = 1
                 self.state = "attacking"
             
@@ -128,7 +128,7 @@ class DefensiveBot(BaseBot):
     """A bot that moves to the nearest buff zone and shoots from there （我逃避）"""
     def __init__(self, tank):
         super().__init__(tank)
-        self.aim_threshold = 5  # Precise aiming
+        self.aim_threshold = 20  # Precise aiming
         self.move_threshold = 45  # Wider threshold for movement
         self.state = "moving_to_buff"  # States: moving_to_buff, shooting
         self.target_position = None
@@ -453,3 +453,15 @@ class DodgeBot(BaseBot):
         self.dodge_timer -= 1
         
         return actions 
+
+class StationaryBot(BaseBot):
+    """A bot that just stands still and does nothing (对吗？)"""
+    def __init__(self, tank):
+        super().__init__(tank)
+        self.state = "idle"  # Only one state: always idle
+        self.stuck_timer = 0  # Add stuck timer for debug display
+        self.target = None  # Add target for debug display
+
+    def get_action(self):
+        # Return no-op action: no rotation (1), no movement (1), no shooting (0)
+        return [1, 1, 0] 

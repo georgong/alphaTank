@@ -6,18 +6,25 @@ from env.gaming_env import GamingENV
 from env.util import angle_to_vector,corner_to_xy
 
 class MultiAgentEnv(gym.Env):
-    def __init__(self, mode="agent", type='train', bot_type='smart'):
+    def __init__(self, mode="agent", type='train', bot_type='smart', weakness=1.0):
         super().__init__()
         self.training_step = 0
-        self.game_env = GamingENV(mode=mode, type=type, bot_type=bot_type)
+        self.game_env = GamingENV(mode=mode, type=type, bot_type=bot_type, weakness=weakness)
         self.num_tanks = len(self.game_env.tanks)
         self.num_walls = len(self.game_env.walls)
         self.max_bullets_per_tank = 6 
         self.prev_actions = None
+        self.change_time = [0, 0]  # Initialize change_time for tracking action changes
 
         obs_dim = self._calculate_obs_dim()
         self.observation_space = gym.spaces.Box(low=-1, high=max(WIDTH, HEIGHT), shape=(obs_dim,), dtype=np.float32)
         self.action_space = gym.spaces.MultiDiscrete([3, 3, 2] * self.num_tanks)  
+
+    def set_bot_type(self, bot_type):
+        """Change the bot type and reinitialize the bot"""
+        self.game_env.bot_type = bot_type
+        # Reset to create new bot of the specified type
+        self.reset()
 
     def _calculate_obs_dim(self):
         
@@ -55,26 +62,43 @@ class MultiAgentEnv(gym.Env):
         self.game_env.reset()
         for tank in self.game_env.tanks:
             tank.reward = 0  # Reset rewards for new episode
+        self.prev_actions = None  # Reset previous actions
+        self.change_time = [0, 0]  # Reset change time counters
         obs = self._get_observation()
         info = {f"Tank:{i}-{tank.team}": tank.reward for i, tank in enumerate(self.game_env.tanks)}
         return obs, info
 
-
     def step(self, actions):
         self.training_step += 1
         prev_obs = self._get_observation()
-        # parsed_actions = [actions[i * 3:(i + 1) * 3] for i in range(self.num_tanks)]
+        
+        # Track action changes if we have previous actions
+        if self.prev_actions is not None:
+            for i, (action, prev_action) in enumerate(zip(actions, self.prev_actions)):
+                # Only compare movement and rotation (ignore shooting)
+                if action[:-1] == prev_action[:-1]:
+                    self.change_time[i] += 1
+        
+        # Store current actions for next step
+        self.prev_actions = actions
+        
+        # Execute actions in environment
         self.game_env.step(actions)
-        if self.prev_actions != None:
-            change_count = [action[:-1] ==  prev_action[:-1] for action,prev_action in zip(actions,self.prev_actions)]
-            self.change_time[0] += change_count[0]
-            self.change_time[1] += change_count[1]
+        
         obs = self._get_observation()
         rewards = self._calculate_rewards()
         done = self._check_done()
+        
+        # Add change time to info
+        info = {
+            "change_time": self.change_time.copy(),
+            "winner": next((i for i, tank in enumerate(self.game_env.tanks) if tank.alive), None)
+        }
+        
         obs = np.array(obs, dtype=np.float32).flatten()
         rewards = np.array(rewards, dtype=np.float32).flatten()
-        return obs, rewards, done, False, {}
+        
+        return obs, rewards, done, False, info
 
     def _get_observation(self):
         """

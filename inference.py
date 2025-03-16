@@ -11,7 +11,7 @@ import os
 from env.bots.bot_factory import BotFactory
 import pygame
 
-def load_agents(env, device, mode='agent', bot_type='smart', model_paths=None, demo=False):
+def load_agents(env, device, mode='agent', bot_type='smart', model_paths=None, demo=False, weakness=1.0):
     """Loads trained agents from the saved models."""
     num_tanks = env.num_tanks  
     obs_dim = env.observation_space.shape[0] // num_tanks  
@@ -36,7 +36,7 @@ def load_agents(env, device, mode='agent', bot_type='smart', model_paths=None, d
                 if demo:
                     model_path = f"demo_checkpoints/ppo_agent_vs_{bot_type}.pt"
                 else:
-                    model_path = f"checkpoints/ppo_agent_vs_{bot_type}.pt"
+                    model_path = f"checkpoints/ppo_agent_cycle.pt"
 
             agent.load_state_dict(torch.load(model_path, map_location=device))
             agent.eval()
@@ -58,7 +58,7 @@ def _record_inference(mode, epoch_checkpoint, frames):
     return video_path
 
 
-def run_inference_with_video(mode, epoch_checkpoint=None, bot_type='smart', model_paths=None, MAX_STEPS=None):
+def run_inference_with_video(mode, epoch_checkpoint=None, bot_type='smart', model_paths=None, weakness=1.0, MAX_STEPS=None):
     # for inference while training
     # MAX_STEPS control the duration of the recoreded videos
     if MAX_STEPS is None:
@@ -69,13 +69,13 @@ def run_inference_with_video(mode, epoch_checkpoint=None, bot_type='smart', mode
     """Runs a trained PPO model in the environment."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if mode == 'bot':
-        env = MultiAgentEnv(mode='bot_agent', type='inference', bot_type=bot_type)
+        env = MultiAgentEnv(mode='bot_agent', type='inference', bot_type=bot_type, weakness=weakness)
     elif mode == 'agent':
         env = MultiAgentEnv()
     env.render()
 
     agents = load_agents(
-        env, device, mode=mode, model_paths=model_paths
+        env, device, mode=mode, model_paths=model_paths, bot_type=bot_type, weakness=weakness
     )
     obs, _ = env.reset()
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
@@ -112,16 +112,16 @@ def run_inference_with_video(mode, epoch_checkpoint=None, bot_type='smart', mode
             return vidoe_path
         
         
-def run_inference(mode, bot_type='smart', demo=False):
+def run_inference(mode, bot_type='smart', demo=False, weakness=1.0):
     """Runs a trained PPO model in the environment."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if mode == 'bot':
-        env = MultiAgentEnv(mode='bot_agent', type='inference', bot_type=bot_type)
+        env = MultiAgentEnv(mode='bot_agent', type='inference', bot_type=bot_type, weakness=weakness)
     elif mode == 'agent':
         env = MultiAgentEnv(type='inference')
     env.render()
 
-    agents = load_agents(env, device, mode=mode, bot_type=bot_type, demo=demo)
+    agents = load_agents(env, device, mode=mode, bot_type=bot_type, demo=demo, weakness=weakness)
 
     obs, _ = env.reset()
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
@@ -181,10 +181,12 @@ if __name__ == "__main__":
     parser.add_argument("--bot-type", type=str, choices=list(BotFactory.BOT_TYPES.keys()), default="smart",
                       help="Select bot type when using bot mode. Options: " + ", ".join(BotFactory.BOT_TYPES.keys()))
     parser.add_argument("--demo", type=bool, choices=[True, False], default=False, help="Choose True of False")
+    parser.add_argument("--weakness", type=float, default=1.0,
+                      help="Bot weakness value between 0 and 1. 1.0 means bot acts every step, 0.1 means bot acts 10% of the time.")
 
     args = parser.parse_args()
 
     if args.mode == "agent":
         run_inference("agent")
     elif args.mode == "bot":
-        run_inference("bot", args.bot_type, args.demo)
+        run_inference("bot", args.bot_type, args.demo, args.weakness)

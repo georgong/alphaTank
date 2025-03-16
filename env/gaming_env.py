@@ -13,7 +13,7 @@ from env.bots.bot_factory import BotFactory
 
 
 class GamingENV:
-    def __init__(self, mode="human_play", type="train", bot_type="smart"):
+    def __init__(self, mode="human_play", type="train", bot_type="smart", weakness=1.0):
         self.screen = None
         self.running = True
         self.clock = None
@@ -23,6 +23,7 @@ class GamingENV:
         self.mode = mode  # Set mode before reset
         self.type = type
         self.bot_type = bot_type
+        self.weakness = weakness  # Bot action probability
         self.last_bfs_dist = [None] * 2
         self.run_bfs = 0
         self.visualize_traj = VISUALIZE_TRAJ
@@ -35,6 +36,8 @@ class GamingENV:
         
         self.score = [0, 0]  # Track scores for tank1 and tank2
         self.font = None  # Will be initialized in render
+        
+        self.episode_steps = 0  # Add step counter for time-based rewards
         
         self.reset()  # Call reset after all attributes are initialized
 
@@ -55,6 +58,8 @@ class GamingENV:
         if self.font is None:
             pygame.font.init()
             self.font = pygame.font.Font(None, 36)  # None uses default system font
+
+        self.episode_steps = 0  # Reset step counter
 
     def check_buff_debuff(self, tank):
         tank_rect = pygame.Rect(tank.x - tank.width // 2, tank.y - tank.height // 2, tank.width, tank.height)
@@ -83,6 +88,7 @@ class GamingENV:
     
     
     def step(self, actions=None):
+        self.episode_steps += 1  # Increment step counter
         # -- Move all bullets first (unchanged) --
         for bullet in self.bullets[:]:
             bullet.move()
@@ -103,6 +109,11 @@ class GamingENV:
         if self.mode == "bot":
             # Get actions from bot for tank 0
             bot_actions = self.bot.get_action()
+            
+            # Determine if bot should act based on weakness
+            bot_acts = np.random.random() < self.weakness
+            if not bot_acts:
+                bot_actions = [1, 1, 0]  # No-op action: no rotation, no movement, no shooting
             
             # Handle bot tank movements (tank 0)
             tank = self.tanks[0]
@@ -151,6 +162,11 @@ class GamingENV:
         elif self.mode == "bot_agent":
             # Get actions from bot for tank 0
             bot_actions = self.bot.get_action()
+            
+            # Determine if bot should act based on weakness
+            bot_acts = np.random.random() < self.weakness
+            if not bot_acts:
+                bot_actions = [1, 1, 0]  # No-op action: no rotation, no movement, no shooting
             
             # Handle bot tank movements (tank 0)
             tank = self.tanks[0]
@@ -531,7 +547,13 @@ class GamingENV:
         if len({tank.alive for tank in self.tanks}) == 1: #only one team exist
             for tank in self.tanks:
                 if tank.alive:
-                    tank.reward += VICTORY_REWARD
+                    # Add time-based victory reward
+                    # The faster the victory, the higher the reward
+                    # We'll use a max episode length of 1000 steps as reference
+                    max_steps = 1000
+                    time_bonus = 5 * max(0, (max_steps - self.episode_steps) / max_steps)
+                    victory_time_reward = VICTORY_REWARD * (time_bonus)  # Up to 2x reward for instant victory
+                    tank.reward += victory_time_reward
 
     def constructWall(self):
         # define constant variables
