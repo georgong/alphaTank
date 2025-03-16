@@ -12,7 +12,7 @@ from torch.distributions.categorical import Categorical
 import gym
 
 from env.gym_env import MultiAgentEnv
-from models.ppo_ppo_model import PPOAgent_PPO, RunningMeanStd
+from models.ppo_ppo_model import PPOAgentPPO, RunningMeanStd
 from inference import run_inference_with_video
 
 wandb.init(
@@ -33,6 +33,9 @@ wandb.init(
     }
 )
 
+EPOCH_CHECK = 50
+MAX_STEP = 400
+
 def train():
     env = MultiAgentEnv()
     env.render()
@@ -43,7 +46,7 @@ def train():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    agents = [PPOAgent_PPO(obs_dim, act_dim).to(device) for _ in range(num_tanks)]
+    agents = [PPOAgentPPO(obs_dim, act_dim).to(device) for _ in range(num_tanks)]
     optimizers = [optim.Adam(agent.parameters(), lr=wandb.config.learning_rate, eps=1e-5) for agent in agents]
 
     num_steps = wandb.config.num_steps
@@ -173,8 +176,8 @@ def train():
                     "env/reset_count": reset_count
                 })
 
-        if iteration % 50 == 0 and iteration > 1:
-            _model_inference(agents, iteration)
+        if iteration % EPOCH_CHECK == 0 and iteration > 1:
+            _model_inference_agent(agents, iteration)
         
     model_save_dir = "checkpoints"
     os.makedirs(model_save_dir, exist_ok=True)
@@ -187,7 +190,7 @@ def train():
     env.close()
     wandb.finish()
 
-def _model_inference(agents, iteration):
+def _model_inference_agent(agents, iteration):
     print(f'inference check at {iteration} iteration')
     model_save_dir = "epoch_checkpoints/ppo_ppo"
     os.makedirs(model_save_dir, exist_ok=True)
@@ -197,7 +200,9 @@ def _model_inference(agents, iteration):
         model_paths.append(model_path)
         torch.save(agent.state_dict(), model_path)
 
-    video_path = run_inference_with_video(mode='agent', epoch_checkpoint=iteration, model_paths=model_paths)
+    video_path = run_inference_with_video(
+        mode='agent', epoch_checkpoint=iteration, model_paths=model_paths, MAX_STEP=MAX_STEP
+    )
     
     # Log video to wandb
     if video_path and os.path.exists(video_path):

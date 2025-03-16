@@ -28,7 +28,7 @@ class RunningMeanStd:
         x = x.to(self.mean.device)
         return (x - self.mean) / (torch.sqrt(self.var) + 1e-8)
 
-class PPOAgent_PPO(nn.Module):
+class PPOAgentPPO(nn.Module):
     def __init__(self, obs_dim, act_dim):
         super().__init__()
         self.critic = nn.Sequential(

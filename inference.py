@@ -2,8 +2,8 @@ import argparse
 import torch
 import numpy as np
 from env.gym_env import MultiAgentEnv
-from models.ppo_ppo_model import PPOAgent_PPO, RunningMeanStd
-from models.ppo_bot_model import PPOAgent_bot, RunningMeanStd
+from models.ppo_ppo_model import PPOAgentPPO
+from models.ppo_bot_model import PPOAgentBot, RunningMeanStd
 
 import imageio
 from datetime import datetime
@@ -17,17 +17,16 @@ def load_agents(env, device, mode='agent', bot_type='smart', model_paths=None, d
     obs_dim = env.observation_space.shape[0] // num_tanks  
     act_dim = env.action_space.nvec[:3]
 
-    agent_type = PPOAgent_PPO if mode=='agent' else PPOAgent_bot
+    agent_type = PPOAgentPPO if mode=='agent' else PPOAgentBot
 
     if model_paths is not None:
         agents = [agent_type(obs_dim, act_dim).to(device) for _ in range(len(model_paths))]
-
         for i, agent in enumerate(agents):
             agent.load_state_dict(torch.load(model_paths[i], map_location=device))
             agent.eval()
 
     else:
-        if mode == 'not': num_tanks -= 1
+        if mode == 'bot': num_tanks -= 1
         agents = [agent_type(obs_dim, act_dim).to(device) for _ in range(num_tanks)]
         
         for i, agent in enumerate(agents):
@@ -59,16 +58,18 @@ def _record_inference(mode, epoch_checkpoint, frames):
     return video_path
 
 
-def run_inference_with_video(mode, epoch_checkpoint=None, model_paths=None):
+def run_inference_with_video(mode, epoch_checkpoint=None, bot_type='smart', model_paths=None, MAX_STEPS=None):
     # for inference while training
-    MAX_STEPS = 200 if epoch_checkpoint is not None else float('inf')
+    # MAX_STEPS control the duration of the recoreded videos
+    if MAX_STEPS is None:
+        MAX_STEPS = float('inf')
     step_count = 0
     frames = []
 
     """Runs a trained PPO model in the environment."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if mode == 'bot':
-        env = MultiAgentEnv(mode='bot_agent')
+        env = MultiAgentEnv(mode='bot_agent', type='inference', bot_type=bot_type)
     elif mode == 'agent':
         env = MultiAgentEnv()
     env.render()
@@ -76,10 +77,9 @@ def run_inference_with_video(mode, epoch_checkpoint=None, model_paths=None):
     agents = load_agents(
         env, device, mode=mode, model_paths=model_paths
     )
-
     obs, _ = env.reset()
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
-    obs_dim = env.observation_space.shape[0] // len(agents)
+    obs_dim = env.observation_space.shape[0] // env.num_tanks # len(agents)
     obs_norm = RunningMeanStd(shape=(env.num_tanks, obs_dim), device=device)
 
     while True:
@@ -125,7 +125,7 @@ def run_inference(mode, bot_type='smart', demo=False):
 
     obs, _ = env.reset()
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
-    obs_dim = env.observation_space.shape[0] // len(agents)
+    obs_dim = env.observation_space.shape[0] // env.num_tanks # len(agents)
     obs_norm = RunningMeanStd(shape=(env.num_tanks, obs_dim), device=device)
     
     agent_wins = 0
