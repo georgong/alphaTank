@@ -27,7 +27,7 @@ wandb.init(
         "max_grad_norm": 0.3,
         "num_steps": 512,
         "num_epochs": 20,
-        "total_timesteps": 100000,
+        "total_timesteps": 300000,
         "auto_reset_interval": 20000,
         "neg_reward_threshold": 0.1,
     }
