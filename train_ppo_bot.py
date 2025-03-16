@@ -13,7 +13,11 @@ from torch.distributions.categorical import Categorical
 
 from env.gym_env import MultiAgentEnv
 from env.bots.bot_factory import BotFactory
-from models.ppo_bot_model import PPOAgent_bot, RunningMeanStd
+from models.ppo_bot_model import PPOAgentBot, RunningMeanStd
+from inference import run_inference_with_video
+
+EPOCH_CHECK = 50
+MAX_STEP = 400
 
 def setup_wandb(bot_type):
     wandb.init(
@@ -49,7 +53,7 @@ def train(bot_type):
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
     # only the training agent
-    agent = PPOAgent_bot(obs_dim, act_dim).to(device)
+    agent = PPOAgentBot(obs_dim, act_dim).to(device)
     optimizer = optim.Adam(agent.parameters(), lr=wandb.config.learning_rate, eps=1e-5)
 
     num_steps = wandb.config.num_steps
@@ -174,6 +178,9 @@ def train(bot_type):
                 "env/reset_count": reset_count
             })
         
+        if iteration % EPOCH_CHECK == 0 and iteration > 1:
+            _model_inference_bot(agent, iteration, bot_type=bot_type)
+        
     model_save_dir = "checkpoints"
     os.makedirs(model_save_dir, exist_ok=True)
     
@@ -183,6 +190,30 @@ def train(bot_type):
 
     env.close()
     wandb.finish()
+
+def _model_inference_bot(agents, iteration, bot_type=None):
+    print(f'inference check at {iteration} iteration')
+    model_save_dir = "epoch_checkpoints/ppo_bot"
+    os.makedirs(model_save_dir, exist_ok=True)
+    if not isinstance(agents, list): agents = [agents]
+    model_paths = []
+    for agent_idx, agent in enumerate(agents):
+        model_path = os.path.join(model_save_dir, f"ppo_agent_{agent_idx}_epoch_{iteration}.pt")
+        model_paths.append(model_path)
+        torch.save(agent.state_dict(), model_path)
+
+    video_path = run_inference_with_video(
+        mode='bot', bot_type=bot_type, epoch_checkpoint=iteration, model_paths=model_paths, MAX_STEP=MAX_STEP
+    )
+    
+    # Log video to wandb
+    if video_path and os.path.exists(video_path):
+        wandb.log({
+            "game_video": wandb.Video(video_path, fps=30, format="mp4"),
+            "iteration": iteration
+        })
+        print(f"[INFO] Video uploaded to wandb at iteration {iteration}")
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Train PPO agent against a specific bot type")
