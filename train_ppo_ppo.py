@@ -201,7 +201,7 @@ def _model_inference_agent(agents, iteration):
         torch.save(agent.state_dict(), model_path)
 
     video_path = run_inference_with_video(
-        mode='agent', epoch_checkpoint=iteration, model_paths=model_paths, MAX_STEP=MAX_STEP
+        mode='agent', epoch_checkpoint=iteration, model_paths=model_paths, MAX_STEPS=MAX_STEP
     )
     
     # Log video to wandb
