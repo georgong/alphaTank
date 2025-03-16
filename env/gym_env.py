@@ -21,15 +21,17 @@ class MultiAgentEnv(gym.Env):
 
     def _calculate_obs_dim(self):
         
-        agent_tank_dim =  13
+        agent_tank_dim =  13 + 1 
         
-        enemy_tank_dim = (self.num_tanks - 1) * 16
+        enemy_tank_dim = (self.num_tanks - 1) * (16 + 1)
         
         agent_bullet_dim =  self.max_bullets_per_tank * 4
         
         enemy_bullet_dim =  (self.num_tanks - 1) * self.max_bullets_per_tank * 7
         
         wall_dim = self.num_walls * 4
+
+        maze_dim = len(self.game_env.maze.flatten())
         
         buff_zone_dim = len(self.game_env.buff_zones) * 2
         
@@ -39,7 +41,15 @@ class MultiAgentEnv(gym.Env):
         
         # print(agent_tank_dim, enemy_tank_dim, agent_bullet_dim, enemy_bullet_dim, wall_dim, buff_zone_dim, debuff_zone_dim, in_buff_zone_dim)
         
-        return (agent_tank_dim + enemy_tank_dim + agent_bullet_dim + enemy_bullet_dim + wall_dim + buff_zone_dim + debuff_zone_dim + in_buff_zone_dim) * self.num_tanks
+        return (agent_tank_dim + 
+                maze_dim + 
+                enemy_tank_dim + 
+                agent_bullet_dim + 
+                enemy_bullet_dim + 
+                wall_dim + 
+                buff_zone_dim + 
+                debuff_zone_dim + 
+                in_buff_zone_dim) * self.num_tanks
 
     def reset(self):
         self.game_env.reset()
@@ -84,7 +94,7 @@ class MultiAgentEnv(gym.Env):
             tank_obs = []
             dx,dy = angle_to_vector(float(tank.angle),float(tank.speed))
             # Tank's own position and status
-            tank_obs.extend([float(tank.x), float(tank.y), *corner_to_xy(tank), float(dx), float(dy), float(1 if tank.alive else 0)]) # 5 + 8
+            tank_obs.extend([float(tank.x), float(tank.y), *corner_to_xy(tank), float(dx), float(dy), float(tank.hittingWall), float(1 if tank.alive else 0)]) # 5 + 8
 
 
             # Tank's bullets
@@ -120,11 +130,13 @@ class MultiAgentEnv(gym.Env):
                     # min_enemy_dist = min(min_enemy_dist, distance)
                     
                     dx, dy = angle_to_vector(float(other_tank.angle), float(other_tank.speed))
-                    tank_obs.extend([float(other_tank.x), float(other_tank.y), rel_x, rel_y, distance, *corner_to_xy(other_tank), float(dx), float(dy), float(1 if other_tank.alive else 0)]) # 8 + 8
+                    tank_obs.extend([float(other_tank.x), float(other_tank.y), rel_x, rel_y, distance, *corner_to_xy(other_tank), float(dx), float(dy),  float(other_tank.hittingWall), float(1 if other_tank.alive else 0)]) # 8 + 8
                 
             # Wall information
             for wall in self.game_env.walls: # 40
                 tank_obs.extend([float(wall.x), float(wall.y), float(wall.x + wall.size), float(wall.y + wall.size)]) # 4
+            
+            tank_obs.extend(self.game_env.maze.flatten())
 
             # Buff Zone Information
             for buff_zone in self.game_env.buff_zones: # 4
