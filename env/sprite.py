@@ -27,30 +27,30 @@ class Bullet:
 
         bullet_rect = pygame.Rect(next_x, next_y, 5, 5)
 
-        # 存储反弹情况
-        bounce_x, bounce_y = False, False
+        # # 存储反弹情况
+        # bounce_x, bounce_y = False, False
 
-        for wall in self.sharing_env.walls:
-            if wall.rect.colliderect(bullet_rect):
-                # 精细化检测
-                temp_rect_x = pygame.Rect(self.x + self.dx * self.speed, self.y, 5, 5)
-                temp_rect_y = pygame.Rect(self.x, self.y + self.dy * self.speed, 5, 5)
+        # for wall in self.sharing_env.walls:
+        #     if wall.rect.colliderect(bullet_rect):
+        #         # 精细化检测
+        #         temp_rect_x = pygame.Rect(self.x + self.dx * self.speed, self.y, 5, 5)
+        #         temp_rect_y = pygame.Rect(self.x, self.y + self.dy * self.speed, 5, 5)
 
-                if wall.rect.colliderect(temp_rect_x):
-                    bounce_x = True  # X 方向反弹
-                if wall.rect.colliderect(temp_rect_y):
-                    bounce_y = True  # Y 方向反弹
+        #         if wall.rect.colliderect(temp_rect_x):
+        #             bounce_x = True  # X 方向反弹
+        #         if wall.rect.colliderect(temp_rect_y):
+        #             bounce_y = True  # Y 方向反弹
 
-                # 防止墙角反弹错误
-                if bounce_x and bounce_y:
-                    self.dx, self.dy = -self.dx, -self.dy  # 对角反弹
-                elif bounce_x:
-                    self.dx = -self.dx
-                elif bounce_y:
-                    self.dy = -self.dy
+        #         # 防止墙角反弹错误
+        #         if bounce_x and bounce_y:
+        #             self.dx, self.dy = -self.dx, -self.dy  # 对角反弹
+        #         elif bounce_x:
+        #             self.dx = -self.dx
+        #         elif bounce_y:
+        #             self.dy = -self.dy
 
-                self.bounces += 1
-                break  # 防止同一帧多次反弹
+        #         self.bounces += 1
+        #         break  # 防止同一帧多次反弹
 
         for tank in self.sharing_env.tanks:
             if tank.alive > 0 and tank != self.owner:  # 确保不击中自己
@@ -60,8 +60,6 @@ class Bullet:
                     self.sharing_env.bullets.remove(self)  
                     self.sharing_env.update_reward_by_bullets(self.owner,tank)
                     return
-            
-
 
         # 更新子弹位置
         self.x += self.dx * self.speed
@@ -114,38 +112,38 @@ class BulletTrajectory(Bullet):
                         self.will_hit_target = True
                         return True  # trajectory will hit a tank
             
-            # check for wall bounces
-            bounce_happened = False
-            for wall in self.sharing_env.walls:
-                if wall.rect.colliderect(bullet_rect):
-                    # store point before bounce
-                    self.trajectory_points.append((self.x, self.y))
-                    self.trajectory_data.append((self.x, self.y, self.dx, self.dy))
+            # # check for wall bounces
+            # bounce_happened = False
+            # for wall in self.sharing_env.walls:
+            #     if wall.rect.colliderect(bullet_rect):
+            #         # store point before bounce
+            #         self.trajectory_points.append((self.x, self.y))
+            #         self.trajectory_data.append((self.x, self.y, self.dx, self.dy))
                     
-                    # handle bounce
-                    temp_rect_x = pygame.Rect(self.x + self.dx * self.speed, self.y, 5, 5)
-                    temp_rect_y = pygame.Rect(self.x, self.y + self.dy * self.speed, 5, 5)
+            #         # handle bounce
+            #         temp_rect_x = pygame.Rect(self.x + self.dx * self.speed, self.y, 5, 5)
+            #         temp_rect_y = pygame.Rect(self.x, self.y + self.dy * self.speed, 5, 5)
                     
-                    bounce_x = wall.rect.colliderect(temp_rect_x)
-                    bounce_y = wall.rect.colliderect(temp_rect_y)
+            #         bounce_x = wall.rect.colliderect(temp_rect_x)
+            #         bounce_y = wall.rect.colliderect(temp_rect_y)
                     
-                    if bounce_x and bounce_y:
-                        self.dx, self.dy = -self.dx, -self.dy
-                    elif bounce_x:
-                        self.dx = -self.dx
-                    elif bounce_y:
-                        self.dy = -self.dy
+            #         if bounce_x and bounce_y:
+            #             self.dx, self.dy = -self.dx, -self.dy
+            #         elif bounce_x:
+            #             self.dx = -self.dx
+            #         elif bounce_y:
+            #             self.dy = -self.dy
                         
-                    self.bounces += 1
-                    bounce_happened = True
-                    break
+            #         self.bounces += 1
+            #         bounce_happened = True
+            #         break
             
-            if not bounce_happened:
-                self.x = next_x
-                self.y = next_y
-                self.distance_traveled += self.speed
-                self.trajectory_points.append((self.x, self.y))
-                self.trajectory_data.append((self.x, self.y, self.dx, self.dy))
+            # if not bounce_happened:
+            self.x = next_x
+            self.y = next_y
+            self.distance_traveled += self.speed
+            self.trajectory_points.append((self.x, self.y))
+            self.trajectory_data.append((self.x, self.y, self.dx, self.dy))
             
             # check ending conditions
             if (self.bounces > self.max_bounces or 
