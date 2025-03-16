@@ -82,6 +82,9 @@ TRAJECTORY_DIST_PENALTY = -1    # Base reward for good aim
 TRAJECTORY_FAR_THRESHOLD = 300  # Distance threshold for penalty
 TRAJECTORY_DIST_THRESHOLD = 200 # Distance threshold for reward
 
+#Dodge Reward
+DODGE_FACTOR  = 0.01
+
 # Aim Reward
 TRAJECTORY_AIM_REWARD = 0    # Reward for aiming at target
 AIMING_FRAMES_THRESHOLD = 17

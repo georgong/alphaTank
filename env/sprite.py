@@ -3,6 +3,7 @@ import random
 import math
 from env.config import *
 from env.util import *
+import numpy as np
 from PIL import Image, ImageSequence, ImageEnhance
 
 class Bullet:
@@ -195,6 +196,7 @@ class Tank:
         self.reward = 0
         self.in_debuff_zone = 0
         self.in_buff_zone = 0
+        self.hittingWall = False
 
         # reward compute
         self.last_x, self.last_y = x, y  # 记录上一次位置
@@ -300,6 +302,9 @@ class Tank:
         # make sure tank won't go through the wall
         if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
             self.x, self.y = new_x, new_y
+            self.hittingWall = False
+        else:
+            self.hittingWall = True
         
         '''Reward #3: stationary penalty'''
         self._stationary_penalty()
@@ -310,6 +315,8 @@ class Tank:
         '''Reward #6 consistency action reward'''
         if current_actions is not None:
             self._control_penalty(current_actions)
+        '''Rward $7 Dodge Reward'''
+        self._dodge_reward()
 
         #   self._action_consistency_reward(current_actions)
 
@@ -450,6 +457,35 @@ class Tank:
             self.aiming_counter = 0
             
             # self.activate_bullet_trajectory_reward = True
+
+    def _dodge_reward(self):
+        reward = 0
+        tank_pos = np.array([self.x, self.y])
+        tank_vel = np.array([*angle_to_vector(self.angle,self.speed)])
+        
+        for bullet in self.sharing_env.bullets:
+            bullet_pos = np.array([bullet.x, bullet.y])
+            bullet_vel = np.array([bullet.dx, bullet.dy])
+            
+            # 计算距离
+            distance = np.linalg.norm(tank_pos - bullet_pos)
+            if distance >= 100:
+                continue  # 忽略远离的子弹
+            
+            # 计算子弹的轨迹单位向量
+            if np.linalg.norm(bullet_vel) == 0:
+                continue  # 忽略静止子弹
+            
+            bullet_dir = bullet_vel / np.linalg.norm(bullet_vel)  # 单位向量
+            perpendicular_dir = np.array([-bullet_dir[1], bullet_dir[0]])  # 计算垂直方向
+            
+            # 计算坦克速度在该垂直向量上的投影
+            projection = np.dot(tank_vel, perpendicular_dir)
+                
+            # 给予远离子弹轨迹的奖励
+            reward += abs(projection) * DODGE_FACTOR
+
+        self.reward += reward
 
 
     def rotate(self, direction):
