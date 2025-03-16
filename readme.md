@@ -63,6 +63,7 @@ python bot_arena.py --bot1 defensive  --bot2 dodge
 When training, choose **bot type** from `smart`, `random`, `aggressive`, `defensive`, `dodge`.
 ```python
 python train_ppo_bot.py --bot-type smart
+python train_ppo_cycle.py
 python train_ppo_ppo.py
 ```
 
