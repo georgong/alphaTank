@@ -13,11 +13,13 @@ from torch.distributions.categorical import Categorical
 
 from env.gym_env import MultiAgentEnv
 from env.bots.bot_factory import BotFactory
-from models.ppo_bot_model import PPOAgent_bot, RunningMeanStd
+from models.ppo_bot_model import PPOAgentBot, RunningMeanStd
+from inference import run_inference_with_video
 
 # Valid rotation strategies
 ROTATION_STRATEGIES = ["random", "fixed", "adaptive"]
-
+EPOCH_CHECK = 50
+MAX_STEP = 400
 class CycleTrainingConfig:
     def __init__(self,
                  bot_types=None,
@@ -204,8 +206,8 @@ class CycleTrainingEvaluator:
             print(f"[ERROR EVAL] Error resetting environment after evaluation: {str(e)}")
             raise e
         
-        # print("[DEBUG EVAL] Evaluation complete")
         return eval_results
+
 
 def setup_wandb(config: CycleTrainingConfig):
     wandb.init(
@@ -261,7 +263,7 @@ def train_cycle(config: CycleTrainingConfig):
     obs_dim = env.observation_space.shape[0] // num_tanks  # Divide by 2 as we only train one agent
     act_dim = env.action_space.nvec[:3]
     
-    agent = PPOAgent_bot(obs_dim, act_dim).to(config.device)
+    agent = PPOAgentBot(obs_dim, act_dim).to(config.device)
     optimizer = optim.Adam(agent.parameters(), lr=config.learning_rate, eps=1e-5)
     
     # Initialize win rate tracker
@@ -415,6 +417,9 @@ def train_cycle(config: CycleTrainingConfig):
             "global_step": update * config.num_steps
         })
         
+        if update % EPOCH_CHECK == 0 and update > 1:
+            _model_inference_cycle(agent, update, bot_type=current_bot)
+        
         # Update progress bar
         progress_bar.set_description(
             f"Update {update}/{num_updates}, "
@@ -432,6 +437,31 @@ def train_cycle(config: CycleTrainingConfig):
     
     env.close()
     wandb.finish()
+
+
+def _model_inference_cycle(agents, iteration, bot_type=None):
+    print(f'inference check at {iteration} iteration')
+    model_save_dir = "epoch_checkpoints/ppo_bot"
+    os.makedirs(model_save_dir, exist_ok=True)
+    if not isinstance(agents, list): agents = [agents]
+    model_paths = []
+    for agent_idx, agent in enumerate(agents):
+        model_path = os.path.join(model_save_dir, f"ppo_agent_{agent_idx}_epoch_{iteration}.pt")
+        model_paths.append(model_path)
+        torch.save(agent.state_dict(), model_path)
+
+    video_path = run_inference_with_video(
+        mode='bot', bot_type=bot_type, epoch_checkpoint=iteration, model_paths=model_paths, MAX_STEPS=MAX_STEP
+    )
+    
+    # Log video to wandb
+    if video_path and os.path.exists(video_path):
+        wandb.log({
+            "game_video": wandb.Video(video_path, fps=30, format="mp4"),
+            "iteration": iteration
+        })
+        print(f"[INFO] Video uploaded to wandb at iteration {iteration}")
+        
 
 # Default configuration
 DEFAULT_CONFIG = {
@@ -452,7 +482,7 @@ DEFAULT_CONFIG = {
     # PPO hyperparameters
     "learning_rate": 3e-4,
     "num_steps": 512,
-    "num_epochs": 20,
+    "num_epochs": 60,
     "gamma": 0.99,
     "gae_lambda": 0.95,
     "clip_coef": 0.1,
