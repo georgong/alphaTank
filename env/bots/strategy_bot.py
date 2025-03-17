@@ -29,7 +29,7 @@ class SmartStrategyBot(BaseBot):
         nearest = None
         
         for tank in self.tank.sharing_env.tanks:
-            if tank != self.tank and tank.alive:
+            if tank.team != self.tank.team and tank.alive:
                 dist = math.sqrt((tank.x - self.tank.x)**2 + (tank.y - self.tank.y)**2)
                 if dist < min_dist:
                     min_dist = dist

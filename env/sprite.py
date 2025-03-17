@@ -53,7 +53,7 @@ class Bullet:
         #         break  # 防止同一帧多次反弹
 
         for tank in self.sharing_env.tanks:
-            if tank.alive > 0 and tank != self.owner:  # 确保不击中自己
+            if tank.alive > 0 and tank.team != self.owner.team:  # 确保不击中自己和队友
                 tank_rect = pygame.Rect(tank.x - tank.width // 2, tank.y - tank.height // 2, tank.width, tank.height)
                 if bullet_rect.colliderect(tank_rect):
                     tank.alive = False  
@@ -99,7 +99,7 @@ class BulletTrajectory(Bullet):
             
             # check for tank hits
             for tank in self.sharing_env.tanks:
-                if tank != self.owner and tank.alive:
+                if tank.team != self.owner.team and tank.alive:
                     tank_rect = pygame.Rect(
                         tank.x - tank.width // 2,
                         tank.y - tank.height // 2,
@@ -174,7 +174,7 @@ class BulletTrajectory(Bullet):
             )
 
 class Tank:
-    def __init__(self, team, x, y, color, keys, env):
+    def __init__(self, team, x, y, color, keys, mode, env):
         self.team = team
         self.x = x
         self.y = y
@@ -195,6 +195,7 @@ class Tank:
         self.in_debuff_zone = 0
         self.in_buff_zone = 0
         self.hittingWall = False
+        self.mode = mode
 
         # reward compute
         self.last_x, self.last_y = x, y  # 记录上一次位置
@@ -465,10 +466,11 @@ class Tank:
             distance = np.linalg.norm(tank_pos - bullet_pos)
             if distance >= 100:
                 continue  # 忽略远离的子弹
-            
             # 计算子弹的轨迹单位向量
             if np.linalg.norm(bullet_vel) == 0:
                 continue  # 忽略静止子弹
+            if bullet.owner.team == self.team:
+                continue # 忽略同队子弹
             
             bullet_dir = bullet_vel / np.linalg.norm(bullet_vel)  # 单位向量
             perpendicular_dir = np.array([-bullet_dir[1], bullet_dir[0]])  # 计算垂直方向
@@ -534,6 +536,7 @@ class Tank:
             self.reward += penalty
 
     def shoot(self):
+        self.check_buff_debuff()
         """ shoot bullets with frequncy limit and existing max bullets limits """
         if not self.alive:
             return
@@ -563,6 +566,54 @@ class Tank:
 
         # **更新射击时间**
         self.last_shot_time = current_time
+
+
+
+    def check_buff_debuff(self):
+        tank_rect = pygame.Rect(self.x - self.width // 2, self.y - self.height // 2, self.width, self.height)
+        
+        self.in_buff_zone = False
+        for buff_pos in self.sharing_env.buff_zones:
+            buff_rect = pygame.Rect(buff_pos[0], buff_pos[1], GRID_SIZE * 3.5, GRID_SIZE * 3.5)
+            if tank_rect.colliderect(buff_rect) and BUFF_ON:
+                # print(f'\nTank {tank.team} got buffed!')
+                self.max_bullets = 30
+                self.in_buff_zone = True
+                break
+        else:
+            self.max_bullets = MAX_BULLETS
+        
+        self.in_debuff_zone = False
+        for debuff_pos in self.sharing_env.debuff_zones:
+            debuff_rect = pygame.Rect(debuff_pos[0], debuff_pos[1], GRID_SIZE * 3.5, GRID_SIZE * 3.5)
+            if tank_rect.colliderect(debuff_rect) and DEBUFF_ON:
+                # print(f'\nTank {tank.team} got debuffed!')
+                self.max_bullets = 1  
+                self.in_debuff_zone = True
+                break
+        else:
+            self.max_bullets = MAX_BULLETS
+
+    def take_action(self,actions):
+        if actions[0] == 2:  # Right
+            self.rotate(-ROTATION_DEGREE)
+        elif actions[0] == 0:  # Left
+            self.rotate(ROTATION_DEGREE)
+        
+        # Handle movement (action[1])
+        if actions[1] == 2:  # Forward
+            self.speed = TANK_SPEED
+        elif actions[1] == 0:  # Backward
+            self.speed = -TANK_SPEED
+        else:
+            self.speed = 0
+        
+        if actions[2] == 1:  # Shoot
+            self.shoot()
+
+        # Move the tank after setting speed
+        self.move(actions)
+
 
     def draw(self):
         """ 绘制坦克（使用 GIF 动画） """

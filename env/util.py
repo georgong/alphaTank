@@ -61,3 +61,24 @@ def euclidean_distance(cell_a, cell_b):
     (r1, c1) = cell_a
     (r2, c2) = cell_b
     return math.sqrt((r1 - r2) ** 2 + (c1 - c2) ** 2)
+
+def find_nearest_enemy(tank, tanks):
+    """
+    Finds the nearest tank from a different team.
+    
+    :param tank: The reference tank (object with x, y, and team attributes).
+    :param tanks: List of all tanks (each with x, y, and team attributes).
+    :return: The nearest enemy tank or None if no enemies are found.
+    """
+    nearest_enemy = None
+    min_distance = float('inf')
+
+    for other_tank in tanks:
+        if other_tank.team != tank.team:  # Check if it's an enemy
+            distance = math.sqrt((tank.x - other_tank.x) ** 2 + (tank.y - other_tank.y) ** 2)
+            
+            if distance < min_distance:
+                min_distance = distance
+                nearest_enemy = other_tank
+
+    return nearest_enemy

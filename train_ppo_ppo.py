@@ -15,24 +15,23 @@ from env.gym_env import MultiAgentEnv
 from models.ppo_ppo_model import PPOAgentPPO, RunningMeanStd
 from video_record import EPOCH_CHECK, VideoRecorder
 
-def setup_wandb():
-    wandb.init(
-        project="multiagent-ppo-ppo",
-        config={
-            "learning_rate": 3e-4,
-            "gamma": 0.99,
-            "gae_lambda": 0.95,
-            "clip_coef": 0.1,
-            "ent_coef": 0.02,
-            "vf_coef": 0.3,
-            "max_grad_norm": 0.3,
-            "num_steps": 512,
-            "num_epochs": 20,
-            "total_timesteps": 100000,
-            "auto_reset_interval": 20000,
-            "neg_reward_threshold": 0.1,
-        }
-    )
+wandb.init(
+    project="multiagent-ppo-ppo",
+    config={
+        "learning_rate": 3e-4,
+        "gamma": 0.99,
+        "gae_lambda": 0.95,
+        "clip_coef": 0.1,
+        "ent_coef": 0.02,
+        "vf_coef": 0.3,
+        "max_grad_norm": 0.3,
+        "num_steps": 512,
+        "num_epochs": 20,
+        "total_timesteps": 100000,
+        "auto_reset_interval": 20000,
+        "neg_reward_threshold": 0.1,
+    }
+)
 
 
 def train():
