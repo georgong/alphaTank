@@ -177,7 +177,7 @@ def train():
 
         if iteration % EPOCH_CHECK == 0 and iteration > 1:
             video_recorder.start_recording(
-                agent, iteration, mode='agent', model='ppo'
+                agents, iteration, mode='agent', model='ppo'
             )
         
         # check videos for logging to wandb
