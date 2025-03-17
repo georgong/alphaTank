@@ -229,10 +229,6 @@ class Tank:
         self.total_rotation = 0  # Track accumulated rotation
         self.last_rotation_pos = (x, y)  # Position where we start tracking rotation
 
-        self.reward_list = []
-
-    def set_reward_list(self, new_reward_list):
-        self.reward_list = new_reward_list
 
     def load_and_colorize_gif(self, gif_path, target_color, size):
         """ 加载 GIF 并调整颜色 & 大小，返回 pygame 兼容的帧列表 """
