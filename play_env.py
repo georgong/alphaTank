@@ -3,6 +3,7 @@ import numpy as np
 from env.gym_env import MultiAgentEnv
 from env.gaming_env import GamingENV
 from env.bots.bot_factory import BotFactory
+from env.config import two_tank_configs,team_configs
 
 def run_random():
     """Runs the environment with randomly sampled actions."""
@@ -22,6 +23,13 @@ def run_random():
 def run_play():
     """Runs the environment in human play mode."""
     env = GamingENV(mode="human_play")
+    while env.running:
+        env.render()
+        env.step()
+
+def run_team_play():
+    """Runs the environment in human play mode."""
+    env = GamingENV(mode="human_play",game_configs=team_configs)
     while env.running:
         env.render()
         env.step()

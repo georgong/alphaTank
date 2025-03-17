@@ -53,7 +53,7 @@ class Bullet:
                 break  # 防止同一帧多次反弹
 
         for tank in self.sharing_env.tanks:
-            if tank.alive > 0 and tank != self.owner:  # 确保不击中自己
+            if tank.alive > 0 and tank.team != self.owner.team:  # 确保不击中自己和队友
                 tank_rect = pygame.Rect(tank.x - tank.width // 2, tank.y - tank.height // 2, tank.width, tank.height)
                 if bullet_rect.colliderect(tank_rect):
                     tank.alive = False  
@@ -101,7 +101,7 @@ class BulletTrajectory(Bullet):
             
             # check for tank hits
             for tank in self.sharing_env.tanks:
-                if tank != self.owner and tank.alive:
+                if tank.team != self.owner.team and tank.alive:
                     tank_rect = pygame.Rect(
                         tank.x - tank.width // 2,
                         tank.y - tank.height // 2,
@@ -471,10 +471,11 @@ class Tank:
             distance = np.linalg.norm(tank_pos - bullet_pos)
             if distance >= 100:
                 continue  # 忽略远离的子弹
-            
             # 计算子弹的轨迹单位向量
             if np.linalg.norm(bullet_vel) == 0:
                 continue  # 忽略静止子弹
+            if bullet.owner.team == self.team:
+                continue # 忽略同队子弹
             
             bullet_dir = bullet_vel / np.linalg.norm(bullet_vel)  # 单位向量
             perpendicular_dir = np.array([-bullet_dir[1], bullet_dir[0]])  # 计算垂直方向

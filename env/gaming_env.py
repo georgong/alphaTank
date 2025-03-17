@@ -13,7 +13,7 @@ from env.bots.bot_factory import BotFactory
 
 
 class GamingENV:
-    def __init__(self, mode="human_play", type="train", bot_type="smart"):
+    def __init__(self, mode="human_play", type="train", bot_type="smart",game_configs = two_tank_configs):
         self.screen = None
         self.running = True
         self.clock = None
@@ -29,6 +29,7 @@ class GamingENV:
         self.render_bfs = RENDER_BFS
         self.reset_cooldown = 0
         self.bot = None
+        self.game_configs = two_tank_configs
         
         self.buff_zones = [] 
         self.debuff_zones = []
@@ -40,7 +41,7 @@ class GamingENV:
 
     def reset(self):
         self.walls, self.empty_space = self.constructWall()
-        self.tanks = self.setup_tank(tank_configs)
+        self.tanks = self.setup_tank(self.game_configs)
         self.bullets = []
         self.bullets_trajs = []
         self.path = None  # Reset BFS path
