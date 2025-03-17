@@ -4,7 +4,7 @@ import pygame
 import os
 from env.config import WIDTH, HEIGHT
 
-'''I put ContinuousToDiscreteWrapper here to precent ciruclar import error'''
+'''I put ContinuousToDiscreteWrapper here to prevent circular import error'''
 
 class ContinuousToDiscreteWrapper(gym.ActionWrapper):
     def __init__(self, env):
