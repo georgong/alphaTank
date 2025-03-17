@@ -421,7 +421,7 @@ def train_cycle(config: CycleTrainingConfig):
         
         if update % EPOCH_CHECK == 0 and update > 1:
             video_recorder.start_recording(
-                agent, update, mode='bot', model='ppo', bot_type=current_bot, weakness=current_weakness
+                agent, update, mode='bot', algorithm='ppo', bot_type=current_bot, weakness=current_weakness
             )
             # _model_inference_cycle(agent, update, bot_type=current_bot)
         

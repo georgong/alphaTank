@@ -4,11 +4,12 @@ import numpy as np
 from env.gym_env import MultiAgentEnv
 from models.ppo_ppo_model import PPOAgentPPO
 from models.ppo_bot_model import PPOAgentBot, RunningMeanStd
+from sac_util import ContinuousToDiscreteWrapper
 
 from env.bots.bot_factory import BotFactory
 import pygame
 
-def load_agents(env, device, mode='agent', bot_type='smart', model_paths=None, demo=False, weakness=1.0):
+def load_agents_ppo(env, device, mode='agent', bot_type='smart', model_paths=None, demo=False, weakness=1.0):
     """Loads trained agents from the saved models."""
     num_tanks = env.num_tanks  
     obs_dim = env.observation_space.shape[0] // num_tanks  
@@ -37,6 +38,48 @@ def load_agents(env, device, mode='agent', bot_type='smart', model_paths=None, d
 
             agent.load_state_dict(torch.load(model_path, map_location=device))
             agent.eval()
+            print(f"[INFO] Loaded model for Agent {i} from {model_path}")
+
+    return agents
+
+
+def load_agents_sac(env, device, mode='agent', bot_type='smart', model_paths=None, demo=False, weakness=1.0):
+    """Loads trained SAC agents from the saved models."""
+    num_tanks = env.num_tanks  
+    obs_dim = env.observation_space.shape[0] // num_tanks  
+    # For SAC, use the continuous action dimension.
+    action_dim = env.action_space.shape[0]
+
+    # Import your SAC agent from the appropriate module
+    from train_sac_sac import SACAgent  # Adjust the import path as needed
+
+    if model_paths is not None:
+        agents = [SACAgent(obs_dim, action_dim, device=device) for _ in range(len(model_paths))]
+        for i, agent in enumerate(agents):
+            state = torch.load(model_paths[i], map_location=device)
+            agent.load_state_dict(state)
+            # Set networks to evaluation mode.
+            agent.actor.eval()
+            agent.critic1.eval()
+            agent.critic2.eval()
+    else:
+        if mode == 'bot':
+            num_tanks -= 1
+        agents = [SACAgent(obs_dim, action_dim, device=device) for _ in range(num_tanks)]
+        for i, agent in enumerate(agents):
+            if mode == 'agent':
+                model_path = f"checkpoints/sac_agent_{i}.pt"
+            elif mode == 'bot':
+                if demo:
+                    model_path = f"demo_checkpoints/sac_agent_vs_{bot_type}.pt"
+                else:
+                    model_path = f"checkpoints/sac_agent_cycle.pt"
+            state = torch.load(model_path, map_location=device)
+            agent.load_state_dict(state)
+            # Set networks to evaluation mode.
+            agent.actor.eval()
+            agent.critic1.eval()
+            agent.critic2.eval()
             print(f"[INFO] Loaded model for Agent {i} from {model_path}")
 
     return agents
@@ -109,7 +152,7 @@ def load_agents(env, device, mode='agent', bot_type='smart', model_paths=None, d
 #             return vidoe_path
         
         
-def run_inference(mode, bot_type='smart', demo=False, weakness=1.0):
+def run_inference(mode, algorithm='ppo', bot_type='smart', demo=False, weakness=1.0):
     """Runs a trained PPO model in the environment."""
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if mode == 'bot':
@@ -117,8 +160,14 @@ def run_inference(mode, bot_type='smart', demo=False, weakness=1.0):
     elif mode == 'agent':
         env = MultiAgentEnv(type='inference')
     env.render()
+    if algorithm == 'sac':
+        env = ContinuousToDiscreteWrapper(env)
+    env.render()
 
-    agents = load_agents(env, device, mode=mode, bot_type=bot_type, demo=demo, weakness=weakness)
+    if algorithm == 'ppo':
+        agents = load_agents_ppo(env, device, mode=mode, algorithm=algorithm, bot_type=bot_type, demo=demo, weakness=weakness)
+    elif algorithm == 'sac':
+        agents = load_agents_sac(env, device, mode=mode, algorithm=algorithm, bot_type=bot_type, demo=demo, weakness=weakness)
 
     obs, _ = env.reset()
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
@@ -175,6 +224,7 @@ def run_inference(mode, bot_type='smart', demo=False, weakness=1.0):
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run MultiAgentEnv in either a. vs. a. or a. vs. b.")
     parser.add_argument("--mode", type=str, choices=["agent", "bot"], required=True, help="Select 'agent vs agent' or 'agent vs bot' mode.")
+    parser.add_argument("--algorithm", type=str, choices=["ppo", "sac"], default="ppo", help="Select 'agent vs agent' or 'agent vs bot' mode.")
     parser.add_argument("--bot-type", type=str, choices=list(BotFactory.BOT_TYPES.keys()), default="smart",
                       help="Select bot type when using bot mode. Options: " + ", ".join(BotFactory.BOT_TYPES.keys()))
     parser.add_argument("--demo", type=bool, choices=[True, False], default=False, help="Choose True of False")
@@ -184,6 +234,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
 
     if args.mode == "agent":
-        run_inference("agent")
+        run_inference("agent", algorithm=args.algorithm)
     elif args.mode == "bot":
-        run_inference("bot", args.bot_type, args.demo, args.weakness)
+        run_inference("bot", args.algorithm, args.bot_type, args.demo, args.weakness)

@@ -15,26 +15,28 @@ from env.gym_env import MultiAgentEnv
 from models.ppo_ppo_model import PPOAgentPPO, RunningMeanStd
 from video_record import EPOCH_CHECK, VideoRecorder
 
-wandb.init(
-    project="multiagent-ppo-ppo",
-    config={
-        "learning_rate": 3e-4,
-        "gamma": 0.99,
-        "gae_lambda": 0.95,
-        "clip_coef": 0.1,
-        "ent_coef": 0.02,
-        "vf_coef": 0.3,
-        "max_grad_norm": 0.3,
-        "num_steps": 512,
-        "num_epochs": 20,
-        "total_timesteps": 100000,
-        "auto_reset_interval": 20000,
-        "neg_reward_threshold": 0.1,
-    }
-)
+def setup_wandb():
+    wandb.init(
+        project="multiagent-ppo-ppo",
+        config={
+            "learning_rate": 3e-4,
+            "gamma": 0.99,
+            "gae_lambda": 0.95,
+            "clip_coef": 0.1,
+            "ent_coef": 0.02,
+            "vf_coef": 0.3,
+            "max_grad_norm": 0.3,
+            "num_steps": 512,
+            "num_epochs": 20,
+            "total_timesteps": 100000,
+            "auto_reset_interval": 20000,
+            "neg_reward_threshold": 0.1,
+        }
+    )
 
 
 def train():
+    setup_wandb()
     env = MultiAgentEnv()
     env.render()
     video_recorder = VideoRecorder()
@@ -177,7 +179,7 @@ def train():
 
         if iteration % EPOCH_CHECK == 0 and iteration > 1:
             video_recorder.start_recording(
-                agent, iteration, mode='agent', model='ppo'
+                agents, iteration, mode='agent', algorithm='ppo'
             )
         
         # check videos for logging to wandb
