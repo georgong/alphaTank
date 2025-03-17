@@ -18,12 +18,13 @@ from inference import run_inference_with_video
 
 # Valid rotation strategies
 ROTATION_STRATEGIES = ["random", "fixed", "adaptive"]
-EPOCH_CHECK = 50
+EPOCH_CHECK = 200
 MAX_STEP = 400
 class CycleTrainingConfig:
     def __init__(self,
                  bot_types=None,
                  rotation_strategy="random",
+                 switch_every=10000,
                  rolling_window_size=100,
                  eval_frequency=1000,
                  eval_episodes=50,
@@ -50,6 +51,7 @@ class CycleTrainingConfig:
         if rotation_strategy not in ROTATION_STRATEGIES:
             raise ValueError(f"rotation_strategy must be one of {ROTATION_STRATEGIES}")
         self.rotation_strategy = rotation_strategy
+        self.switch_every = switch_every
         
         self.rolling_window_size = rolling_window_size
         self.eval_frequency = eval_frequency
@@ -215,6 +217,7 @@ def setup_wandb(config: CycleTrainingConfig):
         config={
             "bot_types": config.bot_types,
             "rotation_strategy": config.rotation_strategy,
+            "switch_every": config.switch_every,
             "rolling_window_size": config.rolling_window_size,
             "eval_frequency": config.eval_frequency,
             "eval_episodes": config.eval_episodes,
@@ -291,7 +294,7 @@ def train_cycle(config: CycleTrainingConfig):
         current_weakness = config.get_current_weakness(current_step)
         
         # Update bot type periodically
-        if update % (1000 // config.num_steps) == 0:  # Switch every ~1000 steps
+        if update % (config.switch_every // config.num_steps) == 0:  # Switch every ~1000 steps
             if config.rotation_strategy == "random":
                 current_bot = np.random.choice(config.bot_types)
             elif config.rotation_strategy == "fixed":
@@ -418,7 +421,8 @@ def train_cycle(config: CycleTrainingConfig):
         })
         
         if update % EPOCH_CHECK == 0 and update > 1:
-            _model_inference_cycle(agent, update, bot_type=current_bot)
+            for bot in config.bot_types:
+                _model_inference_cycle(agent, update, bot_type=bot)
         
         # Update progress bar
         progress_bar.set_description(
@@ -466,31 +470,32 @@ def _model_inference_cycle(agents, iteration, bot_type=None):
 # Default configuration
 DEFAULT_CONFIG = {
     # Bot and rotation settings
-    "bot_types": ["stationary"],
+    "bot_types": ["smart", "aggressive", "random", "defensive"],
     "rotation_strategy": "fixed",  # Options: "random", "fixed", "adaptive"
+    "switch_every": 10000,          # Steps between bot switches
     
     # Evaluation settings
     "rolling_window_size": 100,    # Size of rolling window for win rate calculation
-    "eval_frequency": 1000,        # Steps between evaluations
-    "eval_episodes": 50,           # Episodes per evaluation
+    "eval_frequency": 3000,        # Steps between evaluations
+    "eval_episodes": 60,           # Episodes per evaluation
     "win_rate_threshold": 0.8,     # Win rate needed to consider a bot mastered
     
     # Training settings
     "reward_threshold_percentage": 0.5,  # When to switch to all-or-nothing rewards
-    "total_timesteps": 200000,    # Total training steps
+    "total_timesteps": 1000000,    # Total training steps
     
     # PPO hyperparameters
-    "learning_rate": 3e-4,
+    "learning_rate": 1e-4,
     "num_steps": 512,
     "num_epochs": 60,
     "gamma": 0.99,
     "gae_lambda": 0.95,
     "clip_coef": 0.1,
-    "ent_coef": 0.02,
+    "ent_coef": 0.01,
     "vf_coef": 0.3,
     "max_grad_norm": 0.3,
     
-    # Curriculum learning parameters
+    # Curriculum learning parameters, deternmine if bot is going to act at all
     "weakness_start": 0.1,         # Bot acts 10% of the time initially
     "weakness_end": 0.1,           # Bot acts 80% of the time by the end
     "weakness_schedule": "linear", # Options: "linear", "sigmoid"
