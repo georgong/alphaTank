@@ -21,7 +21,7 @@ class RandomBot(BaseBot):
         nearest = None
         
         for tank in self.tank.sharing_env.tanks:
-            if tank != self.tank and tank.alive:
+            if tank.team != self.tank.team and tank.alive:
                 dist = math.sqrt((tank.x - self.tank.x)**2 + (tank.y - self.tank.y)**2)
                 if dist < min_dist:
                     min_dist = dist
@@ -61,7 +61,7 @@ class AggressiveBot(BaseBot):
         nearest = None
         
         for tank in self.tank.sharing_env.tanks:
-            if tank != self.tank and tank.alive:
+            if tank.team != self.tank.team and tank.alive:
                 dist = math.sqrt((tank.x - self.tank.x)**2 + (tank.y - self.tank.y)**2)
                 if dist < min_dist:
                     min_dist = dist
@@ -140,7 +140,7 @@ class DefensiveBot(BaseBot):
         nearest = None
         
         for tank in self.tank.sharing_env.tanks:
-            if tank != self.tank and tank.alive:
+            if tank.team != self.tank.team and tank.alive:
                 dist = math.sqrt((tank.x - self.tank.x)**2 + (tank.y - self.tank.y)**2)
                 if dist < min_dist:
                     min_dist = dist
@@ -336,7 +336,7 @@ class DodgeBot(BaseBot):
         
         # Check enemy tanks
         for tank in self.tank.sharing_env.tanks:
-            if tank != self.tank and tank.alive:
+            if tank.team != self.tank.team and tank.alive:
                 dist = math.sqrt((tank.x - self.tank.x)**2 + (tank.y - self.tank.y)**2)
                 if dist < min_dist and dist < self.detection_radius:
                     min_dist = dist
@@ -346,7 +346,7 @@ class DodgeBot(BaseBot):
         
         # Check bullets
         for bullet in self.tank.sharing_env.bullets:
-            if bullet.owner != self.tank:  # Don't dodge own bullets
+            if bullet.owner.team != self.tank.team:  # Don't dodge own bullets
                 dist = math.sqrt((bullet.x - self.tank.x)**2 + (bullet.y - self.tank.y)**2)
                 if dist < min_dist and dist < self.detection_radius:
                     min_dist = dist

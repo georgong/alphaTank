@@ -13,6 +13,7 @@ BLACK = (0, 0, 0)
 GREEN = (0, 255, 0)
 RED = (255, 0, 0)
 GRAY = (100, 100, 100)
+YELLOW = (255,255,0)
 
 '''-----------------GAME SETTING-----------------'''
 EPSILON = 0.01  
@@ -45,26 +46,44 @@ TANK_SPEED = 10              # ->  2, Forward, positive || 0, Backward, negative
 TANK_WIDTH = 30
 TANK_HEIGHT = 24
 
-two_tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
+two_tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "mode": "human","keys":{
     "left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s, "shoot": pygame.K_f
 }},
-               "Tank2":{"team":"TeamB", "color":RED, "keys":{
-     "left": pygame.K_LEFT, "right": pygame.K_RIGHT, "up": pygame.K_UP, "down": pygame.K_DOWN, "shoot": pygame.K_SPACE
-}},
-}
-team_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "keys":{
-    "left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s, "shoot": pygame.K_f
-}},
-               "Tank2":{"team":"TeamB", "color":RED, "keys":{
+               "Tank2":{"team":"TeamB", "color":RED, "mode": "human", "keys":{
      "left": pygame.K_LEFT, "right": pygame.K_RIGHT, "up": pygame.K_UP, "down": pygame.K_DOWN, "shoot": pygame.K_SPACE
 }},
 
-                "Tank3":{"team":"TeamA", "color":GREEN, "keys":{
-    "left": pygame.K_j, "right": pygame.K_l, "up": pygame.K_i, "down": pygame.K_k, "shoot": pygame.K_p
+}
+team_configs = {"Tank1":{"team":"TeamA", 
+                         "color":GREEN, 
+                         "mode": "human", 
+                         "keys":{
+    "left": pygame.K_a, 
+    "right": pygame.K_d, 
+    "up": pygame.K_w, 
+    "down": pygame.K_s, 
+    "shoot": pygame.K_f
 }},
-                "Tank4":{"team":"TeamB", "color":RED, "keys":{
-    "left": pygame.K_a, "right": pygame.K_d, "up": pygame.K_w, "down": pygame.K_s, "shoot": pygame.K_f
+               "Tank2":{"team":"TeamA", 
+                        "color":GREEN, 
+                        "mode": "bot", 
+                        "bot_type":"smart",
+                        },
+                "Tank3":{"team":"TeamB", 
+                         "color":RED, 
+                         "mode": "human", 
+                         "keys":{
+    "left": pygame.K_j, 
+    "right": pygame.K_l, 
+    "up": pygame.K_i, 
+    "down": pygame.K_k, 
+    "shoot": pygame.K_p
 }},
+                "Tank4":{"team":"TeamB", 
+                         "color":RED, 
+                         "mode": "bot",
+                         "bot_type":"smart",
+                        },
 }
 
 '''----------------REWARD CONFIG----------------'''
@@ -126,3 +145,50 @@ DEBUFF_ON = True
 VISUALIZE_TRAJ = False
 RENDER_AIMING = True
 RENDER_BFS = True
+
+
+crazy_team_configs = {"Tank1":{"team":"TeamA", 
+                         "color":GREEN, 
+                         "mode": "human", 
+                         "keys":{
+    "left": pygame.K_a, 
+    "right": pygame.K_d, 
+    "up": pygame.K_w, 
+    "down": pygame.K_s, 
+    "shoot": pygame.K_f
+}},
+               "Tank2":{"team":"TeamA", 
+                        "color":GREEN, 
+                        "mode": "bot", 
+                        "bot_type":"smart",
+                        },
+                "Tank3":{"team":"TeamA", 
+                        "color":GREEN, 
+                        "mode": "agent", 
+                        },
+
+                "Tank4":{"team":"TeamB", 
+                         "color":RED, 
+                         "mode": "human", 
+                         "keys":{
+    "left": pygame.K_j, 
+    "right": pygame.K_l, 
+    "up": pygame.K_i, 
+    "down": pygame.K_k, 
+    "shoot": pygame.K_p
+}},
+                "Tank5":{"team":"TeamB", 
+                         "color":RED, 
+                         "mode": "bot",
+                         "bot_type":"smart",
+                        },
+                "Tank6":{"team":"TeamB", 
+                         "color":RED, 
+                         "mode": "agent",
+                        },
+                "Tank7":{"team":"TeamC", 
+                         "color":GRAY, 
+                         "mode": "bot",
+                         "bot_type":"aggressive",
+                }
+}

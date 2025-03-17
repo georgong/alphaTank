@@ -9,6 +9,7 @@ from env.util import *
 from env.bfs import *
 import math
 import time
+from env.controller import BotTankController,HumanTankController,AgentTankController
 from env.bots.bot_factory import BotFactory
 
 
@@ -20,7 +21,7 @@ class GamingENV:
         self.GRID_SIZE = GRID_SIZE
         self.path = None
         self.maze = None
-        self.mode = mode  # Set mode before reset
+        self.env_mode = mode  # Set mode before reset
         self.type = type
         self.bot_type = bot_type
         self.last_bfs_dist = [None] * 2
@@ -29,7 +30,7 @@ class GamingENV:
         self.render_bfs = RENDER_BFS
         self.reset_cooldown = 0
         self.bot = None
-        self.game_configs = two_tank_configs
+        self.game_configs = game_configs
         
         self.buff_zones = [] 
         self.debuff_zones = []
@@ -41,14 +42,13 @@ class GamingENV:
 
     def reset(self):
         self.walls, self.empty_space = self.constructWall()
-        self.tanks = self.setup_tank(self.game_configs)
+        self.tanks,self.bot_controller,self.human_controller,self.agent_controller = self.setup_tank(self.game_configs)
         self.bullets = []
         self.bullets_trajs = []
         self.path = None  # Reset BFS path
         
         # Reset bot with new tank if in bot mode
-        if self.mode == "bot" or self.mode == "bot_agent":
-            self.bot = BotFactory.create_bot(self.bot_type, self.tanks[0])
+        # if self.env_mode == "bot" or self.mode == "bot_agent":
         
         self.buff_zones = random.sample(self.empty_space, 2) if BUFF_ON else []
         self.debuff_zones = random.sample(self.empty_space, 2) if DEBUFF_ON else []
@@ -56,35 +56,322 @@ class GamingENV:
         if self.font is None:
             pygame.font.init()
             self.font = pygame.font.Font(None, 36)  # None uses default system font
+    
+    
+    # def step(self, actions=None):
+    #     # -- Move all bullets first (unchanged) --
+    #     for bullet in self.bullets[:]:
+    #         bullet.move()
 
-    def check_buff_debuff(self, tank):
-        tank_rect = pygame.Rect(tank.x - tank.width // 2, tank.y - tank.height // 2, tank.width, tank.height)
+    #     for event in pygame.event.get():
+    #         if event.type == pygame.QUIT:
+    #             self.running = False
+
+    #     keys = pygame.key.get_pressed()
         
-        tank.in_buff_zone = False
-        for buff_pos in self.buff_zones:
-            buff_rect = pygame.Rect(buff_pos[0], buff_pos[1], GRID_SIZE * 3.5, GRID_SIZE * 3.5)
-            if tank_rect.colliderect(buff_rect) and BUFF_ON:
-                # print(f'\nTank {tank.team} got buffed!')
-                tank.max_bullets = 30
-                tank.in_buff_zone = True
-                break
-        else:
-            tank.max_bullets = MAX_BULLETS
+    #     # Handle reset with cooldown
+    #     if self.reset_cooldown > 0:
+    #         self.reset_cooldown -= 1
+    #     elif keys[pygame.K_r]:
+    #         self.reset()
+    #         self.reset_cooldown = 30  # About 0.5 seconds at 60 FPS
+
+    #     if self.mode == "bot":
+    #         # Get actions from bot for tank 0
+    #         bot_actions = self.bot.get_action()
+            
+    #         # Handle bot tank movements (tank 0)
+    #         tank = self.tanks[0]
+    #         self.check_buff_debuff(tank)
+            
+    #         # Handle rotation (action[0])
+    #         if bot_actions[0] == 2:  # Right
+    #             tank.rotate(-ROTATION_DEGREE)
+    #         elif bot_actions[0] == 0:  # Left
+    #             tank.rotate(ROTATION_DEGREE)
+            
+    #         # Handle movement (action[1])
+    #         if bot_actions[1] == 2:  # Forward
+    #             tank.speed = TANK_SPEED
+    #         elif bot_actions[1] == 0:  # Backward
+    #             tank.speed = -TANK_SPEED
+    #         else:
+    #             tank.speed = 0
+            
+    #         if bot_actions[2] == 1:  # Shoot
+    #             tank.shoot()
+
+    #         # Move the tank after setting speed
+    #         tank.move(bot_actions)
+
+    #         # Handle human controls for tank 1
+    #         human_tank = self.tanks[1]
+    #         self.check_buff_debuff(human_tank)
+    #         if human_tank.keys:
+    #             if keys[human_tank.keys["left"]]: human_tank.rotate(ROTATION_DEGREE)
+    #             if keys[human_tank.keys["right"]]: human_tank.rotate(-ROTATION_DEGREE)
+    #             if keys[human_tank.keys["up"]]: human_tank.speed = TANK_SPEED
+    #             elif keys[human_tank.keys["down"]]: human_tank.speed = -TANK_SPEED
+    #             else: human_tank.speed = 0
+    #             if keys[human_tank.keys["shoot"]]: human_tank.shoot()
+            
+    #         current_actions = [
+    #             2 if keys[tank.keys["up"]] else (0 if keys[tank.keys["down"]] else 1),  # Movement
+    #             2 if keys[tank.keys["right"]] else (0 if keys[tank.keys["left"]] else 1),  # Rotation
+    #             1 if keys[tank.keys["shoot"]] else 0  # Shooting
+    #         ]
+
+    #         # Move the human tank
+    #         human_tank.move(current_actions)
         
-        tank.in_debuff_zone = False
-        for debuff_pos in self.debuff_zones:
-            debuff_rect = pygame.Rect(debuff_pos[0], debuff_pos[1], GRID_SIZE * 3.5, GRID_SIZE * 3.5)
-            if tank_rect.colliderect(debuff_rect) and DEBUFF_ON:
-                # print(f'\nTank {tank.team} got debuffed!')
-                tank.max_bullets = 1  
-                tank.in_debuff_zone = True
-                break
-        else:
-            tank.max_bullets = MAX_BULLETS
-    
-    
+    #     elif self.mode == "bot_agent":
+    #         # Get actions from bot for tank 0
+    #         bot_actions = self.bot.get_action()
+            
+    #         # Handle bot tank movements (tank 0)
+    #         tank = self.tanks[0]
+    #         self.check_buff_debuff(tank)
+    #         # Handle rotation (action[0])
+    #         if bot_actions[0] == 2:  # Right
+    #             tank.rotate(-ROTATION_DEGREE)
+    #         elif bot_actions[0] == 0:  # Left
+    #             tank.rotate(ROTATION_DEGREE)
+            
+    #         # Handle movement (action[1])
+    #         if bot_actions[1] == 2:  # Forward
+    #             tank.speed = TANK_SPEED
+    #         elif bot_actions[1] == 0:  # Backward
+    #             tank.speed = -TANK_SPEED
+    #         else:
+    #             tank.speed = 0
+            
+    #         if bot_actions[2] == 1:  # Shoot
+    #             tank.shoot()
+
+    #         # Move the tank after setting speed
+    #         tank.move(bot_actions)
+
+    #         # Handle agent controls tank 1, convineient for more actions
+    #         if actions is not None:
+    #             # print(actions)
+    #             tank = self.tanks[1]
+    #             self.check_buff_debuff(tank)
+    #             correct_index = 1 if self.type == "train" else 0
+    #             rot_cmd, mov_cmd, shoot_cmd = actions[correct_index] # actions[0] shoul always be [0,0,0], inference only have one list
+
+    #             # Rotate
+    #             if rot_cmd == 0:
+    #                 tank.rotate(ROTATION_DEGREE)   # left
+    #             elif rot_cmd == 2:
+    #                 tank.rotate(-ROTATION_DEGREE)  # right
+    #             # else, do nothing for rotation
+
+    #             # Move
+    #             if mov_cmd == 0:
+    #                 tank.speed = TANK_SPEED   # forward
+    #             elif mov_cmd == 2:
+    #                 tank.speed = -TANK_SPEED  # backward
+    #             else:
+    #                 tank.speed = 1   # "stop"
+
+    #             # Shoot
+    #             if shoot_cmd == 1:
+    #                 tank.shoot()
+            
+    #         # 5) Now the tank actually moves
+    #         tank.move(current_actions=actions[correct_index])
+
+    #     elif self.mode == "human_play":
+    #         keys = pygame.key.get_pressed()
+
+    #         if keys[pygame.K_r]:
+    #             self.reset()
+    #         keys = pygame.key.get_pressed()
+
+    #         for tank in self.tanks:
+    #             i = self.tanks.index(tank)
+    #             self.check_buff_debuff(tank)
+                
+    #             # 1) Get BFS path
+    #             my_pos = tank.get_grid_position()
+    #             opponent_pos = self.tanks[1 - i].get_grid_position()
+    #             self.path = bfs_path(self.maze, my_pos, opponent_pos)
+
+    #             old_dist = None
+    #             next_cell = None
+
+    #             # 2) If we have a BFS path
+    #             if self.path is not None and len(self.path) > 1:
+    #                 next_cell = self.path[1]
+    #                 current_bfs_dist = len(self.path)
+    #                 r, c = next_cell
+    #                 center_x = c * GRID_SIZE + (GRID_SIZE / 2)
+    #                 center_y = r * GRID_SIZE + (GRID_SIZE / 2)
+                    
+    #                 # Get old distance
+    #                 old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
+                    
+    #                 # 3) Every 20 BFS steps, apply penalty based on path length
+    #                 if self.run_bfs % 20 == 0:
+    #                     if self.last_bfs_dist[i] is not None:
+    #                         # If we have a stored previous distance, compare
+    #                         if self.last_bfs_dist[i] is not None:
+    #                             if current_bfs_dist < self.last_bfs_dist[i]:
+    #                                 # BFS distance decreased => reward
+    #                                 distance_diff = self.last_bfs_dist[i] - current_bfs_dist
+                                    
+    #                                 self.tanks[i].reward += BFS_PATH_LEN_REWARD * distance_diff
+                                    
+    #                             elif current_bfs_dist >= self.last_bfs_dist[i]:
+    #                                 # BFS distance increased => penalize
+    #                                 distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
+    #                                 self.tanks[i].reward -= BFS_PATH_LEN_PENALTY * distance_diff
+    #                     self.last_bfs_dist[i] = current_bfs_dist
+
+    #                 # Increment the BFS step counter
+    #                 self.run_bfs += 1
+                    
+    #             if tank.keys:
+    #                 if keys[tank.keys["left"]]: tank.rotate(ROTATION_DEGREE)  
+    #                 elif keys[tank.keys["right"]]: tank.rotate(-ROTATION_DEGREE) 
+    #                 if keys[tank.keys["up"]]: tank.speed = TANK_SPEED 
+    #                 elif keys[tank.keys["down"]]: tank.speed = -TANK_SPEED
+    #                 else: tank.speed = 0  
+    #                 if keys[tank.keys["shoot"]]: tank.shoot()  
+                    
+    #                 current_actions = [
+    #                 2 if keys[tank.keys["up"]] else (0 if keys[tank.keys["down"]] else 1),  # Movement
+    #                 2 if keys[tank.keys["right"]] else (0 if keys[tank.keys["left"]] else 1),  # Rotation
+    #                 1 if keys[tank.keys["shoot"]] else 0  # Shooting
+    #                 ]
+
+    #             # -- Human or AI controls (rotate, move, shoot) as you already have. --
+    #             # e.g., for AI:
+    #             if actions is not None:
+                    
+    #                 chosen_action = actions[i]  # (rotate, move, shoot)
+    #                 rot_cmd, mov_cmd, shoot_cmd = chosen_action
+                    
+    #                 # Rotate
+    #                 if rot_cmd == 0:
+    #                     tank.rotate(ROTATION_DEGREE)   # left
+    #                 elif rot_cmd == 2:
+    #                     tank.rotate(-ROTATION_DEGREE)  # right
+    #                 # else, do nothing for rotation
+
+    #                 # Move
+    #                 if mov_cmd == 0:
+    #                     tank.speed = TANK_SPEED   # forward
+    #                 elif mov_cmd == 2:
+    #                     tank.speed = -TANK_SPEED  # backward
+    #                 else:
+    #                     tank.speed = 1   # "stop"
+
+    #                 # Shoot
+    #                 if shoot_cmd == 1:
+    #                     tank.shoot()
+
+    #                 current_actions = actions[i]
+    #             # 5) Now the tank actually moves
+    #             tank.move(current_actions=current_actions)
+
+    #             # 5) After move, measure new distance if next_cell is not None
+    #             if next_cell is not None and old_dist is not None:
+    #                 r, c = next_cell
+    #                 center_x = c * GRID_SIZE + (GRID_SIZE / 2)
+    #                 center_y = r * GRID_SIZE + (GRID_SIZE / 2)
+    #                 new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
+
+    #                 if new_dist < old_dist:
+    #                     self.tanks[i].reward += BFS_FORWARD_REWARD * (old_dist - new_dist)
+    #                 elif new_dist > old_dist:
+    #                     self.tanks[i].reward -= BFS_BACKWARD_PENALTY * (new_dist - old_dist)
+
+    #         self.run_bfs += 1
+
+    #     # ========== AI ONLY MODE ==========
+    #     else:
+    #         for tank in self.tanks:
+    #             i = self.tanks.index(tank)
+    #             # overall_bfs_dist = 0
+    #             self.check_buff_debuff(tank)
+                
+    #             # 2) BFS path
+    #             my_pos = tank.get_grid_position() 
+    #             opponent_pos = self.tanks[1 - i].get_grid_position()
+    #             self.path = bfs_path(self.maze, my_pos,opponent_pos)
+
+    #             self.run_bfs += 1
+    #             old_dist = None
+    #             next_cell = None
+    #             if self.path is not None and len(self.path) > 1:
+    #                 next_cell = self.path[1]
+    #                 current_bfs_dist = len(self.path)
+    #                 r, c = next_cell
+    #                 center_x = c * GRID_SIZE + (GRID_SIZE / 2)
+    #                 center_y = r * GRID_SIZE + (GRID_SIZE / 2)
+    #                 old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
+    #                 if self.run_bfs % 20 == 0:
+    #                     # If we have a stored previous distance, compare
+    #                     if self.last_bfs_dist[i] is not None:
+    #                         if current_bfs_dist < self.last_bfs_dist[i]:
+    #                             # BFS distance decreased => reward
+    #                             distance_diff = self.last_bfs_dist[i] - current_bfs_dist
+                                
+    #                             self.tanks[i].reward += BFS_PATH_LEN_REWARD * distance_diff
+                                
+    #                         elif current_bfs_dist >= self.last_bfs_dist[i]:
+    #                             # BFS distance increased => penalize
+    #                             distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
+    #                             self.tanks[i].reward -= BFS_PATH_LEN_PENALTY * distance_diff
+
+
+    #                     self.last_bfs_dist[i] = current_bfs_dist
+
+    #                 # Increment the BFS step counter
+    #                 self.run_bfs += 1
+                
+    #             i = self.tanks.index(tank)  # **获取坦克索引**
+    #             if actions[i][0] == 0: tank.rotate(ROTATION_DEGREE)  # **左转**
+    #             elif actions[i][0] == 2: tank.rotate(-ROTATION_DEGREE)  # **右转**
+    #             else: pass
+    #             if actions[i][1] == 2: tank.speed = TANK_SPEED  # **前进**
+    #             elif actions[i][1] == 0: tank.speed = -TANK_SPEED  # **后退**
+    #             else: tank.speed = 0  # **停止** 
+    #             if actions[i][2] == 1: tank.shoot()  # **射击**
+    #             else: pass
+    #             current_actions = actions[i]
+    #             tank.move(current_actions=current_actions)
+
+    #             # ### NEW LOGIC ###
+    #             # 5) After move, measure new distance if next_cell is not None
+    #             if next_cell is not None and old_dist is not None:
+    #                 r, c = next_cell
+    #                 center_x = c * GRID_SIZE + (GRID_SIZE / 2)
+    #                 center_y = r * GRID_SIZE + (GRID_SIZE / 2)
+    #                 new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
+
+    #                 if new_dist < old_dist:
+    #                     self.tanks[i].reward += BFS_FORWARD_REWARD * (old_dist - new_dist)
+    #                 elif new_dist > old_dist:
+    #                     self.tanks[i].reward -= BFS_BACKWARD_PENALTY * (new_dist - old_dist)
+
+    #         self.run_bfs += 1
+    #     self.bullets_trajs = [traj for traj in self.bullets_trajs if not traj.update()]
+
+    #     # -- Move bullets again or do collision checks if desired --
+    #     for bullet in self.bullets[:]:
+    #         bullet.move()
+            
+    #     # Update scores when tanks are destroyed
+    #     for tank in self.tanks:
+    #         if not tank.alive and tank.last_alive:  # Tank was just destroyed
+    #             opponent_idx = 0 if self.tanks.index(tank) == 1 else 1
+    #             self.score[opponent_idx] += 1
+    #         tank.last_alive = tank.alive  # Track previous alive state
+
     def step(self, actions=None):
-        # -- Move all bullets first (unchanged) --
+            #     # -- Move all bullets first (unchanged) --
         for bullet in self.bullets[:]:
             bullet.move()
 
@@ -93,7 +380,6 @@ class GamingENV:
                 self.running = False
 
         keys = pygame.key.get_pressed()
-        
         # Handle reset with cooldown
         if self.reset_cooldown > 0:
             self.reset_cooldown -= 1
@@ -101,290 +387,13 @@ class GamingENV:
             self.reset()
             self.reset_cooldown = 30  # About 0.5 seconds at 60 FPS
 
-        if self.mode == "bot":
-            # Get actions from bot for tank 0
-            bot_actions = self.bot.get_action()
-            
-            # Handle bot tank movements (tank 0)
-            tank = self.tanks[0]
-            self.check_buff_debuff(tank)
-            
-            # Handle rotation (action[0])
-            if bot_actions[0] == 2:  # Right
-                tank.rotate(-ROTATION_DEGREE)
-            elif bot_actions[0] == 0:  # Left
-                tank.rotate(ROTATION_DEGREE)
-            
-            # Handle movement (action[1])
-            if bot_actions[1] == 2:  # Forward
-                tank.speed = TANK_SPEED
-            elif bot_actions[1] == 0:  # Backward
-                tank.speed = -TANK_SPEED
-            else:
-                tank.speed = 0
-            
-            if bot_actions[2] == 1:  # Shoot
-                tank.shoot()
+        if not actions is None:
+            self.agent_controller.step(actions)
+        self.human_controller.step(keys)
+        self.bot_controller.step()
 
-            # Move the tank after setting speed
-            tank.move(bot_actions)
-
-            # Handle human controls for tank 1
-            human_tank = self.tanks[1]
-            self.check_buff_debuff(human_tank)
-            if human_tank.keys:
-                if keys[human_tank.keys["left"]]: human_tank.rotate(ROTATION_DEGREE)
-                if keys[human_tank.keys["right"]]: human_tank.rotate(-ROTATION_DEGREE)
-                if keys[human_tank.keys["up"]]: human_tank.speed = TANK_SPEED
-                elif keys[human_tank.keys["down"]]: human_tank.speed = -TANK_SPEED
-                else: human_tank.speed = 0
-                if keys[human_tank.keys["shoot"]]: human_tank.shoot()
-            
-            current_actions = [
-                2 if keys[tank.keys["up"]] else (0 if keys[tank.keys["down"]] else 1),  # Movement
-                2 if keys[tank.keys["right"]] else (0 if keys[tank.keys["left"]] else 1),  # Rotation
-                1 if keys[tank.keys["shoot"]] else 0  # Shooting
-            ]
-
-            # Move the human tank
-            human_tank.move(current_actions)
         
-        elif self.mode == "bot_agent":
-            # Get actions from bot for tank 0
-            bot_actions = self.bot.get_action()
-            
-            # Handle bot tank movements (tank 0)
-            tank = self.tanks[0]
-            self.check_buff_debuff(tank)
-            # Handle rotation (action[0])
-            if bot_actions[0] == 2:  # Right
-                tank.rotate(-ROTATION_DEGREE)
-            elif bot_actions[0] == 0:  # Left
-                tank.rotate(ROTATION_DEGREE)
-            
-            # Handle movement (action[1])
-            if bot_actions[1] == 2:  # Forward
-                tank.speed = TANK_SPEED
-            elif bot_actions[1] == 0:  # Backward
-                tank.speed = -TANK_SPEED
-            else:
-                tank.speed = 0
-            
-            if bot_actions[2] == 1:  # Shoot
-                tank.shoot()
-
-            # Move the tank after setting speed
-            tank.move(bot_actions)
-
-            # Handle agent controls tank 1, convineient for more actions
-            if actions is not None:
-                # print(actions)
-                tank = self.tanks[1]
-                self.check_buff_debuff(tank)
-                correct_index = 1 if self.type == "train" else 0
-                rot_cmd, mov_cmd, shoot_cmd = actions[correct_index] # actions[0] shoul always be [0,0,0], inference only have one list
-
-                # Rotate
-                if rot_cmd == 0:
-                    tank.rotate(ROTATION_DEGREE)   # left
-                elif rot_cmd == 2:
-                    tank.rotate(-ROTATION_DEGREE)  # right
-                # else, do nothing for rotation
-
-                # Move
-                if mov_cmd == 0:
-                    tank.speed = TANK_SPEED   # forward
-                elif mov_cmd == 2:
-                    tank.speed = -TANK_SPEED  # backward
-                else:
-                    tank.speed = 1   # "stop"
-
-                # Shoot
-                if shoot_cmd == 1:
-                    tank.shoot()
-            
-            # 5) Now the tank actually moves
-            tank.move(current_actions=actions[correct_index])
-
-        elif self.mode == "human_play":
-            keys = pygame.key.get_pressed()
-
-            if keys[pygame.K_r]:
-                self.reset()
-            keys = pygame.key.get_pressed()
-
-            for tank in self.tanks:
-                i = self.tanks.index(tank)
-                self.check_buff_debuff(tank)
-                
-                # 1) Get BFS path
-                my_pos = tank.get_grid_position()
-                opponent_pos = self.tanks[1 - i].get_grid_position()
-                self.path = bfs_path(self.maze, my_pos, opponent_pos)
-
-                old_dist = None
-                next_cell = None
-
-                # 2) If we have a BFS path
-                if self.path is not None and len(self.path) > 1:
-                    next_cell = self.path[1]
-                    current_bfs_dist = len(self.path)
-                    r, c = next_cell
-                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
-                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    
-                    # Get old distance
-                    old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                    
-                    # 3) Every 20 BFS steps, apply penalty based on path length
-                    if self.run_bfs % 20 == 0:
-                        if self.last_bfs_dist[i] is not None:
-                            # If we have a stored previous distance, compare
-                            if self.last_bfs_dist[i] is not None:
-                                if current_bfs_dist < self.last_bfs_dist[i]:
-                                    # BFS distance decreased => reward
-                                    distance_diff = self.last_bfs_dist[i] - current_bfs_dist
-                                    
-                                    self.tanks[i].reward += BFS_PATH_LEN_REWARD * distance_diff
-                                    
-                                elif current_bfs_dist >= self.last_bfs_dist[i]:
-                                    # BFS distance increased => penalize
-                                    distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
-                                    self.tanks[i].reward -= BFS_PATH_LEN_PENALTY * distance_diff
-                        self.last_bfs_dist[i] = current_bfs_dist
-
-                    # Increment the BFS step counter
-                    self.run_bfs += 1
-                    
-                if tank.keys:
-                    if keys[tank.keys["left"]]: tank.rotate(ROTATION_DEGREE)  
-                    elif keys[tank.keys["right"]]: tank.rotate(-ROTATION_DEGREE) 
-                    if keys[tank.keys["up"]]: tank.speed = TANK_SPEED 
-                    elif keys[tank.keys["down"]]: tank.speed = -TANK_SPEED
-                    else: tank.speed = 0  
-                    if keys[tank.keys["shoot"]]: tank.shoot()  
-                    
-                    current_actions = [
-                    2 if keys[tank.keys["up"]] else (0 if keys[tank.keys["down"]] else 1),  # Movement
-                    2 if keys[tank.keys["right"]] else (0 if keys[tank.keys["left"]] else 1),  # Rotation
-                    1 if keys[tank.keys["shoot"]] else 0  # Shooting
-                    ]
-
-                # -- Human or AI controls (rotate, move, shoot) as you already have. --
-                # e.g., for AI:
-                if actions is not None:
-                    
-                    chosen_action = actions[i]  # (rotate, move, shoot)
-                    rot_cmd, mov_cmd, shoot_cmd = chosen_action
-                    
-                    # Rotate
-                    if rot_cmd == 0:
-                        tank.rotate(ROTATION_DEGREE)   # left
-                    elif rot_cmd == 2:
-                        tank.rotate(-ROTATION_DEGREE)  # right
-                    # else, do nothing for rotation
-
-                    # Move
-                    if mov_cmd == 0:
-                        tank.speed = TANK_SPEED   # forward
-                    elif mov_cmd == 2:
-                        tank.speed = -TANK_SPEED  # backward
-                    else:
-                        tank.speed = 1   # "stop"
-
-                    # Shoot
-                    if shoot_cmd == 1:
-                        tank.shoot()
-
-                    current_actions = actions[i]
-                # 5) Now the tank actually moves
-                tank.move(current_actions=current_actions)
-
-                # 5) After move, measure new distance if next_cell is not None
-                if next_cell is not None and old_dist is not None:
-                    r, c = next_cell
-                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
-                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-
-                    if new_dist < old_dist:
-                        self.tanks[i].reward += BFS_FORWARD_REWARD * (old_dist - new_dist)
-                    elif new_dist > old_dist:
-                        self.tanks[i].reward -= BFS_BACKWARD_PENALTY * (new_dist - old_dist)
-
-            self.run_bfs += 1
-
-        # ========== AI ONLY MODE ==========
-        else:
-            for tank in self.tanks:
-                i = self.tanks.index(tank)
-                # overall_bfs_dist = 0
-                self.check_buff_debuff(tank)
-                
-                # 2) BFS path
-                my_pos = tank.get_grid_position() 
-                opponent_pos = self.tanks[1 - i].get_grid_position()
-                self.path = bfs_path(self.maze, my_pos,opponent_pos)
-
-                self.run_bfs += 1
-                old_dist = None
-                next_cell = None
-                if self.path is not None and len(self.path) > 1:
-                    next_cell = self.path[1]
-                    current_bfs_dist = len(self.path)
-                    r, c = next_cell
-                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
-                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                    if self.run_bfs % 20 == 0:
-                        # If we have a stored previous distance, compare
-                        if self.last_bfs_dist[i] is not None:
-                            if current_bfs_dist < self.last_bfs_dist[i]:
-                                # BFS distance decreased => reward
-                                distance_diff = self.last_bfs_dist[i] - current_bfs_dist
-                                
-                                self.tanks[i].reward += BFS_PATH_LEN_REWARD * distance_diff
-                                
-                            elif current_bfs_dist >= self.last_bfs_dist[i]:
-                                # BFS distance increased => penalize
-                                distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
-                                self.tanks[i].reward -= BFS_PATH_LEN_PENALTY * distance_diff
-
-
-                        self.last_bfs_dist[i] = current_bfs_dist
-
-                    # Increment the BFS step counter
-                    self.run_bfs += 1
-                
-                i = self.tanks.index(tank)  # **获取坦克索引**
-                if actions[i][0] == 0: tank.rotate(ROTATION_DEGREE)  # **左转**
-                elif actions[i][0] == 2: tank.rotate(-ROTATION_DEGREE)  # **右转**
-                else: pass
-                if actions[i][1] == 2: tank.speed = TANK_SPEED  # **前进**
-                elif actions[i][1] == 0: tank.speed = -TANK_SPEED  # **后退**
-                else: tank.speed = 0  # **停止** 
-                if actions[i][2] == 1: tank.shoot()  # **射击**
-                else: pass
-                current_actions = actions[i]
-                tank.move(current_actions=current_actions)
-
-                # ### NEW LOGIC ###
-                # 5) After move, measure new distance if next_cell is not None
-                if next_cell is not None and old_dist is not None:
-                    r, c = next_cell
-                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
-                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-
-                    if new_dist < old_dist:
-                        self.tanks[i].reward += BFS_FORWARD_REWARD * (old_dist - new_dist)
-                    elif new_dist > old_dist:
-                        self.tanks[i].reward -= BFS_BACKWARD_PENALTY * (new_dist - old_dist)
-
-            self.run_bfs += 1
         self.bullets_trajs = [traj for traj in self.bullets_trajs if not traj.update()]
-
-        # -- Move bullets again or do collision checks if desired --
         for bullet in self.bullets[:]:
             bullet.move()
             
@@ -394,6 +403,7 @@ class GamingENV:
                 opponent_idx = 0 if self.tanks.index(tank) == 1 else 1
                 self.score[opponent_idx] += 1
             tank.last_alive = tank.alive  # Track previous alive state
+
         
     def render(self):
         if self.screen is None:
@@ -451,32 +461,6 @@ class GamingENV:
             text_surface = font.render(reward_text, True, (0, 0, 0))
             self.screen.blit(text_surface, (10, y_offset))
             y_offset += 25
-
-            # Draw bot debug info if this is the bot's tank
-            if self.mode == "bot" and i == 0 and hasattr(self, 'bot'):
-                bot = self.bot
-                debug_lines = [
-                    f"State: {bot.state}",
-                    f"Stuck Timer: {bot.stuck_timer}",
-                ]
-                if bot.target:
-                    dist = math.sqrt((bot.target.x - tank.x)**2 + (bot.target.y - tank.y)**2)
-                    debug_lines.append(f"Target Distance: {dist:.1f}")
-                
-                for line in debug_lines:
-                    text_surface = font.render(line, True, (0, 0, 0))
-                    self.screen.blit(text_surface, (10, y_offset))
-                    y_offset += 25
-
-        # Draw scoreboard at the bottom
-        if self.font:
-            score_text = f"Green-Bot {self.score[0]} : {self.score[1]} Red-Agent"
-            text_surface = self.font.render(score_text, True, (0, 0, 0))  # Black text
-            text_rect = text_surface.get_rect()
-            text_rect.centerx = self.screen.get_rect().centerx
-            text_rect.bottom = self.screen.get_rect().bottom - 10
-            self.screen.blit(text_surface, text_rect)
-        
         pygame.display.flip()
         self.clock.tick(60)
     
@@ -512,27 +496,49 @@ class GamingENV:
 
     def setup_tank(self,tank_configs):
         tanks = []
-        for team_name,tank_config in tank_configs.items():
+        bot_controller = BotTankController() 
+        human_controller = HumanTankController()
+        human_controller.setup(tank_configs) 
+        agent_controller = AgentTankController()
+        for tank_name,tank_config in tank_configs.items():
             x,y = self.empty_space[np.random.choice(range(len(self.empty_space)))]
-            tanks.append(Tank(tank_config["team"],
-                            x+self.GRID_SIZE/2,
-                            y+self.GRID_SIZE/2,
-                            tank_config["color"],
-                            tank_config["keys"],
-                            env=self))
-        return tanks
+            if tank_config["mode"] == "human":
+                human_tank = Tank(team = tank_config["team"],
+                                x = x+self.GRID_SIZE/2,
+                                y =y+self.GRID_SIZE/2,
+                                color = tank_config["color"],
+                                keys = tank_config["keys"],
+                                mode = tank_config["mode"],
+                                env=self)
+                tanks.append(human_tank)
+                human_controller.set_item(tank_name,human_tank)
+            elif tank_config["mode"] == "bot":
+                bot_tank = Tank(team = tank_config["team"],
+                                x = x+self.GRID_SIZE/2,
+                                y =y+self.GRID_SIZE/2,
+                                color = tank_config["color"],
+                                keys = None,
+                                mode = tank_config["mode"],
+                                env=self)
+                tanks.append(bot_tank)
+                bot_controller.set_item(tank_name,bot_tank)
+                bot_controller.set_bot_item(tank_name,BotFactory.create_bot(tank_config["bot_type"], bot_tank))
+            elif tank_config["mode"] == "agent":
+                agent_tank = Tank(team = tank_config["team"],
+                                x = x+self.GRID_SIZE/2,
+                                y =y+self.GRID_SIZE/2,
+                                color = tank_config["color"],
+                                keys = None,
+                                mode = tank_config["mode"],
+                                env=self)
+                tanks.append(agent_tank)
+                agent_controller.set_item(tank_name,agent_tank)
+                agent_controller.append_name_item(tank_name)
+                
+
+                
+        return tanks,bot_controller,human_controller,agent_controller
     
-    def update_reward_by_bullets(self,shooter,victim):
-        if shooter.team == victim.team: #shoot the teammate
-            shooter.reward += TEAM_HIT_PENALTY
-            victim.reward += HIT_PENALTY
-        else:
-            shooter.reward += OPPONENT_HIT_REWARD
-            victim.reward += HIT_PENALTY
-        if len({tank.alive for tank in self.tanks}) == 1: #only one team exist
-            for tank in self.tanks:
-                if tank.alive:
-                    tank.reward += VICTORY_REWARD
 
     def constructWall(self):
         # define constant variables
@@ -680,3 +686,63 @@ class GamingENV:
         (r2, c2) = cell_b
         return math.sqrt((r1 - r2) ** 2 + (c1 - c2) ** 2)
     
+
+    def bfs_path(self):
+        for tank in self.tanks:
+            i = self.tanks.index(tank)
+            # overall_bfs_dist = 0
+            self.check_buff_debuff(tank)
+            # 1) Get BFS path
+            my_pos = tank.get_grid_position()
+            # opponent_pos = self.tanks[1 - i].get_grid_position()
+            opponent_pos = find_nearest_enemy(tank,self.tanks).get_grid_position()
+            self.path = bfs_path(self.maze, my_pos, opponent_pos)
+
+            old_dist = None
+            next_cell = None
+
+            # 2) If we have a BFS path
+            if self.path is not None and len(self.path) > 1:
+                next_cell = self.path[1]
+                current_bfs_dist = len(self.path)
+                r, c = next_cell
+                center_x = c * GRID_SIZE + (GRID_SIZE / 2)
+                center_y = r * GRID_SIZE + (GRID_SIZE / 2)
+                
+                # Get old distance
+                old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
+                
+                # 3) Every 20 BFS steps, apply penalty based on path length
+                if self.run_bfs % 20 == 0:
+                    if self.last_bfs_dist[i] is not None:
+                        # If we have a stored previous distance, compare
+                        if self.last_bfs_dist[i] is not None:
+                            if current_bfs_dist < self.last_bfs_dist[i]:
+                                # BFS distance decreased => reward
+                                distance_diff = self.last_bfs_dist[i] - current_bfs_dist
+                                
+                                self.tanks[i].reward += BFS_PATH_LEN_REWARD * distance_diff
+                                
+                            elif current_bfs_dist >= self.last_bfs_dist[i]:
+                                # BFS distance increased => penalize
+                                distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
+                                self.tanks[i].reward -= BFS_PATH_LEN_PENALTY * distance_diff
+                    self.last_bfs_dist[i] = current_bfs_dist
+
+                # Increment the BFS step counter
+                self.run_bfs += 1
+
+    def update_reward_by_bullets(self,shooter,victim):
+        if shooter.team == victim.team: #shoot the teammate
+            shooter.reward += TEAM_HIT_PENALTY
+            victim.reward += HIT_PENALTY
+        else:
+            shooter.reward += OPPONENT_HIT_REWARD
+            victim.reward += HIT_PENALTY
+        if len({tank.alive for tank in self.tanks}) == 1: #only one team exist
+            for tank in self.tanks:
+                if tank.alive:
+                    tank.reward += VICTORY_REWARD
+
+    def get_observation_order(self):
+        return self.agent_controller.get_name_list()
