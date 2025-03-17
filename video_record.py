@@ -7,15 +7,16 @@ import imageio
 from multiprocessing import Pipe
 
 from env.gym_env import MultiAgentEnv
-from inference import load_agents
+from inference import load_agents_ppo, load_agents_sac
 from models.ppo_ppo_model import RunningMeanStd
+from sac_util import ContinuousToDiscreteWrapper
 
 # defined constants
-EPOCH_CHECK = 50        # the frequency to record video, 
+EPOCH_CHECK = 20        # the frequency to record video, 
 MAX_STEP = 400          # the time of the recorded videos, 200 ~ 5s 
 
 
-def create_video(output_dir, mode, iteration, model_paths, bot_type=None, weakness=1.0):
+def create_video(output_dir, mode, algorithm, iteration, model_paths, bot_type=None, weakness=1.0):
     """Create video from environment rendering"""
     # MAX_STEPS control the duration of the recoreded videos
     step_count = 0
@@ -26,11 +27,19 @@ def create_video(output_dir, mode, iteration, model_paths, bot_type=None, weakne
         env = MultiAgentEnv(mode='bot_agent', type='inference', bot_type=bot_type, weakness=weakness)
     elif mode == 'agent':
         env = MultiAgentEnv()
+    if algorithm == 'sac':
+        env = ContinuousToDiscreteWrapper(env)
     env.render()
+    
+    if algorithm == 'ppo':
+        agents = load_agents_ppo(
+            env, device, mode=mode, model_paths=model_paths, bot_type=bot_type, weakness=weakness
+        )
+    elif algorithm == 'sac':
+        agents = load_agents_sac(
+            env, device, mode=mode, model_paths=model_paths, bot_type=bot_type, weakness=weakness
+        )
 
-    agents = load_agents(
-        env, device, mode=mode, model_paths=model_paths, bot_type=bot_type, weakness=weakness
-    )
     obs, _ = env.reset()
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
     obs_dim = env.observation_space.shape[0] // env.num_tanks # len(agents)
@@ -75,13 +84,14 @@ def create_video(output_dir, mode, iteration, model_paths, bot_type=None, weakne
 
 
 def record_video_process(
-    output_dir, model_paths, iteration, mode, bot_type, weakness, conn
+    output_dir, mode, algorithm, iteration, model_paths, bot_type, weakness, conn
 ):
     """Process function for video recording"""
     try:
         video_path = create_video(
             output_dir=output_dir, 
             mode=mode, 
+            algorithm=algorithm,
             iteration=iteration, 
             model_paths=model_paths, 
             bot_type=bot_type, 
@@ -106,10 +116,10 @@ class VideoRecorder:
     
 
     def start_recording(
-        self, agents, iteration, mode='bot', model='ppo', bot_type=None, weakness=1.0
+        self, agents, iteration, mode='bot', algorithm='ppo', bot_type=None, weakness=1.0, 
     ):
         """Start recording process for model inference"""
-        model_save_dir = f"epoch_checkpoints/{model}_{mode}"
+        model_save_dir = f"epoch_checkpoints/{algorithm}_{mode}"
         os.makedirs(model_save_dir, exist_ok=True)
         
         if not isinstance(agents, list): agents = [agents]
@@ -118,9 +128,9 @@ class VideoRecorder:
         for agent_idx, agent in enumerate(agents):
             # ppo/sac | bot/agent | 01 or 0 | iteration
             if len(agents) == 1:
-                path = f"{model}_{mode}_{bot_type}_epoch_{iteration}.pt"
+                path = f"{algorithm}_{mode}_{bot_type}_epoch_{iteration}.pt"
             else:
-                path = f"{model}_{mode}_{agent_idx}_epoch_{iteration}.pt"
+                path = f"{algorithm}_{mode}_{agent_idx}_epoch_{iteration}.pt"
 
             model_path = os.path.join(model_save_dir, path)
             model_paths.append(model_path)
@@ -130,7 +140,7 @@ class VideoRecorder:
 
         process = mp.Process(
             target=record_video_process, 
-            args=(self.output_dir, model_paths, iteration, mode, bot_type, weakness, child_conn)
+            args=(self.output_dir, mode, algorithm, iteration, model_paths, bot_type, weakness, child_conn)
         )
         process.start()
         self.recording_processes.append((process, parent_conn))
