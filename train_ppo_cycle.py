@@ -14,12 +14,13 @@ from torch.distributions.categorical import Categorical
 from env.gym_env import MultiAgentEnv
 from env.bots.bot_factory import BotFactory
 from models.ppo_bot_model import PPOAgentBot, RunningMeanStd
-from inference import run_inference_with_video
+# from inference import run_inference_with_video
+from video_record import EPOCH_CHECK, VideoRecorder
 
 # Valid rotation strategies
 ROTATION_STRATEGIES = ["random", "fixed", "adaptive"]
-EPOCH_CHECK = 50
-MAX_STEP = 400
+# EPOCH_CHECK = 50
+# MAX_STEP = 400
 class CycleTrainingConfig:
     def __init__(self,
                  bot_types=None,
@@ -254,6 +255,7 @@ def select_next_bot(config: CycleTrainingConfig, evaluator: CycleTrainingEvaluat
 def train_cycle(config: CycleTrainingConfig):
     """Main training function implementing cycle training against multiple bots"""
     setup_wandb(config)
+    video_recorder = VideoRecorder()
     
     # Initialize environment and agent
     env = MultiAgentEnv(mode='bot_agent', type='train', bot_type=config.bot_types[0])
@@ -418,7 +420,10 @@ def train_cycle(config: CycleTrainingConfig):
         })
         
         if update % EPOCH_CHECK == 0 and update > 1:
-            _model_inference_cycle(agent, update, bot_type=current_bot)
+            video_recorder.start_recording(
+                agent, update, mode='bot', model='ppo', bot_type=current_bot, weakness=current_weakness
+            )
+            # _model_inference_cycle(agent, update, bot_type=current_bot)
         
         # Update progress bar
         progress_bar.set_description(
@@ -439,28 +444,28 @@ def train_cycle(config: CycleTrainingConfig):
     wandb.finish()
 
 
-def _model_inference_cycle(agents, iteration, bot_type=None):
-    print(f'inference check at {iteration} iteration')
-    model_save_dir = "epoch_checkpoints/ppo_bot"
-    os.makedirs(model_save_dir, exist_ok=True)
-    if not isinstance(agents, list): agents = [agents]
-    model_paths = []
-    for agent_idx, agent in enumerate(agents):
-        model_path = os.path.join(model_save_dir, f"ppo_agent_{agent_idx}_epoch_{iteration}.pt")
-        model_paths.append(model_path)
-        torch.save(agent.state_dict(), model_path)
+# def _model_inference_cycle(agents, iteration, bot_type=None):
+#     print(f'inference check at {iteration} iteration')
+#     model_save_dir = "epoch_checkpoints/ppo_bot"
+#     os.makedirs(model_save_dir, exist_ok=True)
+#     if not isinstance(agents, list): agents = [agents]
+#     model_paths = []
+#     for agent_idx, agent in enumerate(agents):
+#         model_path = os.path.join(model_save_dir, f"ppo_agent_{agent_idx}_epoch_{iteration}.pt")
+#         model_paths.append(model_path)
+#         torch.save(agent.state_dict(), model_path)
 
-    video_path = run_inference_with_video(
-        mode='bot', bot_type=bot_type, epoch_checkpoint=iteration, model_paths=model_paths, MAX_STEPS=MAX_STEP
-    )
+#     video_path = run_inference_with_video(
+#         mode='bot', bot_type=bot_type, epoch_checkpoint=iteration, model_paths=model_paths, MAX_STEPS=MAX_STEP
+#     )
     
-    # Log video to wandb
-    if video_path and os.path.exists(video_path):
-        wandb.log({
-            "game_video": wandb.Video(video_path, fps=30, format="mp4"),
-            "iteration": iteration
-        })
-        print(f"[INFO] Video uploaded to wandb at iteration {iteration}")
+#     # Log video to wandb
+#     if video_path and os.path.exists(video_path):
+#         wandb.log({
+#             "game_video": wandb.Video(video_path, fps=30, format="mp4"),
+#             "iteration": iteration
+#         })
+#         print(f"[INFO] Video uploaded to wandb at iteration {iteration}")
         
 
 # Default configuration
