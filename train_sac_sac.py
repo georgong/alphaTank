@@ -8,6 +8,7 @@ import wandb
 from tqdm import tqdm
 from collections import deque
 from env.gym_env import MultiAgentEnv
+from video_record import EPOCH_CHECK, VideoRecorder
 
 import pygame
 
@@ -109,6 +110,8 @@ class ReplayBuffer:
 
 def train():
     env = MultiAgentEnv()
+    video_recorder = VideoRecorder()
+    
     num_tanks = env.num_tanks  
     obs_dim = env.observation_space.shape[0] // num_tanks  
     act_dim = 3  

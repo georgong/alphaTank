@@ -13,7 +13,7 @@ import gym
 
 from env.gym_env import MultiAgentEnv
 from models.ppo_ppo_model import PPOAgentPPO, RunningMeanStd
-from inference import run_inference_with_video
+from video_record import EPOCH_CHECK, VideoRecorder
 
 wandb.init(
     project="multiagent-ppo-ppo",
@@ -33,12 +33,11 @@ wandb.init(
     }
 )
 
-EPOCH_CHECK = 50
-MAX_STEP = 400
 
 def train():
     env = MultiAgentEnv()
     env.render()
+    video_recorder = VideoRecorder()
 
     num_tanks = env.num_tanks
     obs_dim = env.observation_space.shape[0] // num_tanks  
@@ -177,7 +176,15 @@ def train():
                 })
 
         if iteration % EPOCH_CHECK == 0 and iteration > 1:
-            _model_inference_agent(agents, iteration)
+            video_recorder.start_recording(
+                agent, iteration, mode='agent', model='ppo'
+            )
+        
+        # check videos for logging to wandb
+        video_recorder.check_recordings()
+    
+    # Wait for any remaining recording processes to complete
+    video_recorder.cleanup()
         
     model_save_dir = "checkpoints"
     os.makedirs(model_save_dir, exist_ok=True)
@@ -190,27 +197,6 @@ def train():
     env.close()
     wandb.finish()
 
-def _model_inference_agent(agents, iteration):
-    print(f'inference check at {iteration} iteration')
-    model_save_dir = "epoch_checkpoints/ppo_ppo"
-    os.makedirs(model_save_dir, exist_ok=True)
-    model_paths = []
-    for agent_idx, agent in enumerate(agents):
-        model_path = os.path.join(model_save_dir, f"ppo_agent_{agent_idx}_epoch_{iteration}.pt")
-        model_paths.append(model_path)
-        torch.save(agent.state_dict(), model_path)
-
-    video_path = run_inference_with_video(
-        mode='agent', epoch_checkpoint=iteration, model_paths=model_paths, MAX_STEPS=MAX_STEP
-    )
-    
-    # Log video to wandb
-    if video_path and os.path.exists(video_path):
-        wandb.log({
-            "game_video": wandb.Video(video_path, fps=30, format="mp4"),
-            "iteration": iteration
-        })
-        print(f"[INFO] Video uploaded to wandb at iteration {iteration}")
 
 if __name__ == "__main__":
     train()
