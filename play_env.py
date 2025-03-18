@@ -3,7 +3,7 @@ import numpy as np
 from env.gym_env import MultiAgentEnv
 from env.gaming_env import GamingENV
 from env.bots.bot_factory import BotFactory
-from env.config import two_tank_configs,team_configs,crazy_team_configs
+from env.config import two_tank_configs,team_configs,crazy_team_configs, bot_team_configs
 
 def run_play():
     """Runs the environment in human play mode."""
@@ -28,7 +28,7 @@ def run_random():
 
 def run_team_play():
     """Runs the environment in human play mode."""
-    env =  MultiAgentEnv(game_configs=crazy_team_configs)
+    env =  MultiAgentEnv(game_configs=bot_team_configs)
     print(env.get_observation_order()) #two agent tanks['Tank3', 'Tank6']
     for _ in range(10000):
         env.render()

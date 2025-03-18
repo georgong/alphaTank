@@ -220,4 +220,50 @@ crazy_team_configs = {
         "mode": "bot",
         "bot_type": "aggressive",
     },
+     "Tank8": {
+        "team": "TeamC",
+        "color": GRAY,
+        "mode": "bot",
+        "bot_type": "smart",
+    },
+}
+
+
+bot_team_configs = {
+    "Tank1": {
+        "team": "TeamA",
+        "color": GREEN,
+        "mode": "bot",
+        "bot_type": "smart",
+    },
+    "Tank2": {
+        "team": "TeamA",
+        "color": GREEN,
+        "mode": "bot",
+        "bot_type": "smart",
+    },
+    "Tank3": {
+        "team": "TeamB",
+        "color": RED,
+        "mode": "bot",
+        "bot_type": "aggressive",
+    },
+    "Tank4": {
+        "team": "TeamB",
+        "color": RED,
+        "mode": "bot",
+        "bot_type": "aggressive",
+    },
+    "Tank5": {
+        "team": "TeamC",
+        "color": GRAY,
+        "mode": "bot",
+        "bot_type": "defensive",
+    },
+     "Tank6": {
+        "team": "TeamC",
+        "color": GRAY,
+        "mode": "bot",
+        "bot_type": "defensive",
+    },
 }
