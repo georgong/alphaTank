@@ -199,7 +199,7 @@ crazy_team_configs = {"Tank1":{"team":"TeamA",
                 }
 }
 
-agents_vs_bot_config =  {"Tank1":{"team":"TeamA", 
+agents_vs_bot_configs =  {"Tank1":{"team":"TeamA", 
                          "color":RED, 
                          "mode": "agent",
                         },

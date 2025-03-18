@@ -3,7 +3,7 @@ import wandb
 from tqdm import tqdm
 from torch.distributions.categorical import Categorical
 import gym
-from env.config import team_configs,agents_vs_bot_config,agent_vs_agent_configs,agent_vs_bot_configs
+from env.config import team_configs,agents_vs_bot_configs,agent_vs_agent_configs,agent_vs_bot_configs
 from env.gym_env import MultiAgentEnv
 from models.ppo_ppo_model import PPOAgent_PPO, RunningMeanStd
 import os
