@@ -3,7 +3,6 @@ import numpy as np
 import pygame
 from env.config import *
 from env.gaming_env import GamingENV
-from env.gaming_env_team import GamingTeamENV
 from env.util import angle_to_vector,corner_to_xy
 from env.util import two_tank_configs
 
@@ -11,13 +10,10 @@ class MultiAgentEnv(gym.Env):
     def __init__(self, game_configs, weakness=1.0):
         super().__init__()
         self.training_step = 0
-        
-        if USE_TEAM:
-            self.game_env = GamingTeamENV(game_configs=game_configs)
-        else:
-            self.game_env = GamingENV(game_configs=game_configs, weakness=weakness)
+        self.game_env = GamingENV(game_configs=game_configs, weakness=weakness)
             
         self.num_tanks = len(self.game_env.tanks)
+        self.num_agents = len(self.get_observation_order())
         self.num_walls = len(self.game_env.walls)
         self.max_bullets_per_tank = 6 
         self.prev_actions = None
@@ -25,7 +21,7 @@ class MultiAgentEnv(gym.Env):
 
         obs_dim = self._calculate_obs_dim()
         self.observation_space = gym.spaces.Box(low=-1, high=max(WIDTH, HEIGHT), shape=(obs_dim,), dtype=np.float32)
-        self.action_space = gym.spaces.MultiDiscrete([3, 3, 2] * self.num_tanks)  
+        self.action_space = gym.spaces.MultiDiscrete([3, 3, 2] * self.num_agents)  
 
     def get_observation_order(self):
         return self.game_env.get_observation_order()
@@ -38,8 +34,8 @@ class MultiAgentEnv(gym.Env):
 
     def _calculate_obs_dim(self):
         
-        agent_tank_dim =  13 + 1 
-        
+        agent_tank_dim =  15 
+        #x,y,corner(2*4),dx,dy,hittingwall_notication, team_notification(1:team_mate, 0:enemy), alive(1:alive, 0:dead)
         other_tank_dim = (self.num_tanks - 1) * (18)
         #x,y,corner(2*4),dx,dy,team_notification(1:team_mate, 0:enemy), alive(1:alive, 0:dead)
         
@@ -69,7 +65,7 @@ class MultiAgentEnv(gym.Env):
                 wall_dim + 
                 buff_zone_dim + 
                 debuff_zone_dim + 
-                in_buff_zone_dim) * self.num_tanks
+                in_buff_zone_dim) * self.num_agents
 
     def reset(self):
         self.game_env.reset()
@@ -196,17 +192,13 @@ class MultiAgentEnv(gym.Env):
 
 
     def _calculate_rewards(self):
-        return np.array([tank.reward for tank in self.game_env.tanks], dtype=np.float32)
+        return np.array([tank.reward for tank in self.game_env.tanks if tank.mode == "agent"], dtype=np.float32)
 
     def _check_done(self):
-        alive_tanks = {tank.team for tank in self.game_env.tanks if tank.alive}
-        # if self.training_step < 512:
-        #     return False
-        # else:
-        #     self.training_step = 0
-        #     return True
-    
-        return len(alive_tanks) <= 1 
+        alive_teams = {tank.team for tank in self.game_env.tanks if tank.alive}
+        # 当只有一个 team（或 0 个）还存活时，回合结束
+        return len(alive_teams) <= 1
+
 
     def render(self, mode="human"):
         if mode == "human":

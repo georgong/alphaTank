@@ -10,7 +10,7 @@ import wandb
 from tqdm import tqdm
 from torch.distributions.categorical import Categorical
 import gym
-
+from env.config import team_configs
 from env.gym_env import MultiAgentEnv
 from models.ppo_utils import PPOAgentPPO, RunningMeanStd
 from models.video_utils import EPOCH_CHECK, VideoRecorder
@@ -41,7 +41,7 @@ def train():
     env.render()
     video_recorder = VideoRecorder()
 
-    num_tanks = env.num_tanks
+    num_tanks = len(env.get_observation_order())
     obs_dim = env.observation_space.shape[0] // num_tanks  
     act_dim = env.action_space.nvec[:3]  # assume multi-discrete action space
 
