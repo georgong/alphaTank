@@ -15,13 +15,48 @@ team_configs = {
             "color":GREEN, 
             "mode": "agent",
         },
-    "Tank4":{"team":"TeamB", 
-            "color":GREEN, 
-            "mode": "agent",
-        },
 }
 
-crazy_team_configs = {
+bot_team_configs = {
+    "Tank1": {
+        "team": "TeamA",
+        "color": GREEN,
+        "mode": "bot",
+        "bot_type": "smart",
+    },
+    "Tank2": {
+        "team": "TeamA",
+        "color": GREEN,
+        "mode": "bot",
+        "bot_type": "smart",
+    },
+    "Tank3": {
+        "team": "TeamB",
+        "color": RED,
+        "mode": "bot",
+        "bot_type": "aggressive",
+    },
+    "Tank4": {
+        "team": "TeamB",
+        "color": RED,
+        "mode": "bot",
+        "bot_type": "aggressive",
+    },
+    "Tank5": {
+        "team": "TeamC",
+        "color": GRAY,
+        "mode": "bot",
+        "bot_type": "defensive",
+    },
+     "Tank6": {
+        "team": "TeamC",
+        "color": GRAY,
+        "mode": "bot",
+        "bot_type": "defensive",
+    },
+}
+
+mixed_team_configs = {
     "Tank1": {
         "team": "TeamA",
         "color": GREEN,
@@ -82,50 +117,10 @@ crazy_team_configs = {
     },
 }
 
-
-bot_team_configs = {
-    "Tank1": {
-        "team": "TeamA",
-        "color": GREEN,
-        "mode": "bot",
-        "bot_type": "smart",
-    },
-    "Tank2": {
-        "team": "TeamA",
-        "color": GREEN,
-        "mode": "bot",
-        "bot_type": "smart",
-    },
-    "Tank3": {
-        "team": "TeamB",
-        "color": RED,
-        "mode": "bot",
-        "bot_type": "aggressive",
-    },
-    "Tank4": {
-        "team": "TeamB",
-        "color": RED,
-        "mode": "bot",
-        "bot_type": "aggressive",
-    },
-    "Tank5": {
-        "team": "TeamC",
-        "color": GRAY,
-        "mode": "bot",
-        "bot_type": "defensive",
-    },
-     "Tank6": {
-        "team": "TeamC",
-        "color": GRAY,
-        "mode": "bot",
-        "bot_type": "defensive",
-    },
-}
-
 """-----------TEAM INFERENCE SETTING-----------"""
 
 # Need to be consistent with tarining
 inference_agent_configs = {"Tank1":"checkpoints/ppo_agent_0.pt",
                             "Tank2":"checkpoints/ppo_agent_1.pt",
                             "Tank3":"checkpoints/ppo_agent_2.pt",
-                            "Tank4":"checkpoints/ppo_agent_3.pt"}   
+}

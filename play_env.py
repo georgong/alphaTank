@@ -5,13 +5,15 @@ from env.gaming_env import GamingENV
 from env.bots.bot_factory import BotFactory
 from configs.config_teams import bot_team_configs
 
+
 def run_play():
     """Runs the environment in human play mode."""
     env = GamingENV(mode="human_play")
     while env.running:
         env.render()
         env.step()
-        
+
+
 def run_random():
     """Runs the environment with randomly sampled actions."""
     env = MultiAgentEnv()
@@ -21,10 +23,10 @@ def run_random():
         actions_np = actions.reshape(env.num_tanks, 3)
         actions_list = actions_np.tolist()
         observation, reward, terminated, truncated, info = env.step(actions_list)
-        # print(reward)
         if terminated or truncated:
             observation, info = env.reset()
     env.close()
+
 
 def run_team_play():
     """Runs the environment in human play mode."""
@@ -38,10 +40,10 @@ def run_team_play():
         actions_np = np.array([tank_3_actions,tank_6_actions])
         actions_list = actions_np.tolist()
         observation, reward, terminated, truncated, info = env.step(actions_list)
-        # print(observation.reshape(2,-1).shape)
         if terminated or truncated:
             observation, info = env.reset()
     env.close()
+
 
 def run_bot(bot_type, weakness=1.0):
     """Runs the environment in AI mode with specified bot type and weakness level.
