@@ -178,7 +178,7 @@ class Trainer:
                     })
 
             
-        model_save_dir = "checkpoints"
+        model_save_dir = "checkpoints/team_ppo"
         os.makedirs(model_save_dir, exist_ok=True)
 
         for i, agent in enumerate(agents):
