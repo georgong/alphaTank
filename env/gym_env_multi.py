@@ -180,6 +180,8 @@ class MultiAgentTeamEnv(gym.Env):
         alive_teams = {tank.team for tank in self.game_env.tanks if tank.alive}
         # 当只有一个 team（或 0 个）还存活时，回合结束
         if len(alive_teams) <= 1:
+            if len(alive_teams) == 0: # handle all terminated teams condition
+                return True
             winner_team = next(iter(alive_teams))
             for tank in self.game_env.tanks:
                 if tank.team == winner_team:
