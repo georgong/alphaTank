@@ -9,10 +9,9 @@ import wandb
 from tqdm import tqdm
 import random
 from env.gym_env import MultiAgentEnv
-from sac_util import ContinuousToDiscreteWrapper, DisplayManager
+from models.sac_utils import ContinuousToDiscreteWrapper, DisplayManager
 
-from models.ppo_ppo_model import RunningMeanStd
-from video_record import VideoRecorder
+from models.video_utils import VideoRecorder
 
 # Initialize WandB
 def setup_wandb():

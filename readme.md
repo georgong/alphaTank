@@ -29,29 +29,50 @@ pip install -r requirements.txt
 
 - **Bullets will bounce off walls**
 
-```python
-python play_env.py --mode play
-```
-
 ### ⌨️**Keyboard controls**
 - Press **`R`** to reset the game.
 - Press **`V`** to enable/disable visualizing the tank aiming direction.
 - Press **`T`** to enable/disable visualizing the bullet trajectory.
 - Press **`B`** to enable/disable visualizing the BFS shortest path.
 
+The complete documentation of the environment is in [here](docs/structure.md)
+
 ---
 
-## **🤖 Random Action Rendering**
+## **💣 Battle's Setting**
+We support many manydiffeernt modes, to avoid confusion, we will be going over them one by one, the general structure goes like the following:
+
+```
+algorithms
+├── bot_mode
+│   ├── cycle_learning
+│   ├── team_mode
+├── agent_mode
+│   ├── team_mode
+```
+
+Notice that this is not specifically how the code are struectued but rather a conceptual framework of our system:
+- `Algorithms`: include two popular RL algorithms: PPO & SAC, this is the main algorithm for learning agent, we will add more later.
+  - `Bot mode`: include many different types of human heuritsic bots.
+    - Supports cycle training + curriculum learning, but only for single agent-to-bot mode.
+    - Supports team playing against team of agents, team is fully customziable with mixes between agents, bots, and human players.
+  - `Agent mode`: include different algorithm fighting againts each other.
+    - Supports team playing against team of agents, team is fully customziable with mixes between agents, bots, and human players.
+
+We try to keep our codebase as modularzie and conatined as possible, so we have seperated out the ***base team playing environment*** and single agent-to-agent or agent-to-bot environment while maintaining a coherent API call. Similarly, we have seperated out the ***main learning agent training/inference loop*** for clearness for now, we will make abstract classes for agent similar to how we have done with the bot later on.
+
+---
+### **⛰️ Environment Demostrations**
+
+#### **Random Action Rendering**
 ```python
 python play_env.py --mode play
-python play_env.py --mode random
+python play_env.py --mode team
 python play_env.py --mode bot
 ```
 
----
-
-## **🤖 Bot Arena**
-We support a variety of "intelligent" (manual crafted strategy) bot/expert to tarin our learning agent, run the following to see bots fighting aaginst each other (choose from `smart`, `random`, `aggressive`, `defensive`, `dodge`):
+#### **Bot Arena**
+We support a variety of "intelligent" (manual crafted strategy) bot/exper using our very own ***bot factory*** to tarin our learning agent, run the following to see bots fighting aginst each other (choose from `smart`, `random`, `aggressive`, `defensive`, `dodge`), the complete documentation of the environment is in [here](docs/bots.md).
 
 ```python
 python bot_arena.py --bot1 defensive  --bot2 dodge
@@ -59,7 +80,9 @@ python bot_arena.py --bot1 defensive  --bot2 dodge
 
 ---
 
-## **🚀 Training A PPO/SAC Agent**
+### **🚀 Training A Agent**
+
+#### **Training Single Agent-to-X**
 When training, choose **bot type** from `smart`, `random`, `aggressive`, `defensive`, `dodge`.
 ```python
 python train_ppo_bot.py --bot-type smart
@@ -67,17 +90,25 @@ python train_ppo_cycle.py
 python train_ppo_ppo.py
 ```
 
----
-## **🚀 Inference Rendering**
-When inference, choose **bot type** from `smart`, `random`, `aggressive`, `defensive`, `dodge`.
+#### **Training Team Players**
 ```python
-python inference.py --mode bot --bot-type smart
-python inference.py --mode agent
+python train_ppo_bot.py --bot-type smart
 ```
 
 ---
-### **🚀 Run a Pretrained AI Model**
-Run oretrain model against bot:
+
+### **🤖 Inference Modes**
+
+#### **General Inference Rendering**
+When inference with isngle agent-to-bot setting, yone can choose **bot type** from `smart`, `random`, `aggressive`, `defensive`, `dodge`.
+
+```python
+python inference.py --mode bot --bot-type smart --weakness 0.1 --algorithm ppo
+python inference.py --mode agent --algorithm ppo 
+```
+
+#### **Run a Pretrained AI Model**
+Run our trained single agent-to-bot model by the following:
 
 ```python
 python inference.py --mode bot --bot-type aggressive --demo True

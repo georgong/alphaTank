@@ -2,9 +2,8 @@ import argparse
 import torch
 import numpy as np
 from env.gym_env import MultiAgentEnv
-from models.ppo_ppo_model import PPOAgentPPO
-from models.ppo_bot_model import PPOAgentBot, RunningMeanStd
-from sac_util import ContinuousToDiscreteWrapper
+from models.ppo_utils import PPOAgentPPO, PPOAgentBot, RunningMeanStd
+from models.sac_utils import ContinuousToDiscreteWrapper
 
 from env.bots.bot_factory import BotFactory
 import pygame
@@ -83,73 +82,6 @@ def load_agents_sac(env, device, mode='agent', bot_type='smart', model_paths=Non
             print(f"[INFO] Loaded model for Agent {i} from {model_path}")
 
     return agents
-
-
-# def _record_inference(mode, epoch_checkpoint, frames):
-#     output_dir = "recordings"
-#     os.makedirs(output_dir, exist_ok=True)
-#     video_path = os.path.join(output_dir, f"{mode}_game_{epoch_checkpoint}.mp4")
-
-#     # Save video
-#     print(f"Saving video to {video_path}")
-#     imageio.mimsave(video_path, frames, fps=30)
-#     print("Recording saved successfully!")
-    
-#     return video_path
-
-
-# def run_inference_with_video(mode, epoch_checkpoint=None, bot_type='smart', model_paths=None, weakness=1.0, MAX_STEPS=None):
-#     # for inference while training
-#     # MAX_STEPS control the duration of the recoreded videos
-#     if MAX_STEPS is None:
-#         MAX_STEPS = float('inf')
-#     step_count = 0
-#     frames = []
-
-#     """Runs a trained PPO model in the environment."""
-#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#     if mode == 'bot':
-#         env = MultiAgentEnv(mode='bot_agent', type='inference', bot_type=bot_type, weakness=weakness)
-#     elif mode == 'agent':
-#         env = MultiAgentEnv()
-#     env.render()
-
-#     agents = load_agents(
-#         env, device, mode=mode, model_paths=model_paths, bot_type=bot_type, weakness=weakness
-#     )
-#     obs, _ = env.reset()
-#     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
-#     obs_dim = env.observation_space.shape[0] // env.num_tanks # len(agents)
-#     obs_norm = RunningMeanStd(shape=(env.num_tanks, obs_dim), device=device)
-
-#     while True:
-#         with torch.no_grad():
-#             obs_norm.update(obs)
-#             obs = obs_norm.normalize(obs)
-#             actions_list = [
-#                 agent.get_action_and_value(obs[i])[0].cpu().numpy().tolist()
-#                 for i, agent in enumerate(agents)
-#             ]
-
-#         next_obs_np, _, done_np, _, _ = env.step(actions_list)
-#         obs = torch.tensor(next_obs_np, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
-
-#         if np.any(done_np):
-#             print("[INFO] Environment reset triggered.")
-#             obs, _ = env.reset()
-#             obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
-        
-#         env.render()
-
-#         # for inference during training time
-#         frame_array = env.render(mode='rgb_array')
-#         frame_array = frame_array.transpose([1, 0, 2]) 
-#         frames.append(frame_array)
-
-#         step_count += 1
-#         if step_count > MAX_STEPS:
-#             vidoe_path = _record_inference(mode, epoch_checkpoint, frames)
-#             return vidoe_path
         
         
 def run_inference(mode, algorithm='ppo', bot_type='smart', demo=False, weakness=1.0):
@@ -157,15 +89,18 @@ def run_inference(mode, algorithm='ppo', bot_type='smart', demo=False, weakness=
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     if mode == 'bot':
         env = MultiAgentEnv(mode='bot_agent', type='inference', bot_type=bot_type, weakness=weakness)
+    
     elif mode == 'agent':
         env = MultiAgentEnv(type='inference')
-    env.render()
-    if algorithm == 'sac':
-        env = ContinuousToDiscreteWrapper(env)
+        
+        if algorithm == 'sac':
+            env = ContinuousToDiscreteWrapper(env)
+            
     env.render()
 
     if algorithm == 'ppo':
         agents = load_agents_ppo(env, device, mode=mode, algorithm=algorithm, bot_type=bot_type, demo=demo, weakness=weakness)
+    
     elif algorithm == 'sac':
         agents = load_agents_sac(env, device, mode=mode, algorithm=algorithm, bot_type=bot_type, demo=demo, weakness=weakness)
 

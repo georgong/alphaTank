@@ -3,8 +3,15 @@ import numpy as np
 from env.gym_env import MultiAgentEnv
 from env.gaming_env import GamingENV
 from env.bots.bot_factory import BotFactory
-from env.config import two_tank_configs,team_configs
+from env.config import two_tank_configs,team_configs,crazy_team_configs
 
+def run_play():
+    """Runs the environment in human play mode."""
+    env = GamingENV(mode="human_play")
+    while env.running:
+        env.render()
+        env.step()
+        
 def run_random():
     """Runs the environment with randomly sampled actions."""
     env = MultiAgentEnv()
@@ -19,24 +26,23 @@ def run_random():
             observation, info = env.reset()
     env.close()
 
-
-def run_play():
-    """Runs the environment in human play mode."""
-    env = GamingENV(mode="human_play")
-    while env.running:
-        env.render()
-        env.step()
-
 def run_team_play():
     """Runs the environment in human play mode."""
-    env = GamingENV(mode="human_play",game_configs=team_configs)
-    while env.running:
+    env =  MultiAgentEnv(game_configs=crazy_team_configs)
+    print(env.get_observation_order()) #two agent tanks['Tank3', 'Tank6']
+    for _ in range(10000):
         env.render()
-        env.step()
+        env.get_observation_order()
+        tank_3_actions= env.action_space.sample()
+        tank_6_actions = env.action_space.sample()
+        actions_np = np.array([tank_3_actions,tank_6_actions])
+        actions_list = actions_np.tolist()
+        observation, reward, terminated, truncated, info = env.step(actions_list)
+        # print(observation.reshape(2,-1).shape)
+        if terminated or truncated:
+            observation, info = env.reset()
+    env.close()
 
-def run_bot(bot_type):
-    """Runs the environment in AI mode with specified bot type."""
-    env = GamingENV(mode="bot", bot_type=bot_type)
 def run_bot(bot_type, weakness=1.0):
     """Runs the environment in AI mode with specified bot type and weakness level.
     
@@ -53,7 +59,7 @@ def run_bot(bot_type, weakness=1.0):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run MultiAgentEnv in either play, random, or bot mode.")
-    parser.add_argument("--mode", type=str, choices=["play", "random", "bot"], required=True, help="Select 'play', 'random', or 'bot' mode.")
+    parser.add_argument("--mode", type=str, choices=["play", "random", "bot", "team"], required=True, help="Select 'play', 'random', or 'bot' mode.")
     parser.add_argument("--bot-type", type=str, choices=list(BotFactory.BOT_TYPES.keys()), default="smart", 
                       help="Select bot type when using bot mode. Options: " + ", ".join(BotFactory.BOT_TYPES.keys()))
     parser.add_argument("--weakness", type=float, default=1.0,
@@ -65,5 +71,7 @@ if __name__ == "__main__":
         run_play()
     elif args.mode == "random":
         run_random()
+    elif args.mode == "team":
+        run_team_play()
     elif args.mode == "bot":
         run_bot(args.bot_type, args.weakness)

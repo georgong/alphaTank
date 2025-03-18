@@ -28,6 +28,39 @@ class RunningMeanStd:
         x = x.to(self.mean.device)
         return (x - self.mean) / (torch.sqrt(self.var) + 1e-8)
 
+class PPOAgentPPO(nn.Module):
+    def __init__(self, obs_dim, act_dim):
+        super().__init__()
+        self.critic = nn.Sequential(
+            nn.Linear(obs_dim, 64), nn.Tanh(),
+            nn.Linear(64, 64), nn.Tanh(),
+            nn.Linear(64, 1)
+        )
+        self.actor = nn.ModuleList([
+            nn.Sequential(
+                nn.Linear(obs_dim, 64), nn.Tanh(),
+                nn.Linear(64, 64), nn.Tanh(),
+                nn.Linear(64, act)
+            ) for act in act_dim
+        ])
+
+    def get_value(self, x: torch.Tensor):
+        return self.critic(x)
+
+    def get_action_and_value(self, x: torch.Tensor, action=None):
+        logits = [layer(x) for layer in self.actor]
+        probs = [Categorical(logits=l) for l in logits]
+
+        if action is None:
+            action = [p.sample() for p in probs]
+
+        action_tensor = torch.stack(action, dim=-1) if isinstance(action, list) else action
+        logprobs = torch.stack([p.log_prob(a) for p, a in zip(probs, action_tensor.unbind(dim=-1))], dim=-1)
+        entropy = torch.stack([p.entropy() for p in probs], dim=-1)
+        value = self.critic(x)
+
+        return action_tensor, logprobs, entropy, value
+
 class PPOAgentBot(nn.Module):
     def __init__(self, obs_dim, act_dim):
         super().__init__()

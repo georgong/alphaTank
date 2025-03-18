@@ -13,9 +13,9 @@ from torch.distributions.categorical import Categorical
 
 from env.gym_env import MultiAgentEnv
 from env.bots.bot_factory import BotFactory
-from models.ppo_bot_model import PPOAgentBot, RunningMeanStd
-# from inference import run_inference_with_video
-from video_record import EPOCH_CHECK, VideoRecorder
+from models.ppo_utils import PPOAgentBot, RunningMeanStd
+
+from models.video_utils import EPOCH_CHECK, VideoRecorder
 
 # Valid rotation strategies
 ROTATION_STRATEGIES = ["random", "fixed", "adaptive"]

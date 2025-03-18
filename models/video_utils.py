@@ -8,8 +8,8 @@ from multiprocessing import Pipe
 
 from env.gym_env import MultiAgentEnv
 from inference import load_agents_ppo, load_agents_sac
-from models.ppo_ppo_model import RunningMeanStd
-from sac_util import ContinuousToDiscreteWrapper
+from models.ppo_utils import RunningMeanStd
+from models.sac_utils import ContinuousToDiscreteWrapper
 
 # defined constants
 EPOCH_CHECK = 20        # the frequency to record video, 
