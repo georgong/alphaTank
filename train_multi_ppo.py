@@ -4,6 +4,7 @@ from torch.distributions.categorical import Categorical
 from configs.config_teams import team_configs, team_vs_bot_configs
 from env.gym_env_multi import MultiAgentTeamEnv
 from models.ppo_utils import PPOAgentPPO, RunningMeanStd
+from models.video_utils import VideoRecorder
 import os
 import time
 import numpy as np
@@ -34,8 +35,10 @@ class Trainer:
                 "total_timesteps": 200000,
                 "auto_reset_interval": 20000,
                 "neg_reward_threshold": 0,
+                "EPOCH_CHECK": 50,
             }
         )
+        video_recorder = VideoRecorder()
         env = MultiAgentTeamEnv(game_configs=self.game_configs)
         env.render()
 
@@ -59,6 +62,7 @@ class Trainer:
         max_grad_norm = wandb.config.max_grad_norm
         auto_reset_interval = wandb.config.auto_reset_interval
         neg_reward_threshold = wandb.config.neg_reward_threshold
+        EPOCH_CHECK = wandb.config.EPOCH_CHECK
 
         global_step = 0
         start_time = time.time()
@@ -176,8 +180,23 @@ class Trainer:
                         "iteration": iteration,
                         "env/reset_count": reset_count
                     })
-
             
+            if iteration % EPOCH_CHECK == 0 and iteration > 0:
+                # display_manager.set_display()
+                video_recorder.start_recording(
+                    agents, iteration, team_configs=self.game_configs, mode='agent', algorithm='ppo'
+                )
+                # display_manager.set_headless()
+            
+            try:
+                video_recorder.check_recordings()
+            except EOFError:
+                print("[ERROR] Video recording process unexpectedly terminated.")
+                video_recorder.cleanup()
+                video_recorder = VideoRecorder()  # Restart the recorder
+
+        video_recorder.cleanup()
+
         model_save_dir = "checkpoints/team_ppo"
         os.makedirs(model_save_dir, exist_ok=True)
 
