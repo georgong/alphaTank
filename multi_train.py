@@ -3,7 +3,7 @@ import wandb
 from tqdm import tqdm
 from torch.distributions.categorical import Categorical
 import gym
-from env.config import team_configs,agents_vs_bot_config
+from env.config import team_configs,agents_vs_bot_config,agent_vs_agent_configs,agent_vs_bot_configs
 from env.gym_env import MultiAgentEnv
 from models.ppo_ppo_model import PPOAgent_PPO, RunningMeanStd
 import os
@@ -105,10 +105,12 @@ class Trainer:
 
                 actions_np = actions_tensor.cpu().numpy().astype(int).reshape(num_tanks, 3).tolist()
                 next_obs_np, reward_np, done_np, _, _ = env.step(actions_np)
+                #print(reward_np)
                 # filter the reward with tanks
                 env.get_observation_order()
                 
                 rewards[step] = torch.tensor(reward_np, dtype=torch.float32, device=device)
+                #print(rewards.mean())
                 next_done = torch.tensor(done_np, dtype=torch.float32, device=device)
                 next_obs = torch.tensor(next_obs_np, dtype=torch.float32, device=device).reshape(num_tanks, obs_dim)
 
@@ -196,6 +198,6 @@ if __name__ == "__main__":
     add any args if you like, to replace the previous setting in wandb
     """
     args = parser.parse_args()
-    Trainer(game_configs=agents_vs_bot_config).train(args)
+    Trainer(game_configs=agent_vs_bot_configs).train(args)
 
        

@@ -54,6 +54,26 @@ two_tank_configs = {"Tank1":{"team":"TeamA", "color":GREEN, "mode": "human","key
 }},
 
 }
+
+agent_vs_agent_configs = {"Tank1":{"team":"TeamA", 
+                         "color":RED, 
+                         "mode": "agent",
+                        },
+               "Tank2":{"team":"TeamB", 
+                         "color":GREEN, 
+                         "mode": "agent",
+                        }}
+
+agent_vs_bot_configs = {"Tank1":{"team":"TeamA", 
+                         "color":RED, 
+                         "mode": "agent",
+                        },
+               "Tank2":{"team":"TeamB", 
+                         "color":GREEN, 
+                         "mode": "bot",
+                         "bot_type":"smart",
+                        }}
+
 team_configs = {"Tank1":{"team":"TeamA", 
                          "color":RED, 
                          "mode": "agent",
@@ -198,3 +218,6 @@ agents_vs_bot_config =  {"Tank1":{"team":"TeamA",
                          "bot_type":"aggressive",
                         },
 }
+
+
+
