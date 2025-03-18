@@ -3,7 +3,7 @@ import numpy as np
 from env.gym_env import MultiAgentEnv
 from env.gaming_env import GamingENV
 from env.bots.bot_factory import BotFactory
-from env.config import two_tank_configs,team_configs,crazy_team_configs, bot_team_configs
+from configs.config_teams import bot_team_configs
 
 def run_play():
     """Runs the environment in human play mode."""

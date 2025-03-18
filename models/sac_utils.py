@@ -2,7 +2,7 @@ import gym
 import numpy as np
 import pygame
 import os
-from env.config import WIDTH, HEIGHT
+from configs.config_basic import WIDTH, HEIGHT
 
 '''I put ContinuousToDiscreteWrapper here to prevent circular import error'''
 

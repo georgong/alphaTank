@@ -1,7 +1,7 @@
 import math
 import random
 import numpy as np
-from env.config import *
+from configs.config_basic import *
 from env.sprite import BulletTrajectory
 from env.bots.base_bot import BaseBot
 import pygame

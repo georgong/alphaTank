@@ -1,7 +1,7 @@
 
 from collections import deque
 import pygame
-from env.config import *
+from configs.config_basic import *
 
 def bfs_path(grid, start, goal):
     rows = len(grid)

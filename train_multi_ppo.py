@@ -3,8 +3,8 @@ import wandb
 from tqdm import tqdm
 from torch.distributions.categorical import Categorical
 import gym
-from env.config import team_configs
-from env.gym_env import MultiAgentEnv
+from configs.config_teams import team_configs
+from env.gym_env_multi import MultiAgentTeamEnv
 from models.ppo_utils import PPOAgentPPO, RunningMeanStd
 import os
 import time
@@ -36,7 +36,7 @@ class Trainer:
                 "neg_reward_threshold": 0.1,
             }
         )
-        env = MultiAgentEnv(game_configs=self.game_configs)
+        env = MultiAgentTeamEnv(game_configs=self.game_configs)
         env.render()
 
         num_tanks = len(env.get_observation_order())

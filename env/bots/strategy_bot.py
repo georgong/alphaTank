@@ -1,6 +1,6 @@
 import math
 import numpy as np
-from env.config import *
+from configs.config_basic import *
 from env.sprite import BulletTrajectory
 from env.bfs import bfs_path
 from env.bots.base_bot import BaseBot

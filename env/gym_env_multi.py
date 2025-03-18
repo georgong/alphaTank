@@ -2,41 +2,42 @@ import gym
 import numpy as np
 import pygame
 from configs.config_basic import *
-from env.gaming_env import GamingENV
-from env.util import angle_to_vector,corner_to_xy
+from configs.config_teams import *
+from env.gaming_env_multi import GamingTeamENV
+from env.util import angle_to_vector, corner_to_xy
 
 #TODO: making it an inherent abstarct class for root class
 
-class MultiAgentEnv(gym.Env):
-    def __init__(self, mode="agent", type='train', bot_type='smart', weakness=1.0):
+class MultiAgentTeamEnv(gym.Env):
+    def __init__(self, game_configs):
         super().__init__()
         self.training_step = 0
-        self.game_env = GamingENV(mode=mode, type=type, bot_type=bot_type, weakness=weakness)
+        self.game_env = GamingTeamENV(game_configs=game_configs)
         self.num_tanks = len(self.game_env.tanks)
+        self.num_agents = len(self.get_observation_order())
         self.num_walls = len(self.game_env.walls)
         self.max_bullets_per_tank = 6 
         self.prev_actions = None
-        self.change_time = [0, 0]  # Initialize change_time for tracking action changes
 
         obs_dim = self._calculate_obs_dim()
         self.observation_space = gym.spaces.Box(low=-1, high=max(WIDTH, HEIGHT), shape=(obs_dim,), dtype=np.float32)
-        self.action_space = gym.spaces.MultiDiscrete([3, 3, 2] * self.num_tanks)  
+        self.action_space = gym.spaces.MultiDiscrete([3, 3, 2] * self.num_agents)  
 
-    def set_bot_type(self, bot_type):
-        """Change the bot type and reinitialize the bot"""
-        self.game_env.bot_type = bot_type
-        # Reset to create new bot of the specified type
-        self.reset()
+    def get_observation_order(self):
+        return self.game_env.get_observation_order()
 
     def _calculate_obs_dim(self):
         
-        agent_tank_dim =  13 + 1 
-        
-        enemy_tank_dim = (self.num_tanks - 1) * (16 + 1)
+        agent_tank_dim =  15 
+        #x,y,corner(2*4),dx,dy,hittingwall_notication, team_notification(1:team_mate, 0:enemy), alive(1:alive, 0:dead)
+        other_tank_dim = (self.num_tanks - 1) * (18)
+        #x,y,corner(2*4),dx,dy,team_notification(1:team_mate, 0:enemy), alive(1:alive, 0:dead)
         
         agent_bullet_dim =  self.max_bullets_per_tank * 4
+
         
-        enemy_bullet_dim =  (self.num_tanks - 1) * self.max_bullets_per_tank * 7
+        other_bullet_dim =  (self.num_tanks - 1) * self.max_bullets_per_tank * 8
+        #(x,y,dx,dy,relativex,relativey,distance,team_notification(1:team_mate, 0:enemy))
         
         wall_dim = self.num_walls * 4
 
@@ -52,55 +53,42 @@ class MultiAgentEnv(gym.Env):
         
         return (agent_tank_dim + 
                 maze_dim + 
-                enemy_tank_dim + 
+                other_tank_dim + 
                 agent_bullet_dim + 
-                enemy_bullet_dim + 
+                other_bullet_dim + 
                 wall_dim + 
                 buff_zone_dim + 
                 debuff_zone_dim + 
-                in_buff_zone_dim) * self.num_tanks
+                in_buff_zone_dim) * self.num_agents
 
     def reset(self):
         self.game_env.reset()
         for tank in self.game_env.tanks:
             tank.reward = 0  # Reset rewards for new episode
-        self.prev_actions = None  # Reset previous actions
-        self.change_time = [0, 0]  # Reset change time counters
         obs = self._get_observation()
         info = {f"Tank:{i}-{tank.team}": tank.reward for i, tank in enumerate(self.game_env.tanks)}
         return obs, info
 
+
     def step(self, actions):
         self.training_step += 1
         prev_obs = self._get_observation()
-        
-        # Track action changes if we have previous actions
-        if self.prev_actions is not None:
-            for i, (action, prev_action) in enumerate(zip(actions, self.prev_actions)):
-                # Only compare movement and rotation (ignore shooting)
-                if action[:-1] == prev_action[:-1]:
-                    self.change_time[i] += 1
-        
-        # Store current actions for next step
-        self.prev_actions = actions
-        
-        # Execute actions in environment
+        # parsed_actions = [actions[i * 3:(i + 1) * 3] for i in range(self.num_tanks)]
         self.game_env.step(actions)
-        
+        if self.prev_actions != None:
+            change_count = [action[:-1] ==  prev_action[:-1] for action,prev_action in zip(actions,self.prev_actions)]
+            self.change_time[0] += change_count[0]
+            self.change_time[1] += change_count[1]
         obs = self._get_observation()
+        #if np.array([tank.reward for tank in self.game_env.tanks]).max() != 0:
+        # print(np.array([tank.reward for tank in self.game_env.tanks]))
+        # print(self._calculate_rewards())
+
         rewards = self._calculate_rewards()
         done = self._check_done()
-        
-        # Add change time to info
-        info = {
-            "change_time": self.change_time.copy(),
-            "winner": next((i for i, tank in enumerate(self.game_env.tanks) if tank.alive), None)
-        }
-        
         obs = np.array(obs, dtype=np.float32).flatten()
         rewards = np.array(rewards, dtype=np.float32).flatten()
-        
-        return obs, rewards, done, False, info
+        return obs, rewards, done, False, {}
 
     def _get_observation(self):
         """
@@ -116,11 +104,11 @@ class MultiAgentEnv(gym.Env):
         """
         observations = []
         
-        for tank in self.game_env.tanks:
+        for tank in self.game_env.agent_controller.tanks.values():
             tank_obs = []
             dx,dy = angle_to_vector(float(tank.angle),float(tank.speed))
             # Tank's own position and status
-            tank_obs.extend([float(tank.x), float(tank.y), *corner_to_xy(tank), float(dx), float(dy), float(tank.hittingWall), float(1 if tank.alive else 0)]) # 5 + 8
+            tank_obs.extend([float(tank.x), float(tank.y), *corner_to_xy(tank), float(dx), float(dy), float(tank.hittingWall), float(1), float(1 if tank.alive else 0)]) # 5 + 8
 
 
             # Tank's bullets
@@ -140,9 +128,9 @@ class MultiAgentEnv(gym.Env):
                         rel_x = bullet.x - tank.x
                         rel_y = bullet.y - tank.y
                         distance = np.sqrt(rel_x**2 + rel_y**2)
-                        tank_obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy), rel_x, rel_y, distance]) # 7
+                        tank_obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy), rel_x, rel_y, distance,float(other_tank.team == tank.team)]) # 8 #add a team notification
                     while len(enemy_bullets) < self.max_bullets_per_tank:
-                        tank_obs.extend([0, 0, 0, 0, 0, 0, 0])
+                        tank_obs.extend([0, 0, 0, 0, 0, 0, 0, 0]) 
                         enemy_bullets.append(None)
 
             
@@ -156,7 +144,7 @@ class MultiAgentEnv(gym.Env):
                     # min_enemy_dist = min(min_enemy_dist, distance)
                     
                     dx, dy = angle_to_vector(float(other_tank.angle), float(other_tank.speed))
-                    tank_obs.extend([float(other_tank.x), float(other_tank.y), rel_x, rel_y, distance, *corner_to_xy(other_tank), float(dx), float(dy),  float(other_tank.hittingWall), float(1 if other_tank.alive else 0)]) # 8 + 8
+                    tank_obs.extend([float(other_tank.x), float(other_tank.y), rel_x, rel_y, distance, *corner_to_xy(other_tank), float(dx), float(dy),  float(other_tank.hittingWall), float(other_tank.team == tank.team),float(1 if other_tank.alive else 0)]) # 18
                 
             # Wall information
             for wall in self.game_env.walls: # 40
@@ -180,21 +168,18 @@ class MultiAgentEnv(gym.Env):
             
             observations.append(tank_obs)   # obs is 265 dim each * 2
 
+
         return np.array(observations, dtype=np.float32)
 
 
     def _calculate_rewards(self):
-        return np.array([tank.reward for tank in self.game_env.tanks], dtype=np.float32)
+        return np.array([tank.reward for tank in self.game_env.tanks if tank.mode == "agent"], dtype=np.float32)
 
     def _check_done(self):
-        alive_tanks = {tank.team for tank in self.game_env.tanks if tank.alive}
-        # if self.training_step < 512:
-        #     return False
-        # else:
-        #     self.training_step = 0
-        #     return True
-    
-        return len(alive_tanks) <= 1 
+        alive_teams = {tank.team for tank in self.game_env.tanks if tank.alive}
+        # 当只有一个 team（或 0 个）还存活时，回合结束
+        return len(alive_teams) <= 1
+
 
     def render(self, mode="human"):
         if mode == "human":

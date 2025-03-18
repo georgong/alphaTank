@@ -2,7 +2,7 @@ import argparse
 import pygame
 from env.gaming_env import GamingENV
 from env.bots.bot_factory import BotFactory
-from env.config import TANK_SPEED, ROTATION_DEGREE
+from configs.config_basic import TANK_SPEED, ROTATION_DEGREE
 
 def initialize_bots(env, bot1_type, bot2_type):
     """Initialize or reinitialize bots with current environment state."""

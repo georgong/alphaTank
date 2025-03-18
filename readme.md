@@ -83,7 +83,8 @@ python bot_arena.py --bot1 defensive  --bot2 dodge
 ### **🚀 Training A Agent**
 
 #### **Training Single Agent-to-X**
-When training, choose **bot type** from `smart`, `random`, `aggressive`, `defensive`, `dodge`.
+When training, choose **bot type** from `smart`, `random`, `aggressive`, `defensive`, `dodge`. All the basic environmenta lconfigs are taken in as dictionary specified in [this config file](configs/config_basic.py).
+
 ```python
 python train_ppo_bot.py --bot-type smart
 python train_ppo_cycle.py
@@ -91,8 +92,10 @@ python train_ppo_ppo.py
 ```
 
 #### **Training Team Players**
+All the configs are taken in as dictionary specified in [this config file](configs/config_teams.py), no args are needed to be passed in.
+
 ```python
-python train_ppo_bot.py --bot-type smart
+python train_multi_ppo.py
 ```
 
 ---
@@ -107,10 +110,17 @@ python inference.py --mode bot --bot-type smart --weakness 0.1 --algorithm ppo
 python inference.py --mode agent --algorithm ppo 
 ```
 
+#### **Team Inference Rendering**
+Similar with team traibning, all the configs are taken in as dictionary specified in [this config file](configs/config_teams.py), no args are needed to be passed in.
+
+```python 
+python inference_multi.py
+```
+
 #### **Run a Pretrained AI Model**
 Run our trained single agent-to-bot model by the following:
 
 ```python
-python inference.py --mode bot --bot-type aggressive --demo True
+python inference.py --mode bot --bot-type aggressive --demo True --algorithm ppo
 ```
 ---

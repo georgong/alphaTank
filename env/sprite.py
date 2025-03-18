@@ -1,10 +1,12 @@
 import pygame
 import random
 import math
-from env.config import *
+from configs.config_basic import *
 from env.util import *
 import numpy as np
 from PIL import Image, ImageSequence, ImageEnhance
+
+# Reward is now defined by teams
 
 class Bullet:
     def __init__(self, x, y, dx, dy, owner, env):
@@ -26,31 +28,6 @@ class Bullet:
         next_y = self.y + self.dy * self.speed
 
         bullet_rect = pygame.Rect(next_x, next_y, 5, 5)
-
-        # # 存储反弹情况
-        # bounce_x, bounce_y = False, False
-
-        # for wall in self.sharing_env.walls:
-        #     if wall.rect.colliderect(bullet_rect):
-        #         # 精细化检测
-        #         temp_rect_x = pygame.Rect(self.x + self.dx * self.speed, self.y, 5, 5)
-        #         temp_rect_y = pygame.Rect(self.x, self.y + self.dy * self.speed, 5, 5)
-
-        #         if wall.rect.colliderect(temp_rect_x):
-        #             bounce_x = True  # X 方向反弹
-        #         if wall.rect.colliderect(temp_rect_y):
-        #             bounce_y = True  # Y 方向反弹
-
-        #         # 防止墙角反弹错误
-        #         if bounce_x and bounce_y:
-        #             self.dx, self.dy = -self.dx, -self.dy  # 对角反弹
-        #         elif bounce_x:
-        #             self.dx = -self.dx
-        #         elif bounce_y:
-        #             self.dy = -self.dy
-
-        #         self.bounces += 1
-        #         break  # 防止同一帧多次反弹
 
         for tank in self.sharing_env.tanks:
             if tank.alive > 0 and tank.team != self.owner.team:  # 确保不击中自己和队友
@@ -111,32 +88,6 @@ class BulletTrajectory(Bullet):
                         self.trajectory_data.append((next_x, next_y, self.dx, self.dy))
                         self.will_hit_target = True
                         return True  # trajectory will hit a tank
-            
-            # # check for wall bounces
-            # bounce_happened = False
-            # for wall in self.sharing_env.walls:
-            #     if wall.rect.colliderect(bullet_rect):
-            #         # store point before bounce
-            #         self.trajectory_points.append((self.x, self.y))
-            #         self.trajectory_data.append((self.x, self.y, self.dx, self.dy))
-                    
-            #         # handle bounce
-            #         temp_rect_x = pygame.Rect(self.x + self.dx * self.speed, self.y, 5, 5)
-            #         temp_rect_y = pygame.Rect(self.x, self.y + self.dy * self.speed, 5, 5)
-                    
-            #         bounce_x = wall.rect.colliderect(temp_rect_x)
-            #         bounce_y = wall.rect.colliderect(temp_rect_y)
-                    
-            #         if bounce_x and bounce_y:
-            #             self.dx, self.dy = -self.dx, -self.dy
-            #         elif bounce_x:
-            #             self.dx = -self.dx
-            #         elif bounce_y:
-            #             self.dy = -self.dy
-                        
-            #         self.bounces += 1
-            #         bounce_happened = True
-            #         break
             
             # if not bounce_happened:
             self.x = next_x
@@ -536,7 +487,7 @@ class Tank:
             self.reward += penalty
 
     def shoot(self):
-        self.check_buff_debuff()
+        self.check_buff_debuff() # check every time before shoot
         """ shoot bullets with frequncy limit and existing max bullets limits """
         if not self.alive:
             return
@@ -594,7 +545,8 @@ class Tank:
         else:
             self.max_bullets = MAX_BULLETS
 
-    def take_action(self,actions):
+    def take_action(self, actions):
+        # Only uses for multi_team_env
         if actions[0] == 2:  # Right
             self.rotate(-ROTATION_DEGREE)
         elif actions[0] == 0:  # Left

@@ -10,7 +10,7 @@ import wandb
 from tqdm import tqdm
 from torch.distributions.categorical import Categorical
 import gym
-from env.config import team_configs
+from configs.config_basic import team_configs
 from env.gym_env import MultiAgentEnv
 from models.ppo_utils import PPOAgentPPO, RunningMeanStd
 from models.video_utils import EPOCH_CHECK, VideoRecorder

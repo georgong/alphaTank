@@ -4,7 +4,6 @@ import numpy as np
 from env.gym_env import MultiAgentEnv
 from models.ppo_utils import PPOAgentPPO, PPOAgentBot, RunningMeanStd
 from models.sac_utils import ContinuousToDiscreteWrapper
-
 from env.bots.bot_factory import BotFactory
 import pygame
 
@@ -99,10 +98,10 @@ def run_inference(mode, algorithm='ppo', bot_type='smart', demo=False, weakness=
     env.render()
 
     if algorithm == 'ppo':
-        agents = load_agents_ppo(env, device, mode=mode, algorithm=algorithm, bot_type=bot_type, demo=demo, weakness=weakness)
+        agents = load_agents_ppo(env, device, mode=mode, bot_type=bot_type, demo=demo, weakness=weakness)
     
     elif algorithm == 'sac':
-        agents = load_agents_sac(env, device, mode=mode, algorithm=algorithm, bot_type=bot_type, demo=demo, weakness=weakness)
+        agents = load_agents_sac(env, device, mode=mode, bot_type=bot_type, demo=demo, weakness=weakness)
 
     obs, _ = env.reset()
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)

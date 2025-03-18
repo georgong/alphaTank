@@ -1,9 +1,8 @@
-from env.gym_env import MultiAgentEnv
-from env.gaming_env import GamingENV
-from env.config import two_tank_configs,team_configs,crazy_team_configs
+from env.gym_env_multi import MultiAgentTeamEnv
+from configs.config_teams import two_tank_configs, team_configs, crazy_team_configs, inference_agent_configs
 import torch
 import numpy as np
-from models.ppo_utils import PPOAgent_PPO, RunningMeanStd
+from models.ppo_utils import PPOAgentPPO, RunningMeanStd
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class agent:
@@ -16,7 +15,7 @@ class agent:
             num_agents = len(self.env.get_observation_order())
             obs_dim = self.env.observation_space.shape[0] // num_agents
             act_dim = self.env.action_space.nvec[:3]
-            self.agent = PPOAgent_PPO(obs_dim,act_dim)
+            self.agent = PPOAgentPPO(obs_dim,act_dim)
             self.agent.load_state_dict(torch.load(model_path, map_location=device))
             self.agent.eval()
     
@@ -31,7 +30,7 @@ class MultiAgentActor():
     def __init__(self, env, agent_dict):
         """
         agent_dict -> dict(tank_name: model_path or None)
-        如果 model_path 为 None，表示该智能体随机行动
+        如果 model_path 为 None, 表示该智能体随机行动
         """
         self.env = env
         self.tank_names = self.env.get_observation_order()
@@ -60,14 +59,9 @@ class MultiAgentActor():
         return actions
 
 
-
-
-
-
-
-def inference(team_configs,agent_configs):
+def inference(team_configs, agent_configs):
     """Runs the environment"""
-    env =  MultiAgentEnv(game_configs=team_configs)
+    env =  MultiAgentTeamEnv(game_configs=team_configs)
     agent_set = MultiAgentActor(env,agent_dict=agent_configs)
     print(env.get_observation_order()) #get all agent tanks eg:['Tank3', 'Tank6']
     obs,_ = env.reset()
@@ -91,11 +85,4 @@ def inference(team_configs,agent_configs):
 
 
 if __name__ == "__main__":
-    agent_configs = {"Tank1":"checkpoints/ppo_agent_0.pt",
-                     "Tank2":"checkpoints/ppo_agent_1.pt",
-                     "Tank3":"checkpoints/ppo_agent_2.pt",
-                     "Tank4":"checkpoints/ppo_agent_3.pt"}   
-    # agent_configs { "Tank1":"checkpoints/ppo_agent_0.pt",
-    #                 "Tank2":"checkpoints/ppo_agent_1.pt"}   
-    #}
-    inference(team_configs=team_configs ,agent_configs = agent_configs)
+    inference(team_configs=team_configs ,agent_configs=inference_agent_configs)
