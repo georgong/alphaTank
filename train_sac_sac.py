@@ -11,7 +11,6 @@ import random
 from env.gym_env import MultiAgentEnv
 from models.sac_utils import ContinuousToDiscreteWrapper, DisplayManager, ReplayBuffer, SACAgent
 from models.video_utils import VideoRecorder
-import pdb
 
 def setup_wandb():
     wandb.init(
