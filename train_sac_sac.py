@@ -10,9 +10,9 @@ from tqdm import tqdm
 import random
 from env.gym_env import MultiAgentEnv
 from sac_util import ContinuousToDiscreteWrapper, DisplayManager
-
 from models.ppo_ppo_model import RunningMeanStd
 from video_record import VideoRecorder
+import pdb
 
 # Initialize WandB
 def setup_wandb():
@@ -33,38 +33,6 @@ def setup_wandb():
             "EPOCH_CHECK": 10,
         }
     )
-
-# --- Headless Display Initialization (for pygame) ---
-'''I move this to sac_util.py'''
-# if os.environ.get("SDL_VIDEODRIVER") is None:
-#     os.environ["SDL_VIDEODRIVER"] = "dummy"
-# # import pygame
-# pygame.display.init()
-# pygame.display.set_mode((16, 16))
-
-# --- Continuous to Discrete Action Wrapper ---
-# class ContinuousToDiscreteWrapper(gym.ActionWrapper):
-#     def __init__(self, env):
-#         super().__init__(env)
-#         # Save the original discrete sizes (e.g., [3, 3, 2] repeated per tank)
-#         self.discrete_sizes = self.env.action_space.nvec  
-#         # Replace the action space with a continuous Box in [0,1]
-#         self.action_space = gym.spaces.Box(low=0.0, high=1.0,
-#                                            shape=self.env.action_space.shape,
-#                                            dtype=np.float32)
-    
-#     def action(self, action):
-#         # Assume action is an iterable (list or 2D array) with one action per tank.
-#         num_tanks = self.env.num_tanks
-#         total_dim = len(self.env.action_space.nvec)  # e.g., [3, 3, 2] * num_tanks
-#         action_dim = total_dim // num_tanks
-#         discrete_actions = []
-#         for a in action:
-#             # Convert each scalar of this agent's action vector.
-#             discrete_a = [int(np.clip(np.round(x * (n - 1)), 0, n - 1))
-#                           for x, n in zip(a, self.env.action_space.nvec[:action_dim])]
-#             discrete_actions.append(discrete_a)
-#         return discrete_actions # np.array(discrete_actions, dtype=np.int32)
 
 # --- Replay Buffer ---
 class ReplayBuffer:
@@ -222,19 +190,15 @@ class SACAgent:
         
         return actor_loss.item(), critic1_loss.item(), critic2_loss.item(), alpha_loss.item()
 
-    # Add a state_dict method to enable saving the agent's parameters
     def get_action_and_value(self, state, action=None):
-        # If no action is provided, sample one along with its log probability.
         if action is None:
             action, log_prob = self.actor.sample(state)
         else:
-            # Alternatively, you could compute log_prob for a given action.
             action, log_prob = self.actor.sample(state)
-        # Use one of your critics to get a value estimate (here we use critic1)
         value = self.critic1(state, action)
-        # For compatibility, we return a placeholder for entropy (0)
         entropy = torch.tensor(0.0, device=state.device)
         return action, log_prob, entropy, value
+
     def state_dict(self):
         return {
             'actor': self.actor.state_dict(),
@@ -244,6 +208,7 @@ class SACAgent:
             'critic2_target': self.critic2_target.state_dict(),
             'log_alpha': self.log_alpha.detach().cpu().numpy()
         }
+    
     def load_state_dict(self, state_dict):
         self.actor.load_state_dict(state_dict['actor'])
         self.critic1.load_state_dict(state_dict['critic1'])
@@ -252,129 +217,7 @@ class SACAgent:
         self.critic2_target.load_state_dict(state_dict['critic2_target'])
         self.log_alpha = torch.tensor(state_dict['log_alpha'], requires_grad=True, device=self.device)
 
-
-# --- Inference Utility ---
-# def _record_inference(mode, epoch_checkpoint, frames):
-#     output_dir = "recordings"
-#     os.makedirs(output_dir, exist_ok=True)
-#     video_path = os.path.join(output_dir, f"{mode}_game_{epoch_checkpoint}.mp4")
-
-#     print(f"Saving video to {video_path}")
-#     imageio.mimsave(video_path, frames, fps=30)
-#     print("Recording saved successfully!")
-#     return video_path
-
-# def load_agents(env, device, mode='agent', bot_type='smart', model_paths=None, demo=False, weakness=1.0):
-#     """Loads trained SAC agents from the saved models."""
-#     num_tanks = env.num_tanks  
-#     obs_dim = env.observation_space.shape[0] // num_tanks  
-#     # For SAC, use the continuous action dimension.
-#     action_dim = env.action_space.shape[0]
-    
-#     # Import your SAC agent from the appropriate module
-#     from train_sac_sac import SACAgent  # Adjust the import path as needed
-
-#     if model_paths is not None:
-#         agents = [SACAgent(obs_dim, action_dim, device=device) for _ in range(len(model_paths))]
-#         for i, agent in enumerate(agents):
-#             state = torch.load(model_paths[i], map_location=device)
-#             agent.load_state_dict(state)
-#             # Set networks to evaluation mode.
-#             agent.actor.eval()
-#             agent.critic1.eval()
-#             agent.critic2.eval()
-#     else:
-#         if mode == 'bot':
-#             num_tanks -= 1
-#         agents = [SACAgent(obs_dim, action_dim, device=device) for _ in range(num_tanks)]
-#         for i, agent in enumerate(agents):
-#             if mode == 'agent':
-#                 model_path = f"checkpoints/sac_agent_{i}.pt"
-#             elif mode == 'bot':
-#                 if demo:
-#                     model_path = f"demo_checkpoints/sac_agent_vs_{bot_type}.pt"
-#                 else:
-#                     model_path = f"checkpoints/sac_agent_cycle.pt"
-#             state = torch.load(model_path, map_location=device)
-#             agent.load_state_dict(state)
-#             # Set networks to evaluation mode.
-#             agent.actor.eval()
-#             agent.critic1.eval()
-#             agent.critic2.eval()
-#             print(f"[INFO] Loaded model for Agent {i} from {model_path}")
-
-#     return agents
-
-# def run_inference_with_video(mode, epoch_checkpoint=None, bot_type='smart', model_paths=None, weakness=1.0, MAX_STEPS=None):
-#     if MAX_STEPS is None:
-#         MAX_STEPS = float('inf')
-#     step_count = 0
-#     frames = []
-
-#     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-#     if mode == 'bot':
-#         env = MultiAgentEnv(mode='bot_agent', type='inference', bot_type=bot_type, weakness=weakness)
-#     else:
-#         env = MultiAgentEnv()
-#     # Initialize the render window (headless if needed)
-#     env.render()
-
-#     agents = load_agents(env, device, mode=mode, model_paths=model_paths, bot_type=bot_type, weakness=weakness)
-
-#     obs, _ = env.reset()
-#     obs = torch.tensor(obs, dtype=torch.float32, device=device).reshape(env.num_tanks, -1)
-#     obs_dim = env.observation_space.shape[0] // env.num_tanks
-#     obs_norm = RunningMeanStd(shape=(env.num_tanks, obs_dim), device=device)
-
-#     while step_count < MAX_STEPS:
-#         with torch.no_grad():
-#             obs_norm.update(obs)
-#             norm_obs = obs_norm.normalize(obs)
-#             actions_list = [
-#                 agents[i].get_action_and_value(norm_obs[i])[0].cpu().numpy().tolist()
-#                 for i in range(env.num_tanks)
-#             ]
-#         next_obs_np, _, done_np, _, _ = env.step(actions_list)
-#         obs = torch.tensor(next_obs_np, dtype=torch.float32, device=device).reshape(env.num_tanks, -1)
-
-#         if np.any(done_np):
-#             print("[INFO] Environment reset triggered.")
-#             obs, _ = env.reset()
-#             obs = torch.tensor(obs, dtype=torch.float32, device=device).reshape(env.num_tanks, -1)
-
-#         # Capture the frame after the step (and reset if applicable)
-#         frame = env.render(mode='rgb_array')
-#         # Transpose if needed – this matches the PPO version's treatment
-#         frame = frame.transpose(1, 0, 2)
-#         frames.append(frame)
-#         step_count += 1
-
-#     video_path = _record_inference(mode, epoch_checkpoint, frames)
-#     return video_path
-
-
-# def run_inference(agents, iteration, env, num_steps=400):
-#     model_save_dir = "epoch_checkpoints/sac"
-#     os.makedirs(model_save_dir, exist_ok=True)
-#     model_paths = []
-#     for agent_idx, agent in enumerate(agents):
-#         model_path = os.path.join(model_save_dir, f"sac_agent_{agent_idx}_epoch_{iteration}.pt")
-#         model_paths.append(model_path)
-#         torch.save(agent.state_dict(), model_path)
-    
-#     video_path = run_inference_with_video(
-#         mode='agent', epoch_checkpoint=iteration, model_paths=model_paths, MAX_STEPS=num_steps
-#     )
-#     if video_path and os.path.exists(video_path):
-#         wandb.log({
-#             "game_video": wandb.Video(video_path, fps=30, format="mp4"),
-#             "iteration": iteration
-#         })
-#         print(f"[INFO] Video uploaded at iteration {iteration}")
-
 # --- Main Training Loop ---
-
-
 def train():
     setup_wandb()
     display_manager = DisplayManager()
@@ -391,7 +234,6 @@ def train():
 
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
-    # Assume SACAgent and ReplayBuffer are defined/imported elsewhere
     agents = [SACAgent(obs_dim, action_dim, device=device) for _ in range(num_tanks)]
     replay_buffers = [ReplayBuffer(capacity=1000000) for _ in range(num_tanks)]
 
@@ -429,6 +271,7 @@ def train():
             next_obs_np, reward_np, done_np, truncated, info = env.step(actions_np)
 
             for i in range(num_tanks):
+                # pdb.set_trace()
                 replay_buffers[i].push(
                     next_obs[i],
                     actions[i],
@@ -476,7 +319,6 @@ def train():
             )
             display_manager.set_headless()
         
-        # Improved handling of video recorder subprocess to avoid EOFError
         try:
             video_recorder.check_recordings()
         except EOFError:
@@ -486,7 +328,6 @@ def train():
 
     video_recorder.cleanup()
 
-    # Save final model checkpoints
     model_save_dir = "checkpoints"
     os.makedirs(model_save_dir, exist_ok=True)
     for i, agent in enumerate(agents):

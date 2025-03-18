@@ -9,7 +9,7 @@ from env.config import WIDTH, HEIGHT
 class ContinuousToDiscreteWrapper(gym.ActionWrapper):
     def __init__(self, env):
         super().__init__(env)
-        # Save the original discrete sizes (e.g., [3, 3, 2] repeated per tank)
+        # Save the original discrete sizes
         self.discrete_sizes = self.env.action_space.nvec  
         # Replace the action space with a continuous Box in [0,1]
         self.action_space = gym.spaces.Box(low=0.0, high=1.0,
@@ -19,15 +19,15 @@ class ContinuousToDiscreteWrapper(gym.ActionWrapper):
     def action(self, action):
         # Assume action is an iterable (list or 2D array) with one action per tank.
         num_tanks = self.env.num_tanks
-        total_dim = len(self.env.action_space.nvec)  # e.g., [3, 3, 2] * num_tanks
+        total_dim = len(self.discrete_sizes)  # use stored sizes here
         action_dim = total_dim // num_tanks
         discrete_actions = []
         for a in action:
-            # Convert each scalar of this agent's action vector.
             discrete_a = [int(np.clip(np.round(x * (n - 1)), 0, n - 1))
-                          for x, n in zip(a, self.env.action_space.nvec[:action_dim])]
+                          for x, n in zip(a, self.discrete_sizes[:action_dim])]
             discrete_actions.append(discrete_a)
-        return discrete_actions # np.array(discrete_actions, dtype=np.int32)
+        return discrete_actions
+
 
 
 # --- Headless Display Management ---

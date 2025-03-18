@@ -68,6 +68,9 @@ class MultiAgentEnv(gym.Env):
         info = {f"Tank:{i}-{tank.team}": tank.reward for i, tank in enumerate(self.game_env.tanks)}
         return obs, info
 
+    #########
+    # Fixed for SAC
+    #########
     def step(self, actions):
         self.training_step += 1
         prev_obs = self._get_observation()
@@ -78,27 +81,29 @@ class MultiAgentEnv(gym.Env):
                 # Only compare movement and rotation (ignore shooting)
                 if action[:-1] == prev_action[:-1]:
                     self.change_time[i] += 1
-        
+
         # Store current actions for next step
         self.prev_actions = actions
-        
-        # Execute actions in environment
+
+        # Execute actions in the environment
         self.game_env.step(actions)
-        
+
         obs = self._get_observation()
         rewards = self._calculate_rewards()
         done = self._check_done()
-        
+
         # Add change time to info
         info = {
             "change_time": self.change_time.copy(),
             "winner": next((i for i, tank in enumerate(self.game_env.tanks) if tank.alive), None)
         }
-        
-        obs = np.array(obs, dtype=np.float32).flatten()
-        rewards = np.array(rewards, dtype=np.float32).flatten()
-        
+
+        # Remove flatten() to return a 2D array (num_tanks x obs_dim_per_tank)
+        obs = np.array(obs, dtype=np.float32)
+        rewards = np.array(rewards, dtype=np.float32)
+
         return obs, rewards, done, False, info
+
 
     def _get_observation(self):
         """
