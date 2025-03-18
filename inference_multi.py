@@ -1,5 +1,5 @@
 from env.gym_env_multi import MultiAgentTeamEnv
-from configs.config_teams import team_configs, inference_agent_configs
+from configs.config_teams import team_configs, inference_agent_configs, team_vs_bot_configs
 import torch
 import numpy as np
 from models.ppo_utils import PPOAgentPPO, RunningMeanStd
@@ -69,6 +69,7 @@ def inference(team_configs, agent_configs):
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(num_agents, -1)
     obs_dim = env.observation_space.shape[0] // num_agents
     obs_norm = RunningMeanStd(shape=(num_agents, obs_dim), device=device)
+    
     while True:
         env.render()
         obs_norm.update(obs)
@@ -77,12 +78,13 @@ def inference(team_configs, agent_configs):
         actions_list = agent_set.get_action(obs)
         next_obs_np, _, done_np, _, _ = env.step(actions_list)
         obs = torch.tensor(next_obs_np, dtype=torch.float32).to(device).reshape(num_agents, -1)
+        
         if np.any(done_np):
-            print("[INFO] Environment reset triggered.")
+            alive_teams = {tank.team for tank in env.game_env.tanks if tank.alive}
+            print(alive_teams)
             obs, _ = env.reset()
-            obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
-    env.close()
+            obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_agents, -1)
 
 
 if __name__ == "__main__":
-    inference(team_configs=team_configs ,agent_configs=inference_agent_configs)
+    inference(team_configs=team_vs_bot_configs ,agent_configs=inference_agent_configs)

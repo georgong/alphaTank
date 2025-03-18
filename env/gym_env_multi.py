@@ -66,6 +66,7 @@ class MultiAgentTeamEnv(gym.Env):
         for tank in self.game_env.tanks:
             tank.reward = 0  # Reset rewards for new episode
         obs = self._get_observation()
+        obs = np.array(obs, dtype=np.float32).flatten()
         info = {f"Tank:{i}-{tank.team}": tank.reward for i, tank in enumerate(self.game_env.tanks)}
         return obs, info
 
