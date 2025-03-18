@@ -89,16 +89,16 @@ BFS_PATH_LEN_PENALTY = 0
 
 # Bullet Trajectory Reward/Penalty
 TRAJECTORY_HIT_REWARD = 40
-TRAJECTORY_DIST_REWARD = 5  # Base reward for good aim
-TRAJECTORY_DIST_PENALTY = -5  # Base reward for good aim
+TRAJECTORY_DIST_REWARD = 10  # Base reward for good aim
+TRAJECTORY_DIST_PENALTY = -10  # Base reward for good aim
 TRAJECTORY_FAR_THRESHOLD = 300  # Distance threshold for penalty
 TRAJECTORY_DIST_THRESHOLD = 200  # Distance threshold for reward
 
 # Dodge Reward
-DODGE_FACTOR = 30
+DODGE_FACTOR = 0.01  # Reward for dodging bullets
 
 # Aim Reward
-TRAJECTORY_AIM_REWARD = 0  # Reward for aiming at target
+TRAJECTORY_AIM_REWARD = 10  # Reward for aiming at target
 AIMING_FRAMES_THRESHOLD = 17
 
 # Action Consistency Reward

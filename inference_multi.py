@@ -1,8 +1,10 @@
 from env.gym_env_multi import MultiAgentTeamEnv
 from configs.config_teams import team_configs, inference_agent_configs, team_vs_bot_configs
+from configs.config_basic import *
 import torch
 import numpy as np
 from models.ppo_utils import PPOAgentPPO, RunningMeanStd
+import argparse
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 class agent:
@@ -59,9 +61,34 @@ class MultiAgentActor():
         return actions
 
 
-def inference(team_configs, agent_configs):
+def inference(team_configs, agent_configs, demo=False):
     """Runs the environment"""
     env =  MultiAgentTeamEnv(game_configs=team_configs)
+    
+    if demo:
+        team_configs = {
+            "Tank1":{"team":"TeamA", 
+                "color":RED, 
+                "mode": "agent",
+                },
+            "Tank2":{"team":"TeamA", 
+                "color":RED, 
+                "mode": "agent",
+                },
+            "Tank3":{"team":"TeamB", 
+                    "color":GREEN, 
+                    "mode": "bot",
+                    "bot_type": "smart",
+                },
+            "Tank4":{"team":"TeamB", 
+                    "color":GREEN, 
+                    "mode": "bot",
+                    "bot_type": "smart",
+                },
+        }
+        agent_configs = {"Tank1":"demo_checkpoints/team_ppo_vs_bots/ppo_agent_0.pt",
+                         "Tank2":"demo_checkpoints/team_ppo_vs_bots/ppo_agent_1.pt"}
+        
     agent_set = MultiAgentActor(env,agent_dict=agent_configs)
     print(env.get_observation_order()) #get all agent tanks eg:['Tank3', 'Tank6']
     obs,_ = env.reset()
@@ -70,6 +97,7 @@ def inference(team_configs, agent_configs):
     obs_dim = env.observation_space.shape[0] // num_agents
     obs_norm = RunningMeanStd(shape=(num_agents, obs_dim), device=device)
     
+    team_score = {tank.team: 0 for tank in env.game_env.tanks}
     while True:
         env.render()
         obs_norm.update(obs)
@@ -81,10 +109,15 @@ def inference(team_configs, agent_configs):
         
         if np.any(done_np):
             alive_teams = {tank.team for tank in env.game_env.tanks if tank.alive}
-            print(alive_teams)
+            [team_score.update({tank.team: team_score[tank.team] + 1}) for tank in env.game_env.tanks if tank.team in alive_teams]
+            print(team_score)
             obs, _ = env.reset()
             obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_agents, -1)
 
 
 if __name__ == "__main__":
-    inference(team_configs=team_vs_bot_configs ,agent_configs=inference_agent_configs)
+    parser = argparse.ArgumentParser(description="Run MultiAgentEnv in either a. vs. a. or a. vs. b.")
+    parser.add_argument("--demo", type=bool, choices=[True, False], default=False, help="Choose True of False")
+    args = parser.parse_args()
+    
+    inference(team_configs=team_vs_bot_configs, agent_configs=inference_agent_configs, demo=args.demo)

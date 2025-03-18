@@ -124,5 +124,6 @@ Run our trained single agent-to-bot model by the following:
 
 ```python
 python inference.py --mode bot --bot-type aggressive --demo True --algorithm ppo
+python inference_multi.py --demo True
 ```
 ---

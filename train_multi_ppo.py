@@ -22,18 +22,18 @@ class Trainer:
         wandb.init(
             project="multiagent-team-ppo",
             config={
-                "learning_rate": 1e-4,
+                "learning_rate": 3e-3,
                 "gamma": 0.99,
                 "gae_lambda": 0.95,
                 "clip_coef": 0.1,
-                "ent_coef": 0.02,
+                "ent_coef": 0.01,
                 "vf_coef": 0.5,
                 "max_grad_norm": 0.3,
                 "num_steps": 512,
                 "num_epochs": 60,
-                "total_timesteps": 300000,
+                "total_timesteps": 200000,
                 "auto_reset_interval": 20000,
-                "neg_reward_threshold": 0.1,
+                "neg_reward_threshold": 0,
             }
         )
         env = MultiAgentTeamEnv(game_configs=self.game_configs)
