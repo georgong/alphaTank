@@ -1,5 +1,5 @@
 from env.gym_env_multi import MultiAgentTeamEnv
-from configs.config_teams import two_tank_configs, team_configs, crazy_team_configs, inference_agent_configs
+from configs.config_teams import team_configs, inference_agent_configs
 import torch
 import numpy as np
 from models.ppo_utils import PPOAgentPPO, RunningMeanStd

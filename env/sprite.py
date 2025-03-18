@@ -29,6 +29,31 @@ class Bullet:
 
         bullet_rect = pygame.Rect(next_x, next_y, 5, 5)
 
+        # 存储反弹情况
+        bounce_x, bounce_y = False, False
+
+        for wall in self.sharing_env.walls:
+            if wall.rect.colliderect(bullet_rect):
+                # 精细化检测
+                temp_rect_x = pygame.Rect(self.x + self.dx * self.speed, self.y, 5, 5)
+                temp_rect_y = pygame.Rect(self.x, self.y + self.dy * self.speed, 5, 5)
+
+                if wall.rect.colliderect(temp_rect_x):
+                    bounce_x = True  # X 方向反弹
+                if wall.rect.colliderect(temp_rect_y):
+                    bounce_y = True  # Y 方向反弹
+
+                # 防止墙角反弹错误
+                if bounce_x and bounce_y:
+                    self.dx, self.dy = -self.dx, -self.dy  # 对角反弹
+                elif bounce_x:
+                    self.dx = -self.dx
+                elif bounce_y:
+                    self.dy = -self.dy
+
+                self.bounces += 1
+                break  # 防止同一帧多次反弹
+
         for tank in self.sharing_env.tanks:
             if tank.alive > 0 and tank.team != self.owner.team:  # 确保不击中自己和队友
                 tank_rect = pygame.Rect(tank.x - tank.width // 2, tank.y - tank.height // 2, tank.width, tank.height)
@@ -49,7 +74,6 @@ class Bullet:
 
     def draw(self):
         pygame.draw.circle(self.sharing_env.screen, self.owner.color, (int(self.x), int(self.y)), 5)
-
 
 class BulletTrajectory(Bullet):
     def __init__(self, x, y, dx, dy, owner, env):

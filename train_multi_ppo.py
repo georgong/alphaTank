@@ -1,7 +1,7 @@
 import wandb
 from tqdm import tqdm
 from torch.distributions.categorical import Categorical
-from configs.config_teams import team_configs
+from configs.config_teams import team_configs, team_vs_bot_configs
 from env.gym_env_multi import MultiAgentTeamEnv
 from models.ppo_utils import PPOAgentPPO, RunningMeanStd
 import os
@@ -31,7 +31,7 @@ class Trainer:
                 "max_grad_norm": 0.3,
                 "num_steps": 512,
                 "num_epochs": 60,
-                "total_timesteps": 300000,
+                "total_timesteps": 100000,
                 "auto_reset_interval": 20000,
                 "neg_reward_threshold": 0.1,
             }
@@ -195,6 +195,6 @@ if __name__ == "__main__":
     add any args if you like, to replace the previous setting in wandb
     """
     args = parser.parse_args()
-    Trainer(game_configs=team_configs).train(args)
+    Trainer(game_configs=team_vs_bot_configs).train(args)
 
        
