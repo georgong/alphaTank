@@ -45,9 +45,11 @@ We support many manydiffeernt modes, to avoid confusion, we will be going over t
 ```
 algorithms
 ├── bot_mode
+│   ├── single_mode
 │   ├── cycle_learning
 │   ├── team_mode
 ├── agent_mode
+│   ├── single_mode
 │   ├── team_mode
 ```
 

@@ -428,10 +428,7 @@ class GamingTeamENV:
         else:
             shooter.reward += OPPONENT_HIT_REWARD
             victim.reward += HIT_PENALTY
-        if len({tank.alive for tank in self.tanks}) == 1: #only one team exist
-            for tank in self.tanks:
-                if tank.alive:
-                    tank.reward += VICTORY_REWARD
+            
 
     def get_observation_order(self):
         return self.agent_controller.get_name_list()
