@@ -141,4 +141,4 @@ mixed_team_configs = {
 """-----------TEAM INFERENCE SETTING-----------"""
 
 # Need to be consistent with tarining
-inference_agent_configs = {"Tank1":"checkpoints/ppo_agent_0.pt"}
+inference_agent_configs = {"Tank1":"checkpoints/team_ppo/ppo_agent_0.pt", "Tank2":"checkpoints/team_ppo/ppo_agent_1.pt"}
