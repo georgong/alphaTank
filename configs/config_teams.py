@@ -22,15 +22,19 @@ team_vs_bot_configs = {
         "color":RED, 
         "mode": "agent",
         },
-    "Tank2":{"team":"TeamB", 
-            "color":GREEN, 
-            "mode": "bot",
-            "bot_type": "smart",
+    "Tank2":{"team":"TeamA", 
+        "color":RED, 
+        "mode": "agent",
         },
     "Tank3":{"team":"TeamB", 
             "color":GREEN, 
             "mode": "bot",
-            "bot_type": "aggressive",
+            "bot_type": "smart",
+        },
+    "Tank4":{"team":"TeamB", 
+            "color":GREEN, 
+            "mode": "bot",
+            "bot_type": "smart",
         },
 }
 
@@ -137,7 +141,4 @@ mixed_team_configs = {
 """-----------TEAM INFERENCE SETTING-----------"""
 
 # Need to be consistent with tarining
-inference_agent_configs = {"Tank1":"checkpoints/ppo_agent_0.pt",
-                            "Tank2":"checkpoints/ppo_agent_1.pt",
-                            "Tank3":"checkpoints/ppo_agent_2.pt",
-}
+inference_agent_configs = {"Tank1":"checkpoints/ppo_agent_0.pt"}

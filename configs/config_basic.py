@@ -26,7 +26,7 @@ BULLET_COOLDOWN = 300
 STATIONARY_EPSILON = 3
 
 # Map setting
-USE_OCTAGON = True  # 八角笼斗
+USE_OCTAGON = False  # 八角笼斗
 
 # Tank control setting
 ROTATION_DEGREE = 8  # ->  2, Right, negative, || 0, left, positive
@@ -67,10 +67,10 @@ two_tank_configs = {
 # We should not post too much constraint/reward on the agent, let it learn by itself
 
 # Victory Reward
-HIT_PENALTY = -50  # punishement of being hit
+HIT_PENALTY = -30  # punishement of being hit
 TEAM_HIT_PENALTY = -5  # punishment of hitting teamate
-OPPONENT_HIT_REWARD = 50  # reward of hitting enemy
-VICTORY_REWARD = 100
+OPPONENT_HIT_REWARD = 30  # reward of hitting enemy
+VICTORY_REWARD = 200
 
 # Wall Hit Penalty
 WALL_HIT_THRESHOLD = 0

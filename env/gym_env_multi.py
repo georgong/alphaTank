@@ -66,6 +66,7 @@ class MultiAgentTeamEnv(gym.Env):
         for tank in self.game_env.tanks:
             tank.reward = 0  # Reset rewards for new episode
         obs = self._get_observation()
+        obs = np.array(obs, dtype=np.float32).flatten()
         info = {f"Tank:{i}-{tank.team}": tank.reward for i, tank in enumerate(self.game_env.tanks)}
         return obs, info
 
@@ -178,6 +179,11 @@ class MultiAgentTeamEnv(gym.Env):
     def _check_done(self):
         alive_teams = {tank.team for tank in self.game_env.tanks if tank.alive}
         # 当只有一个 team（或 0 个）还存活时，回合结束
+        if len(alive_teams) <= 1:
+            winner_team = next(iter(alive_teams))
+            for tank in self.game_env.tanks:
+                if tank.team == winner_team:
+                    tank.reward += VICTORY_REWARD
         return len(alive_teams) <= 1
 
 
