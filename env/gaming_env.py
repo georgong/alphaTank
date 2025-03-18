@@ -206,44 +206,10 @@ class GamingENV:
                 i = self.tanks.index(tank)
                 
                 # 1) Get BFS path
-                my_pos = tank.get_grid_position()
+                my_pos = tank.get_grid_position() 
                 opponent_pos = self.tanks[1 - i].get_grid_position()
                 self.path = bfs_path(self.maze, my_pos, opponent_pos)
 
-                old_dist = None
-                next_cell = None
-
-                # 2) If we have a BFS path
-                if self.path is not None and len(self.path) > 1:
-                    next_cell = self.path[1]
-                    current_bfs_dist = len(self.path)
-                    r, c = next_cell
-                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
-                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    
-                    # Get old distance
-                    old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                    
-                    # 3) Every 20 BFS steps, apply penalty based on path length
-                    if self.run_bfs % 20 == 0:
-                        if self.last_bfs_dist[i] is not None:
-                            # If we have a stored previous distance, compare
-                            if self.last_bfs_dist[i] is not None:
-                                if current_bfs_dist < self.last_bfs_dist[i]:
-                                    # BFS distance decreased => reward
-                                    distance_diff = self.last_bfs_dist[i] - current_bfs_dist
-                                    
-                                    self.tanks[i].reward += BFS_PATH_LEN_REWARD * distance_diff
-                                    
-                                elif current_bfs_dist >= self.last_bfs_dist[i]:
-                                    # BFS distance increased => penalize
-                                    distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
-                                    self.tanks[i].reward -= BFS_PATH_LEN_PENALTY * distance_diff
-                        self.last_bfs_dist[i] = current_bfs_dist
-
-                    # Increment the BFS step counter
-                    self.run_bfs += 1
-                    
                 if tank.keys:
                     if keys[tank.keys["left"]]: tank.rotate(ROTATION_DEGREE)  
                     elif keys[tank.keys["right"]]: tank.rotate(-ROTATION_DEGREE) 
@@ -286,62 +252,15 @@ class GamingENV:
 
                     current_actions = actions[i]
                 # 5) Now the tank actually moves
-                tank.move(current_actions=current_actions)
-
-                # 5) After move, measure new distance if next_cell is not None
-                if next_cell is not None and old_dist is not None:
-                    r, c = next_cell
-                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
-                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-
-                    if new_dist < old_dist:
-                        self.tanks[i].reward += BFS_FORWARD_REWARD * (old_dist - new_dist)
-                    elif new_dist > old_dist:
-                        self.tanks[i].reward -= BFS_BACKWARD_PENALTY * (new_dist - old_dist)
-
-            self.run_bfs += 1
+                tank.move(current_actions=current_actions, maze = self.maze)
 
         # ========== AI ONLY MODE ==========
         else:
             for tank in self.tanks:
                 i = self.tanks.index(tank)
-                # overall_bfs_dist = 0
-                
-                # 2) BFS path
                 my_pos = tank.get_grid_position() 
                 opponent_pos = self.tanks[1 - i].get_grid_position()
-                self.path = bfs_path(self.maze, my_pos,opponent_pos)
-
-                self.run_bfs += 1
-                old_dist = None
-                next_cell = None
-                if self.path is not None and len(self.path) > 1:
-                    next_cell = self.path[1]
-                    current_bfs_dist = len(self.path)
-                    r, c = next_cell
-                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
-                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                    if self.run_bfs % 20 == 0:
-                        # If we have a stored previous distance, compare
-                        if self.last_bfs_dist[i] is not None:
-                            if current_bfs_dist < self.last_bfs_dist[i]:
-                                # BFS distance decreased => reward
-                                distance_diff = self.last_bfs_dist[i] - current_bfs_dist
-                                
-                                self.tanks[i].reward += BFS_PATH_LEN_REWARD * distance_diff
-                                
-                            elif current_bfs_dist >= self.last_bfs_dist[i]:
-                                # BFS distance increased => penalize
-                                distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
-                                self.tanks[i].reward -= BFS_PATH_LEN_PENALTY * distance_diff
-
-
-                        self.last_bfs_dist[i] = current_bfs_dist
-
-                    # Increment the BFS step counter
-                    self.run_bfs += 1
+                self.path = bfs_path(self.maze, my_pos, opponent_pos)
                 
                 i = self.tanks.index(tank)  # **获取坦克索引**
                 if actions[i][0] == 0: tank.rotate(ROTATION_DEGREE)  # **左转**
@@ -353,22 +272,10 @@ class GamingENV:
                 if actions[i][2] == 1: tank.shoot()  # **射击**
                 else: pass
                 current_actions = actions[i]
-                tank.move(current_actions=current_actions)
+                tank.move(current_actions=current_actions, maze = self.maze)
 
                 # ### NEW LOGIC ###
                 # 5) After move, measure new distance if next_cell is not None
-                if next_cell is not None and old_dist is not None:
-                    r, c = next_cell
-                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
-                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-
-                    if new_dist < old_dist:
-                        self.tanks[i].reward += BFS_FORWARD_REWARD * (old_dist - new_dist)
-                    elif new_dist > old_dist:
-                        self.tanks[i].reward -= BFS_BACKWARD_PENALTY * (new_dist - old_dist)
-
-            self.run_bfs += 1
         self.bullets_trajs = [traj for traj in self.bullets_trajs if not traj.update()]
 
         # -- Move bullets again or do collision checks if desired --
