@@ -63,7 +63,6 @@ class MultiAgentActor():
 
 def inference(team_configs, agent_configs, demo=False):
     """Runs the environment"""
-    env =  MultiAgentTeamEnv(game_configs=team_configs)
     
     if demo:
         team_configs = {
@@ -89,6 +88,7 @@ def inference(team_configs, agent_configs, demo=False):
         agent_configs = {"Tank1":"demo_checkpoints/team_ppo_vs_bots/ppo_agent_0.pt",
                          "Tank2":"demo_checkpoints/team_ppo_vs_bots/ppo_agent_1.pt"}
         
+    env =  MultiAgentTeamEnv(game_configs=team_configs)
     agent_set = MultiAgentActor(env,agent_dict=agent_configs)
     print(env.get_observation_order()) #get all agent tanks eg:['Tank3', 'Tank6']
     obs,_ = env.reset()
@@ -120,4 +120,4 @@ if __name__ == "__main__":
     parser.add_argument("--demo", type=bool, choices=[True, False], default=False, help="Choose True of False")
     args = parser.parse_args()
     
-    inference(team_configs=team_vs_bot_configs, agent_configs=inference_agent_configs, demo=args.demo)
+    inference(team_configs=team_configs, agent_configs=inference_agent_configs, demo=args.demo)

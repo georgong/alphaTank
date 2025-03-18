@@ -195,6 +195,6 @@ if __name__ == "__main__":
     add any args if you like, to replace the previous setting in wandb
     """
     args = parser.parse_args()
-    Trainer(game_configs=team_vs_bot_configs).train(args)
+    Trainer(game_configs=team_configs).train(args)
 
        
