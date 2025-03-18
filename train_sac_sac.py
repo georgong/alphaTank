@@ -373,30 +373,28 @@ class SACAgent:
 #         print(f"[INFO] Video uploaded at iteration {iteration}")
 
 # --- Main Training Loop ---
+
+
 def train():
     setup_wandb()
     display_manager = DisplayManager()
     display_manager.set_headless()  # Start in headless mode
-    
+
     env = MultiAgentEnv()
     env = ContinuousToDiscreteWrapper(env)
     env.render()
     video_recorder = VideoRecorder()
 
-    # Optionally, call env.render() for visualization (not needed in headless mode)
-    
     num_tanks = env.num_tanks
-    # Assume observation dimension per tank is overall obs dim divided by num_tanks.
     obs_dim = env.observation_space.shape[0] // num_tanks
-    # The continuous action dimension (should match the discrete vector length per agent, e.g., 3)
     action_dim = env.action_space.shape[0]
-    
+
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    
-    # Create one SAC agent and replay buffer per tank.
+
+    # Assume SACAgent and ReplayBuffer are defined/imported elsewhere
     agents = [SACAgent(obs_dim, action_dim, device=device) for _ in range(num_tanks)]
     replay_buffers = [ReplayBuffer(capacity=1000000) for _ in range(num_tanks)]
-    
+
     num_steps = wandb.config.num_steps
     total_timesteps = wandb.config.total_timesteps
     start_steps = wandb.config.start_steps
@@ -406,46 +404,42 @@ def train():
     auto_reset_interval = wandb.config.auto_reset_interval
     neg_reward_threshold = wandb.config.neg_reward_threshold
     EPOCH_CHECK = wandb.config.EPOCH_CHECK
-    
+
     global_step = 0
     next_obs, _ = env.reset()
     next_obs = np.array(next_obs).reshape(num_tanks, obs_dim)
     next_done = np.zeros(num_tanks)
-    
+
     progress_bar = tqdm(range(total_timesteps // num_steps), desc="Training SAC")
-    
+
     for iteration in progress_bar:
         reset_count = 0
-        
+
         for step in range(num_steps):
             global_step += 1
             actions = []
-            # For each agent, select an action (random during initial exploration)
             for i, agent in enumerate(agents):
                 if global_step < start_steps:
                     a = env.action_space.sample()
-                    actions.append(a)
                 else:
                     a = agent.select_action(next_obs[i])
-                    actions.append(a)
-            
-            # The environment expects a list of actions (one per tank)
+                actions.append(a)
+
             actions_np = [np.array(a) for a in actions]
             next_obs_np, reward_np, done_np, truncated, info = env.step(actions_np)
-            
-            # Store each agent's transition in its replay buffer.
+
             for i in range(num_tanks):
                 replay_buffers[i].push(
                     next_obs[i],
                     actions[i],
                     reward_np[i],
                     np.array(next_obs_np).reshape(num_tanks, obs_dim)[i],
-                    float(done_np)  # Use float(done_np) since done_np is a single boolean.
+                    float(done_np)
                 )
-            
+
             next_obs = np.array(next_obs_np).reshape(num_tanks, obs_dim)
             next_done = np.array(done_np)
-            
+
             if (np.any(done_np) or
                 (global_step % auto_reset_interval == 0 and global_step > 0) or
                 np.any(np.array(reward_np) < -neg_reward_threshold)):
@@ -453,12 +447,8 @@ def train():
                 next_obs, _ = env.reset()
                 next_obs = np.array(next_obs).reshape(num_tanks, obs_dim)
                 next_done = np.zeros(num_tanks)
-        
-        # Perform gradient updates for each agent.
-        actor_losses = []
-        critic1_losses = []
-        critic2_losses = []
-        alpha_losses = []
+
+        actor_losses, critic1_losses, critic2_losses, alpha_losses = [], [], [], []
         for _ in range(update_every):
             for i, agent in enumerate(agents):
                 if len(replay_buffers[i].buffer) >= batch_size:
@@ -467,7 +457,7 @@ def train():
                     critic1_losses.append(c1_loss)
                     critic2_losses.append(c2_loss)
                     alpha_losses.append(al_loss)
-        
+
         wandb.log({
             "global_step": global_step,
             "actor_loss": np.mean(actor_losses) if actor_losses else 0,
@@ -478,32 +468,32 @@ def train():
             "env_reset_count": reset_count,
             "iteration": iteration,
         })
-        
+
         if iteration % EPOCH_CHECK == 0 and iteration > 0:
             display_manager.set_display()
-
             video_recorder.start_recording(
                 agents, iteration, mode='agent', algorithm='sac'
             )
-            # run_inference(agents, iteration, env, num_steps=400)
-
-            # Switch back to headless for training
             display_manager.set_headless()
         
-        # check videos for logging to wandb
-        video_recorder.check_recordings()
-    
-    # Wait for any remaining recording processes to complete
+        # Improved handling of video recorder subprocess to avoid EOFError
+        try:
+            video_recorder.check_recordings()
+        except EOFError:
+            print("[ERROR] Video recording process unexpectedly terminated.")
+            video_recorder.cleanup()
+            video_recorder = VideoRecorder()  # Restart the recorder
+
     video_recorder.cleanup()
 
-    # Save final model checkpoints.
+    # Save final model checkpoints
     model_save_dir = "checkpoints"
     os.makedirs(model_save_dir, exist_ok=True)
     for i, agent in enumerate(agents):
         model_path = os.path.join(model_save_dir, f"sac_agent_{i}.pt")
         torch.save(agent.state_dict(), model_path)
         print(f"[INFO] Saved model for Agent {i} at {model_path}")
-    
+
     env.close()
     wandb.finish()
 
