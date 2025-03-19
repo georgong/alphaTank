@@ -23,9 +23,9 @@ def setup_wandb():
             "gamma": 0.99,
             "gae_lambda": 0.95,
             "clip_coef": 0.25,
-            "ent_coef": 0.02,
+            "ent_coef": 0.01,
             "vf_coef": 0.5,
-            "max_grad_norm": 0.5,
+            "max_grad_norm": 0.2,
             "num_steps": 1024,
             "num_epochs": 20,
             "total_timesteps": 200000,
@@ -40,8 +40,8 @@ def train():
     env = MultiAgentEnv()
     env.render()
     video_recorder = VideoRecorder()
-
-    num_tanks = len(env.get_observation_order())
+    
+    num_tanks = env.num_tanks
     obs_dim = env.observation_space.shape[0] // num_tanks  
     act_dim = env.action_space.nvec[:3]  # assume multi-discrete action space
 
