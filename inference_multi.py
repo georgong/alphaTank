@@ -1,123 +1,142 @@
 from env.gym_env_multi import MultiAgentTeamEnv
-from configs.config_teams import team_configs, inference_agent_configs, team_vs_bot_configs, team_vs_bot_hard_configs
-from configs.config_basic import *
 import torch
 import numpy as np
 from models.ppo_utils import PPOAgentPPO, RunningMeanStd
-import argparse
+import os
+import pygame
+
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-class agent:
-    def __init__(self,env,model_path):
-        if model_path is None:
-            self.env = env
-            self.agent = "random"
-        else:
-            self.env = env
-            num_agents = len(self.env.get_observation_order())
-            obs_dim = self.env.observation_space.shape[0] // num_agents
-            act_dim = self.env.action_space.nvec[:3]
-            self.agent = PPOAgentPPO(obs_dim,act_dim)
-            self.agent.load_state_dict(torch.load(model_path, map_location=device))
-            self.agent.eval()
-    
-    def inference(self,obs):
-        if self.agent == "random":
-            return  #self.env.action_space.sample()
-        else:
+
+class AgentWrapper:
+    def __init__(self, env, agent_state_dict):
+        self.env = env
+        num_agents = len(self.env.get_observation_order())
+        obs_dim = self.env.observation_space.shape[0] // num_agents
+        act_dim = self.env.action_space.nvec[:3]
+        self.agent = PPOAgentPPO(obs_dim, act_dim).to(device)
+        self.agent.load_state_dict(agent_state_dict)
+        self.agent.eval()
+
+    def inference(self, obs):
+        with torch.no_grad():
             return self.agent.get_action_and_value(obs)[0].cpu().numpy().tolist()
-        
-        
-class MultiAgentActor():
-    def __init__(self, env, agent_dict):
-        """
-        agent_dict -> dict(tank_name: model_path or None)
-        如果 model_path 为 None, 表示该智能体随机行动
-        """
+
+
+class MultiAgentActor:
+    def __init__(self, env, checkpoint):
         self.env = env
         self.tank_names = self.env.get_observation_order()
-        print(self.tank_names)
+        print(f"Loaded tanks: {self.tank_names}")
+        self.team_config = checkpoint["team_config"]
         self.agent_list = {}
 
         for name in self.tank_names:
-            model_path = agent_dict.get(name, None)
-            self.agent_list[name] = agent(env, model_path)
+            if name in checkpoint:
+                agent_state_dict = checkpoint[name]
+                self.agent_list[name] = AgentWrapper(env, agent_state_dict)
+            else:
+                print(f"No saved model found for {name}, using random agent.")
+                self.agent_list[name] = None  # random
 
     def get_action(self, total_obs):
-        """
-        输入:
-            total_obs: numpy array 或 list (shape: (num_agents, obs_dim))
-        输出:
-            actions: list of actions (shape: (num_agents, 3))
-        """
         actions = []
         for idx, name in enumerate(self.tank_names):
             single_obs = total_obs[idx]
-            #based on the name, find the correct agent to process the current single_obs
-            current_agent = self.agent_list[name]
-            action = current_agent.inference(single_obs)
+            agent_wrapper = self.agent_list[name]
+            if agent_wrapper is None:
+                action = self.env.action_space.sample()[idx]  # fallback to random
+            else:
+                action = agent_wrapper.inference(single_obs)
             actions.append(action)
-
         return actions
 
 
-def inference(team_configs, agent_configs, demo=False):
-    """Runs the environment"""
+def display_hit_table(hit_stats):
+    os.system('cls' if os.name == 'nt' else 'clear')
+    print("\n====== Tank Hit Statistics (Live Update) ======")
     
-    if demo:
-        team_configs = {
-            "Tank1":{"team":"TeamA", 
-                "color":RED, 
-                "mode": "agent",
-                },
-            "Tank2":{"team":"TeamA", 
-                "color":RED, 
-                "mode": "agent",
-                },
-            "Tank3":{"team":"TeamB", 
-                    "color":GREEN, 
-                    "mode": "bot",
-                    "bot_type": "smart",
-                },
-            "Tank4":{"team":"TeamB", 
-                    "color":GREEN, 
-                    "mode": "bot",
-                    "bot_type": "smart",
-                },
-        }
-        agent_configs = {"Tank1":"demo_checkpoints/team_ppo_vs_bots/ppo_agent_0.pt",
-                         "Tank2":"demo_checkpoints/team_ppo_vs_bots/ppo_agent_1.pt"}
-        
-    env =  MultiAgentTeamEnv(game_configs=team_configs)
-    agent_set = MultiAgentActor(env,agent_dict=agent_configs)
-    print(env.get_observation_order()) #get all agent tanks eg:['Tank3', 'Tank6']
-    obs,_ = env.reset()
+    for team, tanks in hit_stats.items():
+        print(f"Team: {team}")
+        print("| Tank Name | Current Game Hits | Accumulated Hits |")
+        print("|-----------|------------------|------------------|")
+        for tank_name, data in tanks.items():
+            print(f"| {tank_name.ljust(9)} | {str(data['current']).center(16)} | {str(data['total']).center(16)} |")
+        print("\n")
+
+
+def inference_from_checkpoint(checkpoint_file_path, replace_human=None):
+    checkpoint = torch.load(checkpoint_file_path, map_location=device)
+    team_config = checkpoint["team_config"]
+    if replace_human:
+        for tank_name, keys_config in replace_human.items():
+            if tank_name in team_config:
+                team_config[tank_name]["mode"] = "human"
+                team_config[tank_name]["keys"] = keys_config
+                if "bot_type" in team_config[tank_name]:
+                    del team_config[tank_name]["bot_type"]
+                print(f"Replaced {tank_name} to human mode with keys {keys_config}")
+
+    env = MultiAgentTeamEnv(game_configs=team_config)
+    agent_set = MultiAgentActor(env, checkpoint)
+
+    obs, _ = env.reset()
     num_agents = env.num_agents
-    obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(num_agents, -1)
+    obs = torch.tensor(obs, dtype=torch.float32, device=device).reshape(num_agents, -1)
     obs_dim = env.observation_space.shape[0] // num_agents
     obs_norm = RunningMeanStd(shape=(num_agents, obs_dim), device=device)
-    
-    team_score = {tank.team: 0 for tank in env.game_env.tanks}
+
+    # Initialize hit stats
+    hit_stats = {}
+    for name,tank in zip(env.game_env.game_configs,env.game_env.tanks):
+        team = tank.team
+        if team not in hit_stats:
+            hit_stats[team] = {}
+        hit_stats[team][name] = {"current": 0, "total": 0}
+
     while True:
         env.render()
         obs_norm.update(obs)
         obs = obs_norm.normalize(obs)
-        env.get_observation_order()
         actions_list = agent_set.get_action(obs)
-        next_obs_np, _, done_np, _, _ = env.step(actions_list)
-        obs = torch.tensor(next_obs_np, dtype=torch.float32).to(device).reshape(num_agents, -1)
-        
+        next_obs_np, rewards, done_np, _, info = env.step(actions_list)
+
+        # Update hits continuously after each step
+        if "hits" in info:
+            for tank_name, hits in info["hits"].items():
+                for team, tanks in hit_stats.items():
+                    if tank_name in tanks:
+                        tanks[tank_name]["current"] = hits
+
+        # Continuously show updated table each step
+        display_hit_table(hit_stats)
+
+        obs = torch.tensor(next_obs_np, dtype=torch.float32, device=device).reshape(
+            num_agents, -1
+        )
+
         if np.any(done_np):
-            alive_teams = {tank.team for tank in env.game_env.tanks if tank.alive}
-            [team_score.update({tank.team: team_score[tank.team] + 1}) for tank in env.game_env.tanks if tank.team in alive_teams]
-            print(team_score)
+            for team, tanks in hit_stats.items():
+                for tank_name, data in tanks.items():
+                    data["total"] += data["current"]
+                    data["current"] = 0
+
             obs, _ = env.reset()
-            obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_agents, -1)
+            obs = torch.tensor(obs, dtype=torch.float32, device=device).reshape(
+                env.num_agents, -1
+            )
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Run MultiAgentEnv in either a. vs. a. or a. vs. b.")
-    parser.add_argument("--demo", type=bool, choices=[True, False], default=False, help="Choose True of False")
-    args = parser.parse_args()
-    
-    inference(team_configs=team_vs_bot_hard_configs, agent_configs=inference_agent_configs, demo=args.demo)
+    checkpoint_path = "checkpoints/multiagent_ppo.pth"
+    # replace_human = {"Tank3":{
+    #         "left": pygame.K_a,
+    #         "right": pygame.K_d,
+    #         "up": pygame.K_w,
+    #         "down": pygame.K_s,
+    #         "shoot": pygame.K_f,
+    #     }}
+    ##user replace_human to replace the bot 
+    ##(actually you can also replace agent but I cannot make sure there is no bug when you replace agent)
+    #inference_from_checkpoint(checkpoint_path,replace_human = replace_human)
+    inference_from_checkpoint(checkpoint_path)

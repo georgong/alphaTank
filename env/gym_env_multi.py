@@ -5,6 +5,7 @@ from configs.config_basic import *
 from configs.config_teams import *
 from env.gaming_env_multi import GamingTeamENV
 from env.util import angle_to_vector, corner_to_xy
+from pprint import pprint
 
 #TODO: making it an inherent abstarct class for root class
 
@@ -25,41 +26,168 @@ class MultiAgentTeamEnv(gym.Env):
 
     def get_observation_order(self):
         return self.game_env.get_observation_order()
+    
+    def _get_context(self):
+        return {
+            'num_agents': self.num_agents,
+            'num_tanks': self.num_tanks,
+            'max_bullets_per_tank': self.max_bullets_per_tank,
+            'num_walls': self.num_walls,
+            'maze_dim': len(self.game_env.maze.flatten()),
+            'buff_zone_count': len(self.game_env.buff_zones),
+            'debuff_zone_count': len(self.game_env.debuff_zones)
+        }
+    
+    def _get_observation_dict(self):
+        return {
+                'agent_tank_info': {
+                    'multiplier': '1',
+                    'items': {
+                        'position': {'description': '(x, y)', 'dimension': 2},
+                        'corner_positions': {'description': '4 corners', 'dimension': 8},
+                        'angle_vector': {'description': '(dx, dy)', 'dimension': 2},
+                        'hitting_wall': {'description': 'Boolean', 'dimension': 1},
+                        'team_notification': {'description': 'Team mate(1) or enemy(0)', 'dimension': 1},
+                        'alive_status': {'description': 'Alive(1) or dead(0)', 'dimension': 1},
+                    }
+                },
+                'other_tank_info': {
+                    'multiplier': '(num_tanks - 1)',
+                    'items': {
+                        'position': {'description': '(x, y)', 'dimension': 2},
+                        'relative_position': {'description': '(rel_x, rel_y)', 'dimension': 2},
+                        'distance': {'description': 'Distance to agent', 'dimension': 1},
+                        'corner_positions': {'description': '4 corners', 'dimension': 8},
+                        'velocity': {'description': '(dx, dy)', 'dimension': 2},
+                        'hitting_wall': {'description': 'Boolean', 'dimension': 1},
+                        'team_notification': {'description': 'Team mate(1) or enemy(0)', 'dimension': 1},
+                        'alive_status': {'description': 'Alive(1) or dead(0)', 'dimension': 1},
+                    }
+                },
+                'agent_bullet_info': {
+                    'multiplier': 'max_bullets_per_tank',
+                    'items': {
+                        'position': {'description': '(x, y)', 'dimension': 2},
+                        'velocity': {'description': '(dx, dy)', 'dimension': 2},
+                    }
+                },
+                'enemy_bullet_info': {
+                    'multiplier': '(num_tanks - 1) * max_bullets_per_tank',
+                    'items': {
+                        'position': {'description': '(x, y)', 'dimension': 2},
+                        'velocity': {'description': '(dx, dy)', 'dimension': 2},
+                        'relative_position': {'description': '(rel_x, rel_y)', 'dimension': 2},
+                        'distance': {'description': 'Distance to agent', 'dimension': 1},
+                        'team_notification': {'description': 'Team mate(1) or enemy(0)', 'dimension': 1},
+                    }
+                },
+                'wall_info': {
+                    'multiplier': 'num_walls',
+                    'items': {
+                        'corner_positions': {'description': '(x1, y1, x2, y2)', 'dimension': 4},
+                    }
+                },
+                'maze_info': {
+                    'multiplier': '1',
+                    'items': {
+                        'maze_flat': {'description': 'Maze flatten array', 'dimension': 'maze_dim'},
+                    }
+                },
+                'buff_zone_info': {
+                    'multiplier': 'buff_zone_count',
+                    'items': {
+                        'buff_position': {'description': '(x, y)', 'dimension': 2},
+                    }
+                },
+                'debuff_zone_info': {
+                    'multiplier': 'debuff_zone_count',
+                    'items': {
+                        'debuff_position': {'description': '(x, y)', 'dimension': 2},
+                    }
+                },
+                'in_zone_flags': {
+                    'multiplier': '1',
+                    'items': {
+                        'in_buff_zone': {'description': 'Boolean', 'dimension': 1},
+                        'in_debuff_zone': {'description': 'Boolean', 'dimension': 1},
+                    }
+                }
+                }
+
+    
+    def display_observation_table(self,observation_dict, context):
+        num_agents = context.get('num_agents', '?')
+        print("\n" + "=" * 80)
+        print(f"| Observation Table For Single Agent (Total Will Be Multiplied By num_agents = {num_agents}) |".center(80))
+        print("=" * 80 + "\n")
+
+        # Prepare header row
+        table_data = [["Component", "Description", "Dimension"]]
+        table_data.append(["-"*10, "-"*40, "-"*10])
+
+        for obs_type, obs_info in observation_dict.items():
+            multiplier_expr = obs_info.get('multiplier', '1')
+            try:
+                multiplier_val = eval(multiplier_expr, {}, context)
+            except Exception as e:
+                multiplier_val = 'Error'
+                print(f"Error evaluating multiplier for {obs_type}: {e}")
+
+            multiplier_display = f"x {multiplier_expr} = {multiplier_val}" if multiplier_val != 'Error' else f"x {multiplier_expr} (eval error)"
+            table_data.append([f"**{obs_type.replace('_', ' ').title()} ({multiplier_display})**", "-", "-"])
+
+            for key, value in obs_info['items'].items():
+                description = value.get('description', '-')
+                dimension = value.get('dimension', '-')
+                table_data.append([key.replace('_', ' ').title(), description, dimension])
+
+            table_data.append(["", "", ""])  # Empty row for spacing
+
+        # Print table with manual alignment
+        col_widths = [max(len(str(row[i])) for row in table_data) for i in range(3)]
+
+        def format_row(row):
+            return f"| {row[0].ljust(col_widths[0])} | {row[1].ljust(col_widths[1])} | {str(row[2]).ljust(col_widths[2])} |"
+
+        separator = f"|{'-'*(col_widths[0]+2)}|{'-'*(col_widths[1]+2)}|{'-'*(col_widths[2]+2)}|"
+
+        print(separator)
+        for row in table_data:
+            print(format_row(row))
+            if row[0].startswith("**"):
+                print(separator)
+        print(separator)
+
+    def calculate_observation_dim(self,observation_dict, context, multiply_by_num_agents=True):
+        total_dim_single = 0
+        self_obj = context.get('self')
+        for obs_type, obs_info in observation_dict.items():
+            multiplier_expr = obs_info.get('multiplier', '1')
+            try:
+                multiplier = eval(multiplier_expr, {}, {'self': self_obj, **context})
+            except Exception as e:
+                print(f"Error evaluating multiplier for {obs_type}: {e}")
+                multiplier = 1
+
+            for key, value in obs_info['items'].items():
+                dim = value.get('dimension', 0)
+                if isinstance(dim, str):
+                    try:
+                        dim = eval(dim, {}, {'self': self_obj, **context})
+                    except Exception as e:
+                        print(f"Error evaluating dimension for {key} in {obs_type}: {e}")
+                        dim = 0
+                total_dim_single += dim * multiplier
+
+        if multiply_by_num_agents:
+            return total_dim_single * context.get('num_agents', 1)
+        else:
+            return total_dim_single
 
     def _calculate_obs_dim(self):
-        
-        agent_tank_dim =  15 
-        #x,y,corner(2*4),dx,dy,hittingwall_notication, team_notification(1:team_mate, 0:enemy), alive(1:alive, 0:dead)
-        other_tank_dim = (self.num_tanks - 1) * (18)
-        #x,y,corner(2*4),dx,dy,team_notification(1:team_mate, 0:enemy), alive(1:alive, 0:dead)
-        
-        agent_bullet_dim =  self.max_bullets_per_tank * 4
-
-        
-        other_bullet_dim =  (self.num_tanks - 1) * self.max_bullets_per_tank * 8
-        #(x,y,dx,dy,relativex,relativey,distance,team_notification(1:team_mate, 0:enemy))
-        
-        wall_dim = self.num_walls * 4
-
-        maze_dim = len(self.game_env.maze.flatten())
-        
-        buff_zone_dim = len(self.game_env.buff_zones) * 2
-        
-        debuff_zone_dim = len(self.game_env.debuff_zones) * 2
-        
-        in_buff_zone_dim = 2
-        
-        # print(agent_tank_dim, enemy_tank_dim, agent_bullet_dim, enemy_bullet_dim, wall_dim, buff_zone_dim, debuff_zone_dim, in_buff_zone_dim)
-        
-        return (agent_tank_dim + 
-                maze_dim + 
-                other_tank_dim + 
-                agent_bullet_dim + 
-                other_bullet_dim + 
-                wall_dim + 
-                buff_zone_dim + 
-                debuff_zone_dim + 
-                in_buff_zone_dim) * self.num_agents
+        self.display_observation_table(self._get_observation_dict(),self._get_context())
+        return self.calculate_observation_dim(self._get_observation_dict(),self._get_context())
+    
 
     def reset(self):
         self.game_env.reset()
@@ -89,7 +217,9 @@ class MultiAgentTeamEnv(gym.Env):
         done = self._check_done()
         obs = np.array(obs, dtype=np.float32).flatten()
         rewards = np.array(rewards, dtype=np.float32).flatten()
-        return obs, rewards, done, False, {}
+        info = {}
+        info["hits"] = {name:tank.num_hit for name,tank in zip(self.game_env.game_configs,self.game_env.tanks)}
+        return obs, rewards, done, False, info
 
     def _get_observation(self):
         """
@@ -178,6 +308,12 @@ class MultiAgentTeamEnv(gym.Env):
 
     def _check_done(self):
         alive_teams = {tank.team for tank in self.game_env.tanks if tank.alive}
+        if TERMINATE_TIME is not None:
+            if self.training_step < TERMINATE_TIME:
+                return False
+            else:
+                self.training_step = 0
+                return True
         # 当只有一个 team（或 0 个）还存活时，回合结束
         if len(alive_teams) <= 1:
             if len(alive_teams) == 0: # handle all terminated teams condition

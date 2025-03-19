@@ -58,11 +58,10 @@ class Bullet:
             if tank.alive > 0 and tank.team != self.owner.team:  # 确保不击中自己和队友
                 tank_rect = pygame.Rect(tank.x - tank.width // 2, tank.y - tank.height // 2, tank.width, tank.height)
                 if bullet_rect.colliderect(tank_rect):
-                    
                     if TERMINATE_TIME is None:
                         tank.alive = False  
-                        
                     self.sharing_env.bullets.remove(self)  
+                    self.owner.num_hit += 1
                     self.sharing_env.update_reward_by_bullets(self.owner,tank)
                     return
 
@@ -174,6 +173,7 @@ class Tank:
         self.in_buff_zone = 0
         self.hittingWall = False
         self.mode = mode
+        self.num_hit = 0
 
         # reward compute
         self.last_x, self.last_y = x, y  # 记录上一次位置

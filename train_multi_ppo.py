@@ -12,6 +12,7 @@ import argparse
 import torch
 import torch.nn as nn
 import torch.optim as optim
+import importlib
 
 class Trainer:
     def __init__(self, game_configs):
@@ -20,6 +21,7 @@ class Trainer:
     def train(self,args):
         wandb.init(
             project="multiagent-team-ppo",
+            name = args.experiment_name,
             config={
                 "learning_rate": 3e-3,
                 "gamma": 0.99,
@@ -30,7 +32,7 @@ class Trainer:
                 "max_grad_norm": 0.3,
                 "num_steps": 512,
                 "num_epochs": 60,
-                "total_timesteps": 200000,
+                "total_timesteps": 10000,
                 "auto_reset_interval": 20000,
                 "neg_reward_threshold": 0,
                 "EPOCH_CHECK": 50,
@@ -142,7 +144,7 @@ class Trainer:
                 returns = advantages + values[:-1]
                 
                 
-            for i, agent in enumerate(agents):
+            for i, (tank_name, agent) in enumerate(zip(env.get_observation_order(),agents)):
                 b_obs = obs[:, i].reshape((-1, obs_dim))
                 b_actions = actions[:, i].reshape((-1, 3))
                 b_logprobs = logprobs[:, i].reshape(-1, 3)
@@ -169,16 +171,16 @@ class Trainer:
                     optimizers[i].step()
 
                     wandb.log({
-                        f"agent_{i}/reward": rewards[:, i].mean().item(),
-                        f"agent_{i}/policy_loss": pg_loss.item(),
-                        f"agent_{i}/value_loss": v_loss.item(),
-                        f"agent_{i}/entropy_loss": entropy_loss.item(),
+                        f"agent_{i}({tank_name})/reward": rewards[:, i].mean().item(),
+                        f"agent_{i}({tank_name})/policy_loss": pg_loss.item(),
+                        f"agent_{i}({tank_name})/value_loss": v_loss.item(),
+                        f"agent_{i}({tank_name})/entropy_loss": entropy_loss.item(),
                         # f"agent_{i}/approx_kl": (ratio - 1 - logratio.sum(dim=1)).mean().item(),
-                        f"agent_{i}/explained_variance": 1 - ((b_returns - b_values) ** 2).mean() / b_returns.var(),
+                        f"agent_{i}({tank_name})/explained_variance": 1 - ((b_returns - b_values) ** 2).mean() / b_returns.var(),
                         "iteration": iteration,
                         "env/reset_count": reset_count
                     })
-            
+
             if iteration % EPOCH_CHECK == 0 and iteration > 0:
                 # display_manager.set_display()
                 video_recorder.start_recording(
@@ -195,23 +197,32 @@ class Trainer:
 
         video_recorder.cleanup()
 
-        model_save_dir = "checkpoints/team_ppo"
+            
+        model_save_dir = "checkpoints"
         os.makedirs(model_save_dir, exist_ok=True)
 
-        for i, agent in enumerate(agents):
-            model_path = os.path.join(model_save_dir, f"ppo_agent_{i}.pt")
-            torch.save(agent.state_dict(), model_path)
-            print(f"[INFO] Saved model for Agent {i} at {model_path}")
-
+        save_dict = {'team_config': self.game_configs}
+        model_path = os.path.join(model_save_dir, f"{args.experiment_name}.pth")
+        for tank_name, agent in zip(env.get_observation_order(),agents):
+            save_dict[f'{tank_name}'] = agent.state_dict()
+            print(f"save {tank_name} state_dict")
+        torch.save(save_dict, model_path)
+        print(f"[INFO] Saved model and config at {model_path}")
         env.close()
         wandb.finish()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run MultiAgentEnv in different")
-    """
-    add any args if you like, to replace the previous setting in wandb
-    """
+    parser.add_argument("--experiment_name", type=str, default="multiagent_ppo")
+    parser.add_argument("--config_var", type=str, default="team_vs_bot_configs",
+                        help="The variable name of the config dictionary defined in configs/config_teams.py (e.g., team_vs_bot_configs)")
     args = parser.parse_args()
-    Trainer(game_configs=team_vs_bot_hard_configs).train(args)
+    config_module = importlib.import_module("configs.config_teams")
+    if hasattr(config_module, args.config_var):
+        game_configs = getattr(config_module, args.config_var)
+    else:
+        raise ValueError(f"Variable {args.config_var} not found in configs/config_teams.py")
+    
+    Trainer(game_configs=game_configs).train(args)
 
        
