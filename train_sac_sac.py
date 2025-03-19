@@ -27,7 +27,7 @@ def setup_wandb():
             "update_every": 50,
             "auto_reset_interval": 20000,
             "neg_reward_threshold": 0.1,
-            "EPOCH_CHECK": 10,
+            "EPOCH_CHECK": 50,
         }
     )
 
