@@ -4,6 +4,8 @@ import numpy as np
 from models.ppo_utils import PPOAgentPPO, RunningMeanStd
 import os
 import pygame
+import argparse
+from configs.config_basic import *
 
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -65,7 +67,10 @@ def display_hit_table(hit_stats):
         print("\n")
 
 
-def inference_from_checkpoint(checkpoint_file_path, replace_human=None):
+def inference_from_checkpoint(checkpoint_file_path, replace_human=None, demo=False):
+    if demo:
+        checkpoint_file_path = "demo_checkpoints/team_ppo/2a_vs_2b.pth"
+        
     checkpoint = torch.load(checkpoint_file_path, map_location=device)
     team_config = checkpoint["team_config"]
     if replace_human:
@@ -128,15 +133,23 @@ def inference_from_checkpoint(checkpoint_file_path, replace_human=None):
 
 
 if __name__ == "__main__":
-    checkpoint_path = "checkpoints/multiagent_ppo.pth"
-    # replace_human = {"Tank3":{
-    #         "left": pygame.K_a,
-    #         "right": pygame.K_d,
-    #         "up": pygame.K_w,
-    #         "down": pygame.K_s,
-    #         "shoot": pygame.K_f,
-    #     }}
-    ##user replace_human to replace the bot 
-    ##(actually you can also replace agent but I cannot make sure there is no bug when you replace agent)
-    #inference_from_checkpoint(checkpoint_path,replace_human = replace_human)
-    inference_from_checkpoint(checkpoint_path)
+    parser = argparse.ArgumentParser(description="Run MultiAgentEnv in either a. vs. a. or a. vs. b.")
+    parser.add_argument("--demo", type=bool, choices=[True, False], default=False, help="Choose True of False")
+    parser.add_argument("--experiment_name", type=str, default="2a_vs_2b")
+    parser.add_argument("--joy_stick_controller", type=bool, choices=[True, False], default=False, help="Choose True of False")
+    args = parser.parse_args()
+    checkpoint_path = f"checkpoints/team_ppo/{args.experiment_name}.pth"
+    
+    if args.joy_stick_controller and args.demo:
+        replace_human = {"Tank3":{
+                "left": pygame.K_a,
+                "right": pygame.K_d,
+                "up": pygame.K_w,
+                "down": pygame.K_s,
+                "shoot": pygame.K_f,
+            }}
+    else:
+        replace_human = None
+    
+    # user replace_human to replace the bot (actually you can also replace agent but I cannot make sure there is no bug when you replace agent)
+    inference_from_checkpoint(checkpoint_path, demo=args.demo, replace_human=replace_human)

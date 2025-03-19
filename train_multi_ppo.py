@@ -23,17 +23,17 @@ class Trainer:
             project="multiagent-team-ppo",
             name = args.experiment_name,
             config={
-                "learning_rate": 3e-3,
+                "learning_rate": 3e-4,
                 "gamma": 0.99,
                 "gae_lambda": 0.95,
-                "clip_coef": 0.1,
-                "ent_coef": 0.01,
+                "clip_coef": 0.25,
+                "ent_coef": 0.02,
                 "vf_coef": 0.5,
-                "max_grad_norm": 0.3,
-                "num_steps": 512,
-                "num_epochs": 60,
-                "total_timesteps": 10000,
-                "auto_reset_interval": 20000,
+                "max_grad_norm": 0.5,
+                "num_steps": 1024,
+                "num_epochs": 20,
+                "total_timesteps": 200000,
+                "auto_reset_interval": 10000,
                 "neg_reward_threshold": 0,
                 "EPOCH_CHECK": 50,
             }
@@ -198,7 +198,7 @@ class Trainer:
         video_recorder.cleanup()
 
             
-        model_save_dir = "checkpoints"
+        model_save_dir = "checkpoints/team_ppo"
         os.makedirs(model_save_dir, exist_ok=True)
 
         save_dict = {'team_config': self.game_configs}
@@ -213,7 +213,7 @@ class Trainer:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run MultiAgentEnv in different")
-    parser.add_argument("--experiment_name", type=str, default="multiagent_ppo")
+    parser.add_argument("--experiment_name", type=str, default="2a_vs_2b")
     parser.add_argument("--config_var", type=str, default="team_vs_bot_configs",
                         help="The variable name of the config dictionary defined in configs/config_teams.py (e.g., team_vs_bot_configs)")
     args = parser.parse_args()

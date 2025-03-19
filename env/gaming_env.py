@@ -174,7 +174,7 @@ class GamingENV:
                 tank = self.tanks[1]
                 
                 correct_index = 1 if self.type == "train" else 0
-                rot_cmd, mov_cmd, shoot_cmd = actions[correct_index] # actions[0] shoul always be [0,0,0], inference only have one list
+                rot_cmd, mov_cmd, shoot_cmd = actions[correct_index] # actions[0] should always be [0,0,0], inference only have one list
 
                 # Rotate
                 if rot_cmd == 0:
@@ -616,71 +616,6 @@ class GamingENV:
 
         return walls, empty_space
     
-    def constructWall_2(self):
-        """
-        Creates a battlefield-style map with a smaller playable area,
-        encouraging dodging and tactical movement.
-        """
-        mazewidth = MAZEWIDTH
-        mazeheight = MAZEHEIGHT
-
-        walls = []
-        empty_space = []
-
-        if USE_OCTAGON:
-            self.maze = np.ones((mazeheight, mazewidth), dtype=int)
-            self.maze[2:-2, 2:-2] = 0  # Shrink open space further
-        else:
-            # Create a battlefield layout with a restricted movement area
-            self.maze = np.ones((mazeheight, mazewidth), dtype=int)  # Start with all walls
-
-            # Define a smaller **open** area in the center
-            playable_min = 2
-            playable_max = mazewidth - 3  # Leaves a 2-wall buffer around the edge
-            self.maze[playable_min:playable_max, playable_min:playable_max] = 0  # Open central area
-
-            # 1. **Create side barriers** (extra walls to limit movement further)
-            for i in range(mazewidth):
-                if i < playable_min or i > playable_max - 1:
-                    continue  # Skip outer walls
-
-                self.maze[playable_min + 1, i] = 1  # Top barrier
-                self.maze[playable_max - 1, i] = 1  # Bottom barrier
-                self.maze[i, playable_min + 1] = 1  # Left barrier
-                self.maze[i, playable_max - 1] = 1  # Right barrier
-
-            # 2. **Central Cover - Blocks for dodging**
-            center_x, center_y = mazewidth // 2, mazeheight // 2
-            cover_positions = [
-                (center_y, center_x),  # Center block
-                (center_y - 1, center_x), (center_y + 1, center_x),
-                (center_y, center_x - 1), (center_y, center_x + 1),
-            ]
-
-            for (r, c) in cover_positions:
-                self.maze[r, c] = 1
-
-            # 3. **Side covers for dodging movement**
-            side_covers = [
-                (playable_min + 2, playable_min + 3), (playable_min + 2, playable_max - 3),
-                (playable_max - 2, playable_min + 3), (playable_max - 2, playable_max - 3),
-            ]
-
-            for (r, c) in side_covers:
-                self.maze[r, c] = 1
-
-        # Convert the grid into wall objects
-        self.grid_map = [[0] * mazewidth for _ in range(mazeheight)]
-        for row in range(mazeheight):
-            for col in range(mazewidth):
-                if self.maze[row, col] == 1:
-                    walls.append(Wall(col * self.GRID_SIZE, row * self.GRID_SIZE, self))
-                else:
-                    empty_space.append((col * self.GRID_SIZE, row * self.GRID_SIZE))
-
-        return walls, empty_space
-
-
     def euclidean_distance(self, cell_a, cell_b):
         (r1, c1) = cell_a
         (r2, c2) = cell_b

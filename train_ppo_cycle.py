@@ -435,7 +435,7 @@ def train_cycle(config: CycleTrainingConfig):
         )
     
     # Save final model
-    model_save_dir = "checkpoints"
+    model_save_dir = "checkpoints/single_ppo_cycle"
     os.makedirs(model_save_dir, exist_ok=True)
     model_path = os.path.join(model_save_dir, "ppo_agent_cycle.pt")
     torch.save(agent.state_dict(), model_path)

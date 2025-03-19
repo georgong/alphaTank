@@ -66,12 +66,12 @@ def load_agents_sac(env, device, mode='agent', bot_type='smart', model_paths=Non
         agents = [SACAgent(obs_dim, action_dim, device=device) for _ in range(num_tanks)]
         for i, agent in enumerate(agents):
             if mode == 'agent':
-                model_path = f"checkpoints/sac_agent_{i}.pt"
+                model_path = f"checkpoints/single_sac_vs_sac/sac_agent_{i}.pt"
             elif mode == 'bot':
                 if demo:
-                    model_path = f"demo_checkpoints/sac_agent_vs_{bot_type}.pt"
+                    model_path = f"demo_checkpoints/single_sac_vs_bots/sac_agent_vs_{bot_type}.pt"
                 else:
-                    model_path = f"checkpoints/sac_agent_cycle.pt"
+                    model_path = f"checkpoints/single_sac_vs_bots/sac_agent_vs_{bot_type}.pt"
             state = torch.load(model_path, map_location=device)
             agent.load_state_dict(state)
             # Set networks to evaluation mode.
