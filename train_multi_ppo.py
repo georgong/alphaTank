@@ -182,12 +182,13 @@ class Trainer:
                     })
 
             if iteration % EPOCH_CHECK == 0 and iteration > 0:
-                # display_manager.set_display()
+                ...
+                # # display_manager.set_display()
                 video_recorder.start_recording(
-                    agents, iteration, team_configs=self.game_configs, mode='agent', algorithm='ppo'
+                    agents, iteration, team_args=args, env=env, team_config=self.game_configs,
                 )
                 # display_manager.set_headless()
-            
+
             try:
                 video_recorder.check_recordings()
             except EOFError:

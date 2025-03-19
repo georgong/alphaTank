@@ -10,10 +10,10 @@ import wandb
 from tqdm import tqdm
 from torch.distributions.categorical import Categorical
 import gym
-from configs.config_basic import team_configs
+# from configs.config_basic import team_configs
 from env.gym_env import MultiAgentEnv
 from models.ppo_utils import PPOAgentPPO, RunningMeanStd
-from models.video_utils import EPOCH_CHECK, VideoRecorder
+from models.video_utils import VideoRecorder
 
 def setup_wandb():
     wandb.init(
@@ -31,6 +31,7 @@ def setup_wandb():
             "total_timesteps": 100000,
             "auto_reset_interval": 10000,
             "neg_reward_threshold": 0,
+            "EPOCH_CHECK": 50,
         }
     )
     
@@ -41,7 +42,7 @@ def train():
     env.render()
     video_recorder = VideoRecorder()
 
-    num_tanks = len(env.get_observation_order())
+    num_tanks = env.num_tanks #len(env.get_observation_order())
     obs_dim = env.observation_space.shape[0] // num_tanks  
     act_dim = env.action_space.nvec[:3]  # assume multi-discrete action space
 
@@ -61,6 +62,7 @@ def train():
     max_grad_norm = wandb.config.max_grad_norm
     auto_reset_interval = wandb.config.auto_reset_interval
     neg_reward_threshold = wandb.config.neg_reward_threshold
+    EPOCH_CHECK = wandb.config.EPOCH_CHECK
 
     global_step = 0
     start_time = time.time()

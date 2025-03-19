@@ -14,7 +14,7 @@ from torch.distributions.categorical import Categorical
 from env.gym_env import MultiAgentEnv
 from env.bots.bot_factory import BotFactory
 from models.ppo_utils import PPOAgentBot, RunningMeanStd
-from models.video_utils import EPOCH_CHECK, VideoRecorder
+from models.video_utils import VideoRecorder
 
 def setup_wandb(bot_type):
     wandb.init(
@@ -34,6 +34,7 @@ def setup_wandb(bot_type):
             "neg_reward_threshold": 0,
             "training_agent_index": 1,  # Only train agent 1, agent 0 is handled by the environment (bot)
             "opponent_bot_type": bot_type,  # Track which bot we're training against
+            "EPOCH_CHECK": 50,
         }
     )
 
@@ -66,6 +67,7 @@ def train(bot_type):
     max_grad_norm = wandb.config.max_grad_norm
     auto_reset_interval = wandb.config.auto_reset_interval
     neg_reward_threshold = wandb.config.neg_reward_threshold
+    EPOCH_CHECK = wandb.config.EPOCH_CHECK
 
     global_step = 0
     start_time = time.time()
