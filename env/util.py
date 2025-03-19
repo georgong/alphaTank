@@ -2,6 +2,7 @@ import pygame
 import random
 import math
 from configs.config_basic import *
+from PIL import Image, ImageSequence, ImageEnhance
 
 def reflect_vector(incident, normal):
     """计算反弹方向：反射向量 = incident - 2 * (incident ⋅ normal) * normal"""
@@ -82,3 +83,67 @@ def find_nearest_enemy(tank, tanks):
                 nearest_enemy = other_tank
 
     return nearest_enemy
+
+def load_gif(gif_path, size):
+    """ 加载 GIF 并调整 大小，返回 pygame 兼容的帧列表 """
+    pil_image = Image.open(gif_path)
+    frames = []
+
+    for frame in ImageSequence.Iterator(pil_image):
+        frame = frame.convert("RGBA")  # convert to RGBA
+        resized_frame = frame.resize(size)  # **调整大小**
+        pygame_image = pygame.image.fromstring(
+            resized_frame.tobytes(), resized_frame.size, resized_frame.mode
+        )
+        frames.append(pygame_image)
+    return frames
+
+# for visualization purpose
+class Explosion:
+    def __init__(self, x, y, env):
+        self.x = x
+        self.y = y
+        self.env = env
+        self.alive = True
+        self.size = (96, 96)    # Adjust based on your preference
+        self.frame_index = 0
+
+        # Used to determine frame rate
+        gif_path = "env/assets/explosion.gif"
+        pil_gif = Image.open(gif_path)
+        self.frame_duration = pil_gif.info.get('duration', 50)
+        self.frame_rate = max(1, int(self.frame_duration / (1000 / 60)))
+        self.tick = 0
+
+        # Load explosion GIF
+        self.frames = load_gif("env/assets/explosion.gif", self.size)
+        self.total_frames = len(self.frames)
+
+        self.played_once = False
+
+    def update(self):
+        """Update explosion animation"""
+        if self.played_once:
+            self.alive = False
+            return True
+
+        self.tick += 1
+        if self.tick >= self.frame_rate:
+            self.frame_index += 1
+            self.tick = 0
+
+            # Check if animation has completed one cycle
+            if self.frame_index >= self.total_frames:
+                self.played_once = True
+                self.alive = False
+                return True
+
+        return not self.alive
+
+    def draw(self):
+        """Draw current frame of explosion"""
+        if self.alive and self.frame_index < self.total_frames:
+            current_frame = self.frames[self.frame_index]
+            rect = current_frame.get_rect(center=(self.x, self.y))
+            self.env.screen.blit(current_frame, rect)
+

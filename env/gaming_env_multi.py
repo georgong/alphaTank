@@ -42,6 +42,9 @@ class GamingTeamENV:
         
         self.reset()  # Call reset after all attributes are initialized
 
+        # for enemy defeat visualization
+        self.explosions = []
+
     def reset(self):
         self.walls, self.empty_space = self.constructWall()
         self.tanks,self.bot_controller,self.human_controller,self.agent_controller = self.setup_tank(self.game_configs)
@@ -138,6 +141,12 @@ class GamingTeamENV:
         if self.render_bfs:
             if self.path is not None:
                 self._draw_bfs_path()
+
+        # Update and draw explosions
+        if VISUALIZE_EXPLOSION:
+            self.explosions = [exp for exp in self.explosions if not exp.update()]
+            for explosion in self.explosions:
+                explosion.draw()
 
         pygame.font.init()
         font = pygame.font.SysFont("Arial", 20)
@@ -428,6 +437,9 @@ class GamingTeamENV:
         else:
             shooter.reward += OPPONENT_HIT_REWARD
             victim.reward += HIT_PENALTY
+
+        # visualize explosions
+        self.explosions.append(Explosion(victim.x, victim.y, self))
             
 
     def get_observation_order(self):
