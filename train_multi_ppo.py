@@ -108,10 +108,12 @@ class Trainer:
 
                 actions_np = actions_tensor.cpu().numpy().astype(int).reshape(num_tanks, 3).tolist()
                 next_obs_np, reward_np, done_np, _, _ = env.step(actions_np)
+                #print(reward_np)
                 # filter the reward with tanks
                 env.get_observation_order()
                 
                 rewards[step] = torch.tensor(reward_np, dtype=torch.float32, device=device)
+                #print(rewards.mean())
                 next_done = torch.tensor(done_np, dtype=torch.float32, device=device)
                 next_obs = torch.tensor(next_obs_np, dtype=torch.float32, device=device).reshape(num_tanks, obs_dim)
 

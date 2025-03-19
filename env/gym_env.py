@@ -88,6 +88,10 @@ class MultiAgentEnv(gym.Env):
         self.game_env.step(actions)
         
         obs = self._get_observation()
+        #if np.array([tank.reward for tank in self.game_env.tanks]).max() != 0:
+        # print(np.array([tank.reward for tank in self.game_env.tanks]))
+        # print(self._calculate_rewards())
+
         rewards = self._calculate_rewards()
         done = self._check_done()
         
