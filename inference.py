@@ -27,12 +27,12 @@ def load_agents_ppo(env, device, mode='agent', bot_type='smart', model_paths=Non
         
         for i, agent in enumerate(agents):
             if mode=='agent':
-                model_path = f"checkpoints/ppo_agent_{i}.pt"
+                model_path = f"checkpoints/single_ppo_vs_ppo/ppo_agent_{i}.pt"
             elif mode=='bot':
                 if demo:
-                    model_path = f"demo_checkpoints/ppo_agent_vs_{bot_type}.pt"
+                    model_path = f"demo_checkpoints/single_ppo_vs_bots/ppo_agent_vs_{bot_type}.pt"
                 else:
-                    model_path = f"checkpoints/ppo_agent_cycle.pt"
+                    model_path = f"checkpoints/single_ppo_vs_bots/ppo_agent_vs_{bot_type}.pt"
 
             agent.load_state_dict(torch.load(model_path, map_location=device))
             agent.eval()

@@ -1,5 +1,5 @@
 from env.gym_env_multi import MultiAgentTeamEnv
-from configs.config_teams import team_configs, inference_agent_configs, team_vs_bot_configs
+from configs.config_teams import team_configs, inference_agent_configs, team_vs_bot_configs, team_vs_bot_hard_configs
 from configs.config_basic import *
 import torch
 import numpy as np
@@ -120,4 +120,4 @@ if __name__ == "__main__":
     parser.add_argument("--demo", type=bool, choices=[True, False], default=False, help="Choose True of False")
     args = parser.parse_args()
     
-    inference(team_configs=team_configs, agent_configs=inference_agent_configs, demo=args.demo)
+    inference(team_configs=team_vs_bot_hard_configs, agent_configs=inference_agent_configs, demo=args.demo)

@@ -188,13 +188,16 @@ class MultiAgentEnv(gym.Env):
 
     def _check_done(self):
         alive_tanks = {tank.team for tank in self.game_env.tanks if tank.alive}
-        # if self.training_step < 512:
-        #     return False
-        # else:
-        #     self.training_step = 0
-        #     return True
-    
-        return len(alive_tanks) <= 1 
+        
+        if TERMINATE_TIME is not None:
+            if self.training_step < TERMINATE_TIME:
+                return False
+            else:
+                self.training_step = 0
+                return True
+        
+        else:
+            return len(alive_tanks) <= 1 
 
     def render(self, mode="human"):
         if mode == "human":
