@@ -141,7 +141,7 @@ def train():
 
     video_recorder.cleanup()
 
-    model_save_dir = "checkpoints"
+    model_save_dir = "checkpoints/single_sac_vs_sac"
     os.makedirs(model_save_dir, exist_ok=True)
     for i, agent in enumerate(agents):
         model_path = os.path.join(model_save_dir, f"sac_agent_{i}.pt")

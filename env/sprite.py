@@ -116,12 +116,38 @@ class BulletTrajectory(Bullet):
                         self.will_hit_target = True
                         return True  # trajectory will hit a tank
             
-            # if not bounce_happened:
-            self.x = next_x
-            self.y = next_y
-            self.distance_traveled += self.speed
-            self.trajectory_points.append((self.x, self.y))
-            self.trajectory_data.append((self.x, self.y, self.dx, self.dy))
+            # Check for wall bounces
+            bounce_happened = False
+            for wall in self.sharing_env.walls:
+                if wall.rect.colliderect(bullet_rect):
+                    # Store point before bounce
+                    self.trajectory_points.append((self.x, self.y))
+                    self.trajectory_data.append((self.x, self.y, self.dx, self.dy))
+                    
+                    # Handle bounce
+                    temp_rect_x = pygame.Rect(self.x + self.dx * self.speed, self.y, 5, 5)
+                    temp_rect_y = pygame.Rect(self.x, self.y + self.dy * self.speed, 5, 5)
+                    
+                    bounce_x = wall.rect.colliderect(temp_rect_x)
+                    bounce_y = wall.rect.colliderect(temp_rect_y)
+                    
+                    if bounce_x and bounce_y:
+                        self.dx, self.dy = -self.dx, -self.dy
+                    elif bounce_x:
+                        self.dx = -self.dx
+                    elif bounce_y:
+                        self.dy = -self.dy
+                        
+                    self.bounces += 1
+                    bounce_happened = True
+                    break
+            
+            if not bounce_happened: # if not bounce_happened:
+                self.x = next_x
+                self.y = next_y
+                self.distance_traveled += self.speed
+                self.trajectory_points.append((self.x, self.y))
+                self.trajectory_data.append((self.x, self.y, self.dx, self.dy))
             
             # check ending conditions
             if (self.bounces > self.max_bounces or 

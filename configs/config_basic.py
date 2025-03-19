@@ -17,16 +17,16 @@ YELLOW = (255, 255, 0)
 
 """-----------------GAME SETTING-----------------"""
 EPSILON = 0.01
-ROTATION_SPEED = 1
-BULLET_SPEED = 1
-BULLET_MAX_BOUNCES = 8
-BULLET_MAX_DISTANCE = 200 #400
+ROTATION_SPEED = 2
+BULLET_SPEED = 2
+BULLET_MAX_BOUNCES = 6
+BULLET_MAX_DISTANCE = 400
 MAX_BULLETS = 6
 BULLET_COOLDOWN = 300
 STATIONARY_EPSILON = 3
 
 # Map setting
-USE_OCTAGON = True  # 八角笼斗
+USE_OCTAGON = False  # 八角笼斗
 
 # Tank control setting
 ROTATION_DEGREE = 8  # ->  2, Right, negative, || 0, left, positive
@@ -118,8 +118,8 @@ CONTROL_CHANGE_THRESHOLD = 0.5
 BUFF_ON = True
 DEBUFF_ON = True
 
-# Terminate time, set NONE if infinite life, set NONE in inference
-TERMINATE_TIME = 512
+# Set 512 if infinite life, set NONE in inference
+TERMINATE_TIME = None
 
 """-----------KEYBOARD SETTING-----------"""
 VISUALIZE_TRAJ = False
