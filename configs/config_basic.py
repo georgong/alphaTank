@@ -95,11 +95,17 @@ BFS_PATH_LEN_PENALTY = 0
 # TRAJECTORY_DIST_THRESHOLD = 200  # Distance threshold for reward
 
 # Dodge Reward
-DODGE_FACTOR = 0.01  # Reward for dodging bullets
+DODGE_FACTOR = 0.1  # Reward for dodging bullets
 
 # Aim Reward
 TRAJECTORY_AIM_REWARD = 0  # Reward for aiming at target
 AIMING_FRAMES_THRESHOLD = 17
+
+#Bullet Reward
+BULLET_AWAY_PENALTY = 0.02
+BULLET_CLOSE_REWARD = 0.01
+DISTANCE_CANCEL_THRESHOLD = 100
+
 
 # Action Consistency Reward
 ACTION_CONSISTENCY_REWARD = 0  # Reward for maintaining consistent actions

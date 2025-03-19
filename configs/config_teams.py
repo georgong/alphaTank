@@ -21,6 +21,17 @@ team_configs = {
         },
 }
 
+pair_configs = {
+    "Tank1":{"team":"TeamA", 
+            "color":RED, 
+            "mode": "agent",
+            },
+    "Tank2":{"team":"TeamB", 
+            "color":GREEN, 
+            "mode": "agent",
+        },
+}
+
 team_vs_bot_configs = {
     "Tank1":{"team":"TeamA", 
         "color":RED, 
