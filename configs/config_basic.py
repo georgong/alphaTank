@@ -98,7 +98,7 @@ BFS_PATH_LEN_PENALTY = 0
 DODGE_FACTOR = 0.01  # Reward for dodging bullets
 
 # Aim Reward
-TRAJECTORY_AIM_REWARD = 40  # Reward for aiming at target
+TRAJECTORY_AIM_REWARD = 0  # Reward for aiming at target
 AIMING_FRAMES_THRESHOLD = 17
 
 # Action Consistency Reward
