@@ -1,3 +1,4 @@
+
 from env.gym_env_multi import MultiAgentTeamEnv
 import torch
 import numpy as np
@@ -56,14 +57,19 @@ class MultiAgentActor:
 
 def display_hit_table(hit_stats):
     os.system('cls' if os.name == 'nt' else 'clear')
-    print("\n====== Tank Hit Statistics (Live Update) ======")
+    print("\n====== Tank Hit / Be Hit Statistics (Live Update) ======")
     
     for team, tanks in hit_stats.items():
         print(f"Team: {team}")
-        print("| Tank Name | Current Game Hits | Accumulated Hits |")
-        print("|-----------|------------------|------------------|")
+        print("| Tank Name | Hit (cur/total) | Be Hit (cur/total) | Hit/Be Hit Ratio (cur/total) |")
+        print("|-----------|-----------------|--------------------|------------------------------|")
         for tank_name, data in tanks.items():
-            print(f"| {tank_name.ljust(9)} | {str(data['current']).center(16)} | {str(data['total']).center(16)} |")
+            hits_str = f"{data['hits_current']}/{data['hits_total']}"
+            behits_str = f"{data['be_hits_current']}/{data['be_hits_total']}"
+            ratio_current = round(data['hits_current'] / (data['be_hits_current'] + 1), 2)
+            ratio_total = round(data['hits_total'] / (data['be_hits_total'] + 1), 2)
+            ratio_str = f"{ratio_current}/{ratio_total}"
+            print(f"| {tank_name.ljust(9)} | {hits_str.center(15)} | {behits_str.center(18)} | {ratio_str.center(28)} |")
         print("\n")
 
 
@@ -93,11 +99,11 @@ def inference_from_checkpoint(checkpoint_file_path, replace_human=None, demo=Fal
 
     # Initialize hit stats
     hit_stats = {}
-    for name,tank in zip(env.game_env.game_configs,env.game_env.tanks):
+    for name, tank in zip(env.game_env.game_configs, env.game_env.tanks):
         team = tank.team
         if team not in hit_stats:
             hit_stats[team] = {}
-        hit_stats[team][name] = {"current": 0, "total": 0}
+        hit_stats[team][name] = {"hits_current": 0, "hits_total": 0, "be_hits_current": 0, "be_hits_total": 0}
 
     while True:
         env.render()
@@ -111,7 +117,13 @@ def inference_from_checkpoint(checkpoint_file_path, replace_human=None, demo=Fal
             for tank_name, hits in info["hits"].items():
                 for team, tanks in hit_stats.items():
                     if tank_name in tanks:
-                        tanks[tank_name]["current"] = hits
+                        tanks[tank_name]["hits_current"] = hits
+
+        if "be_hits" in info:
+            for tank_name, behits in info["be_hits"].items():
+                for team, tanks in hit_stats.items():
+                    if tank_name in tanks:
+                        tanks[tank_name]["be_hits_current"] = behits
 
         # Continuously show updated table each step
         display_hit_table(hit_stats)
@@ -123,8 +135,10 @@ def inference_from_checkpoint(checkpoint_file_path, replace_human=None, demo=Fal
         if np.any(done_np):
             for team, tanks in hit_stats.items():
                 for tank_name, data in tanks.items():
-                    data["total"] += data["current"]
-                    data["current"] = 0
+                    data["hits_total"] += data["hits_current"]
+                    data["be_hits_total"] += data["be_hits_current"]
+                    data["hits_current"] = 0
+                    data["be_hits_current"] = 0
 
             obs, _ = env.reset()
             obs = torch.tensor(obs, dtype=torch.float32, device=device).reshape(
