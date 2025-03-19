@@ -123,3 +123,6 @@ DEBUFF_ON = True
 VISUALIZE_TRAJ = False
 RENDER_AIMING = True
 RENDER_BFS = True
+
+"""-----------VISUALIZATION-----------"""
+VISUALIZE_EXPLOSION = True

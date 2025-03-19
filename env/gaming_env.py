@@ -42,6 +42,9 @@ class GamingENV:
         
         self.reset()  # Call reset after all attributes are initialized
 
+        # for enemy defeat visualization
+        self.explosions = []
+
     def reset(self):
         self.walls, self.empty_space = self.constructWall()
         self.tanks = self.setup_tank(two_tank_configs)
@@ -427,6 +430,12 @@ class GamingENV:
             if self.path is not None:
                 self._draw_bfs_path()
 
+        # Update and draw explosions
+        if VISUALIZE_EXPLOSION:
+            self.explosions = [exp for exp in self.explosions if not exp.update()]
+            for explosion in self.explosions:
+                explosion.draw()
+
         pygame.font.init()
         font = pygame.font.SysFont("Arial", 20)
 
@@ -527,6 +536,9 @@ class GamingENV:
                     time_bonus = 5 * max(0, (max_steps - self.episode_steps) / max_steps)
                     victory_time_reward = VICTORY_REWARD * (time_bonus)  # Up to 2x reward for instant victory
                     tank.reward += victory_time_reward
+        
+        # visualize explosions
+        self.explosions.append(Explosion(victim.x, victim.y, self))
 
     def constructWall(self):
         # define constant variables
