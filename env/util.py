@@ -84,8 +84,8 @@ def find_nearest_enemy(tank, tanks):
 
     return nearest_enemy
 
-def load_and_colorize_gif(gif_path, size):
-    """ 加载 GIF 并调整颜色 & 大小，返回 pygame 兼容的帧列表 """
+def load_gif(gif_path, size):
+    """ 加载 GIF 并调整 大小，返回 pygame 兼容的帧列表 """
     pil_image = Image.open(gif_path)
     frames = []
 
@@ -116,7 +116,7 @@ class Explosion:
         self.tick = 0
 
         # Load explosion GIF
-        self.frames = load_and_colorize_gif("env/assets/explosion.gif", self.size)
+        self.frames = load_gif("env/assets/explosion.gif", self.size)
         self.total_frames = len(self.frames)
 
         self.played_once = False
