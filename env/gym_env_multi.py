@@ -219,6 +219,7 @@ class MultiAgentTeamEnv(gym.Env):
         rewards = np.array(rewards, dtype=np.float32).flatten()
         info = {}
         info["hits"] = {name:tank.num_hit for name,tank in zip(self.game_env.game_configs,self.game_env.tanks)}
+        info["be_hits"] = {name:tank.num_be_hit for name,tank in zip(self.game_env.game_configs,self.game_env.tanks)}
         return obs, rewards, done, False, info
 
     def _get_observation(self):

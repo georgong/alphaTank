@@ -62,6 +62,7 @@ class Bullet:
                         tank.alive = False  
                     self.sharing_env.bullets.remove(self)  
                     self.owner.num_hit += 1
+                    tank.num_be_hit += 1
                     self.sharing_env.update_reward_by_bullets(self.owner,tank)
                     return
 
@@ -174,6 +175,7 @@ class Tank:
         self.hittingWall = False
         self.mode = mode
         self.num_hit = 0
+        self.num_be_hit = 0
 
         # reward compute
         self.last_x, self.last_y = x, y  # 记录上一次位置
