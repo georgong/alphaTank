@@ -14,24 +14,24 @@ from env.gym_env_multi import MultiAgentTeamEnv
 from inference_multi import MultiAgentActor
 
 # defined constants
-EPOCH_CHECK = 40       # the frequency to record video, 
 MAX_STEP = 400          # the time of the recorded videos, 200 ~ 5s 
 
 
-def create_video_team(output_dir, team_configs, model_paths, path_to_save):
+def create_video_team(output_dir, team_config, checkpoint_file_path, path_to_save):
     """Runs the environment"""
     # MAX_STEPS control the duration of the recoreded videos
     step_count = 0
     frames = []
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     
     # model_paths -> agent_configs   
-    agent_configs = {f'Tank{i+1}': path for i, path in enumerate(model_paths)}        
+    # agent_configs = {f'Tank{i+1}': path for i, path in enumerate(model_paths)}
+    checkpoint = torch.load(checkpoint_file_path, map_location=device)
+    # team_config = checkpoint['team_config']
 
-    env =  MultiAgentTeamEnv(game_configs=team_configs)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    env = MultiAgentTeamEnv(game_configs=team_config)
         
-    agent_set = MultiAgentActor(env,agent_dict=agent_configs)
-    #  print(env.get_observation_order()) #get all agent tanks eg:['Tank3', 'Tank6']
+    agent_set = MultiAgentActor(env, checkpoint)
     obs,_ = env.reset()
     num_agents = env.num_agents
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(num_agents, -1)
@@ -44,15 +44,11 @@ def create_video_team(output_dir, team_configs, model_paths, path_to_save):
         env.render()
         obs_norm.update(obs)
         obs = obs_norm.normalize(obs)
-        env.get_observation_order()
         actions_list = agent_set.get_action(obs)
         next_obs_np, _, done_np, _, _ = env.step(actions_list)
         obs = torch.tensor(next_obs_np, dtype=torch.float32).to(device).reshape(num_agents, -1)
         
         if np.any(done_np):
-            alive_teams = {tank.team for tank in env.game_env.tanks if tank.alive}
-            # [team_score.update({tank.team: team_score[tank.team] + 1}) for tank in env.game_env.tanks if tank.team in alive_teams]
-            # print(team_score)
             obs, _ = env.reset()
             obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_agents, -1)
         
@@ -138,38 +134,34 @@ def create_video(output_dir, mode, algorithm, iteration, model_paths, bot_type=N
     return video_path
 
 
-def record_video_process(
-    output_dir, mode, team_configs, algorithm, iteration, model_paths, bot_type, weakness, conn
-):
+def record_video_process(output_dir, **kwargs):
     """Process function for video recording"""
     try:
-        if team_configs is not None:
-
-            if bot_type is not None:
-                path_to_save = f"multi/{mode}_{bot_type}_game_{iteration}.mp4"
-            else:
-                path_to_save = f"multi/{mode}_game_{iteration}.mp4"
-
+        if 'team_args' in kwargs:
+            path_to_save = f"multi/{kwargs['team_args'].experiment_name}_{kwargs['iteration']}.mp4"
             video_path = create_video_team(
                 output_dir=output_dir, 
-                team_configs=team_configs, 
-                model_paths=model_paths, 
+                # team_args=kwargs['team_args'],
+                team_config=kwargs['team_config'], 
+                checkpoint_file_path=kwargs['checkpoint_file_path'], 
                 path_to_save=path_to_save 
             )
         else:
             video_path = create_video(
                 output_dir=output_dir, 
-                mode=mode, 
-                algorithm=algorithm,
-                iteration=iteration, 
-                model_paths=model_paths, 
-                bot_type=bot_type, 
-                weakness=weakness
+                mode=kwargs['mode'], 
+                algorithm=kwargs['algorithm'], 
+                iteration=kwargs['iteration'], 
+                model_paths=kwargs['model_paths'], 
+                bot_type=kwargs.get('bot_type'), 
+                weakness=kwargs.get('weakness', 1.0)
             )
 
+        conn = kwargs['conn']
         if video_path and os.path.exists(video_path):
-            conn.send((video_path, iteration))
+            conn.send((video_path, kwargs['iteration']))
     except Exception as e:
+        conn = kwargs['conn']
         print(f"[ERROR] Video recording failed: {str(e)}")
         conn.send(None)
     finally:
@@ -183,18 +175,62 @@ class VideoRecorder:
         self.pipes = []
         os.makedirs(output_dir + '/single', exist_ok=True)
         os.makedirs(output_dir + '/multi', exist_ok=True)
-    
 
-    def start_recording(
-        self, agents, iteration, team_configs=None, mode='bot', algorithm='ppo', bot_type=None, weakness=1.0, 
+    def start_recording(self, *args, **kwargs):
+        """Start recording process for model inference"""
+        if 'team_args' in kwargs:
+            return self._start_recording_team(*args, **kwargs)
+        else:
+            return self._start_recording_single(*args, **kwargs)
+    
+    def _start_recording_team(
+        self, 
+        agents, 
+        iteration, 
+        env=None,           # multi
+        team_args=None,     # multi
+        team_config=None,   # multi
+    ):
+        save_dict = {'team_config': team_config}
+        model_save_dir = f"epoch_checkpoints/multi"
+        model_path = os.path.join(model_save_dir, f"{team_args.experiment_name}.pth")
+        for tank_name, agent in zip(env.get_observation_order(), agents):
+            save_dict[f'{tank_name}'] = agent.state_dict()
+            print(f"save {tank_name} state_dict")
+        torch.save(save_dict, model_path)
+
+        # praralle process according to given kwargs
+        parent_conn, child_conn = Pipe()
+
+        process = mp.Process(
+            target=record_video_process,
+            kwargs={
+                'output_dir': self.output_dir,
+                'team_args': team_args,
+                'team_config': team_config,
+                'iteration': iteration,
+                'checkpoint_file_path': model_path,
+                'conn': child_conn
+            }
+        )
+        process.start()
+        self.recording_processes.append((process, parent_conn))
+        return process
+
+
+    def _start_recording_single(
+        self, 
+        agents, 
+        iteration, 
+        mode='bot',         # single
+        algorithm='ppo',    # single
+        bot_type=None,      # single
+        weakness=1.0, 
     ):
         """Start recording process for model inference"""
-        if team_configs is not None:
-            model_save_dir = f"epoch_checkpoints/multi/{algorithm}_{mode}"
-        else:
-            model_save_dir = f"epoch_checkpoints/single/{algorithm}_{mode}"
+        model_save_dir = f"epoch_checkpoints/single/{algorithm}_{mode}"
         os.makedirs(model_save_dir, exist_ok=True)
-        
+
         if not isinstance(agents, list): agents = [agents]
 
         model_paths = []
@@ -212,13 +248,23 @@ class VideoRecorder:
         parent_conn, child_conn = Pipe()
 
         process = mp.Process(
-            target=record_video_process, 
-            args=(self.output_dir, mode, team_configs, algorithm, iteration, model_paths, bot_type, weakness, child_conn)
+            target=record_video_process,
+            kwargs={
+                'output_dir': self.output_dir,
+                'mode': mode,
+                'algorithm': algorithm, 
+                'iteration': iteration,
+                'model_paths': model_paths,
+                'bot_type': bot_type,
+                'weakness': weakness,
+                'conn': child_conn
+            }
         )
+
         process.start()
         self.recording_processes.append((process, parent_conn))
         return process
-    
+
 
     def check_recordings(self):
         """
