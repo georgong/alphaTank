@@ -18,9 +18,9 @@ YELLOW = (255, 255, 0)
 """-----------------GAME SETTING-----------------"""
 EPSILON = 0.01
 ROTATION_SPEED = 1
-BULLET_SPEED = 1
-BULLET_MAX_BOUNCES = 8
-BULLET_MAX_DISTANCE = 200 #400
+BULLET_SPEED = 5
+BULLET_MAX_BOUNCES = 2
+BULLET_MAX_DISTANCE = 500 #400
 MAX_BULLETS = 6
 BULLET_COOLDOWN = 300
 STATIONARY_EPSILON = 3
@@ -29,8 +29,8 @@ STATIONARY_EPSILON = 3
 USE_OCTAGON = True  # 八角笼斗
 
 # Tank control setting
-ROTATION_DEGREE = 8  # ->  2, Right, negative, || 0, left, positive
-TANK_SPEED = 10  # ->  2, Forward, positive || 0, Backward, negative
+ROTATION_DEGREE = 4  # ->  2, Right, negative, || 0, left, positive
+TANK_SPEED = 5  # ->  2, Forward, positive || 0, Backward, negative
 
 # Tank Setting
 TANK_WIDTH = 30
@@ -68,8 +68,8 @@ two_tank_configs = {
 
 # Victory Reward
 HIT_PENALTY = -50  # punishement of being hit
-TEAM_HIT_PENALTY = -5  # punishment of hitting teamate
-OPPONENT_HIT_REWARD = 50  # reward of hitting enemy
+TEAM_HIT_PENALTY = -5  # punishment of hitting teamate(NOT USED)
+OPPONENT_HIT_REWARD = 40  # reward of hitting enemy
 VICTORY_REWARD = 200
 
 # Wall Hit Penalty
@@ -95,11 +95,17 @@ TRAJECTORY_FAR_THRESHOLD = 300  # Distance threshold for penalty
 TRAJECTORY_DIST_THRESHOLD = 200  # Distance threshold for reward
 
 # Dodge Reward
-DODGE_FACTOR = 0.01  # Reward for dodging bullets
+DODGE_FACTOR = 0.1  # Reward for dodging bullets
 
 # Aim Reward
 TRAJECTORY_AIM_REWARD = 10  # Reward for aiming at target
 AIMING_FRAMES_THRESHOLD = 17
+
+#Bullet Reward
+BULLET_AWAY_PENALTY = 0.02
+BULLET_CLOSE_REWARD = 0.01
+DISTANCE_CANCEL_THRESHOLD = 100
+
 
 # Action Consistency Reward
 ACTION_CONSISTENCY_REWARD = 0  # Reward for maintaining consistent actions

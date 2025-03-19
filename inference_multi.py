@@ -141,14 +141,14 @@ def inference_from_checkpoint(checkpoint_file_path, replace_human=None):
 
 if __name__ == "__main__":
     checkpoint_path = "checkpoints/multiagent_ppo.pth"
-    # replace_human = {"Tank3":{
-    #         "left": pygame.K_a,
-    #         "right": pygame.K_d,
-    #         "up": pygame.K_w,
-    #         "down": pygame.K_s,
-    #         "shoot": pygame.K_f,
-    #     }}
-    ##user replace_human to replace the bot 
-    ##(actually you can also replace agent but I cannot make sure there is no bug when you replace agent)
-    #inference_from_checkpoint(checkpoint_path,replace_human = replace_human)
-    inference_from_checkpoint(checkpoint_path)
+    replace_human = {"Tank1":{
+            "left": pygame.K_a,
+            "right": pygame.K_d,
+            "up": pygame.K_w,
+            "down": pygame.K_s,
+            "shoot": pygame.K_f,
+        }}
+    #user replace_human to replace the bot 
+    #(actually you can also replace agent but I cannot make sure there is no bug when you replace agent)
+    inference_from_checkpoint(checkpoint_path,replace_human = replace_human)
+    #inference_from_checkpoint(checkpoint_path)
