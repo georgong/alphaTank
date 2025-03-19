@@ -23,13 +23,13 @@ def setup_wandb(bot_type):
             "learning_rate": 3e-4,
             "gamma": 0.99,
             "gae_lambda": 0.95,
-            "clip_coef": 0.2,
-            "ent_coef": 0.01,
-            "vf_coef": 0.3,
-            "max_grad_norm": 0.3,
-            "num_steps": 512,
-            "num_epochs": 60,
-            "total_timesteps": 100000,
+            "clip_coef": 0.25,
+            "ent_coef": 0.02,
+            "vf_coef": 0.5,
+            "max_grad_norm": 0.5,
+            "num_steps": 1024,
+            "num_epochs": 20,
+            "total_timesteps": 200000,
             "auto_reset_interval": 10000,
             "neg_reward_threshold": 0,
             "training_agent_index": 1,  # Only train agent 1, agent 0 is handled by the environment (bot)
@@ -191,7 +191,7 @@ def train(bot_type):
     # Wait for any remaining recording processes to complete
     video_recorder.cleanup()
 
-    model_save_dir = "checkpoints"
+    model_save_dir = "checkpoints/single_ppo_vs_bots"
     os.makedirs(model_save_dir, exist_ok=True)
     
     model_path = os.path.join(model_save_dir, f"ppo_agent_vs_{bot_type}.pt")

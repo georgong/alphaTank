@@ -32,15 +32,15 @@ class PPOAgentPPO(nn.Module):
     def __init__(self, obs_dim, act_dim):
         super().__init__()
         self.critic = nn.Sequential(
-            nn.Linear(obs_dim, 64), nn.Tanh(),
-            nn.Linear(64, 64), nn.Tanh(),
-            nn.Linear(64, 1)
+            nn.Linear(obs_dim, 256), nn.Tanh(),
+            nn.Linear(256, 256), nn.Tanh(),
+            nn.Linear(256, 1)
         )
         self.actor = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(obs_dim, 64), nn.Tanh(),
-                nn.Linear(64, 64), nn.Tanh(),
-                nn.Linear(64, act)
+                nn.Linear(obs_dim, 256), nn.Tanh(),
+                nn.Linear(256, 256), nn.Tanh(),
+                nn.Linear(256, act)
             ) for act in act_dim
         ])
 
@@ -65,15 +65,15 @@ class PPOAgentBot(nn.Module):
     def __init__(self, obs_dim, act_dim):
         super().__init__()
         self.critic = nn.Sequential(
-            nn.Linear(obs_dim, 128), nn.Tanh(),
-            nn.Linear(128, 128), nn.Tanh(),
-            nn.Linear(128, 1)
+            nn.Linear(obs_dim, 256), nn.Tanh(),
+            nn.Linear(256, 256), nn.Tanh(),
+            nn.Linear(256, 1)
         )
         self.actor = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(obs_dim, 128), nn.Tanh(),
-                nn.Linear(128, 128), nn.Tanh(),
-                nn.Linear(128, act)
+                nn.Linear(obs_dim, 256), nn.Tanh(),
+                nn.Linear(256, 256), nn.Tanh(),
+                nn.Linear(256, act)
             ) for act in act_dim
         ])
 

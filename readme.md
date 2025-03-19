@@ -1,7 +1,7 @@
 # **🚀 Alpha Tank - Multi-Agent Tank Battle**
 **Alpha Tank** is a **multi-agent tank battle** game built with Pygame and designed for Reinforcement Learning (RL) training. We want to create a **fully customizable RL pipeline** (from environment to learning algorithms) as a demonstration of showcasing how RL may learn from their opponents (depends on who, maybe another RL agent (i.e. PPO, SAC) or an intelligent bot (i.e. BFS bot, A* bot)) and use their charcteristics, along with the environement setup, to fight againts them and optimzie the reward.
 
-Checkout real time training on this [wandb report](https://wandb.ai/kaiwenbian107/multiagent-ppo-bot/reports/AlphaTank-Training--VmlldzoxMTgxNjU0MQ)
+ We support both wandb loggings as well as saving `agent_dict` with `agent_parameters` both in the `.pt` file ([this base config file](configs/config_teams.py) need to remain the same for training and inference). Checkout real time training on this [wandb report](https://wandb.ai/kaiwenbian107/multiagent-ppo-bot/reports/AlphaTank-Training--VmlldzoxMTgxNjU0MQ).
 
 <p align="center">
   <img src="docs/assets/demo.gif" width="400"/>
@@ -84,6 +84,8 @@ python bot_arena.py --bot1 defensive  --bot2 dodge
 
 ### **🚀 Training A Agent**
 
+For all training, the varaiable `TERMINATE_TIME` in [this config file](configs/config_basic.py) is very critical as it detrenmines whether or not the agent will have infinite life during training, promoting chasing and attacking actions, this flag should be set to None during ineference at all time.
+
 #### **Training Single Agent-to-X**
 When training, choose **bot type** from `smart`, `random`, `aggressive`, `defensive`, `dodge`. All the basic environmental configs are taken in as dictionary specified in [this config file](configs/config_basic.py).
 
@@ -93,11 +95,13 @@ python train_ppo_cycle.py
 python train_ppo_ppo.py
 ```
 
+*Team playing is also a form of cycle learning as well, just happening all at once.
+
 #### **Training Team Players**
-All the configs are taken in as dictionary specified in [this config file](configs/config_teams.py), no args are needed to be passed in.
+All the specific `config_var` are taken in as dictionary specified in [this config file](configs/config_teams.py), notice that this `experiment_name` should be consitent for training and inference.
 
 ```python
-python train_multi_ppo.py
+python train_multi_ppo.py --experiment_name 2a_vs_2b --config_var team_vs_bot_configs
 ```
 
 ---
@@ -113,17 +117,21 @@ python inference.py --mode agent --algorithm ppo
 ```
 
 #### **Team Inference Rendering**
-Similar with team training, all the configs are taken in as dictionary specified in [this config file](configs/config_teams.py), no args are needed to be passed in.
+Similar with team training, all the configs are taken in as dictionary specified in [this config file](configs/config_teams.py). Notice that this  `experiment_name` should be consitent for training and inference. There is no need to pass in the `config_var` as everything will be saved in teh checkpointing system.
 
 ```python 
-python inference_multi.py
+python inference_multi.py --experiment_name 2a_vs_2b
 ```
 
 #### **Run a Pretrained AI Model**
-Run our trained single agent-to-bot model by the following:
+We have provided a [list of checkpoints](/demo_checkpoints/) that we have ran to the users for baseline comparisons. Run our trained single agent-to-bot model by the following. The demos will be defaulted to running the following.
+- Single: ppo v.s. aggersive bot
+- Team: 2A ppo v.s. 2B smart
+
+For team playing mode, we  support using a joy_stick_controller to play against the agent, you will be replacing one of the bot, only supported for demo mode.
 
 ```python
-python inference.py --mode bot --bot-type aggressive --demo True --algorithm ppo
-python inference_multi.py --demo True
+python inference.py --mode bot --bot-type aggressive --algorithm ppo --demo True
+python inference_multi.py --demo True --joy_stick_controller True
 ```
 ---

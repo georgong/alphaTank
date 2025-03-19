@@ -14,7 +14,7 @@ from env.gym_env_multi import MultiAgentTeamEnv
 from inference_multi import MultiAgentActor
 
 # defined constants
-EPOCH_CHECK = 20        # the frequency to record video, 
+EPOCH_CHECK = 50        # the frequency to record video, 
 MAX_STEP = 400          # the time of the recorded videos, 200 ~ 5s 
 
 
