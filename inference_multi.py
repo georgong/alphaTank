@@ -73,9 +73,9 @@ def display_hit_table(hit_stats):
         print("\n")
 
 
-def inference_from_checkpoint(checkpoint_file_path, replace_human=None, demo=False):
+def inference_from_checkpoint(checkpoint_file_path, replace_human=None, demo=False, experiment_name=None):
     if demo:
-        checkpoint_file_path = "demo_checkpoints/team_ppo/2a_vs_2b.pth"
+        checkpoint_file_path = f"demo_checkpoints/team_ppo/{experiment_name}.pth"
         
     checkpoint = torch.load(checkpoint_file_path, map_location=device)
     team_config = checkpoint["team_config"]
@@ -166,4 +166,4 @@ if __name__ == "__main__":
         replace_human = None
     
     # user replace_human to replace the bot (actually you can also replace agent but I cannot make sure there is no bug when you replace agent)
-    inference_from_checkpoint(checkpoint_path, demo=args.demo, replace_human=replace_human)
+    inference_from_checkpoint(checkpoint_path, replace_human=replace_human, experiment_name=args.experiment_name, demo=args.demo)

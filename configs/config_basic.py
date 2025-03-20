@@ -18,9 +18,9 @@ YELLOW = (255, 255, 0)
 """-----------------GAME SETTING-----------------"""
 EPSILON = 0.01
 ROTATION_SPEED = 2
-BULLET_SPEED = 2
+BULLET_SPEED = 1
 BULLET_MAX_BOUNCES = 6
-BULLET_MAX_DISTANCE = 400
+BULLET_MAX_DISTANCE = 300
 MAX_BULLETS = 6
 BULLET_COOLDOWN = 300
 STATIONARY_EPSILON = 3
@@ -29,7 +29,7 @@ STATIONARY_EPSILON = 3
 USE_OCTAGON = False  # 八角笼斗
 
 # Tank control setting
-ROTATION_DEGREE = 8  # ->  2, Right, negative, || 0, left, positive
+ROTATION_DEGREE = 3  # ->  2, Right, negative, || 0, left, positive
 TANK_SPEED = 10  # ->  2, Forward, positive || 0, Backward, negative
 
 # Tank Setting
@@ -98,8 +98,13 @@ TRAJECTORY_DIST_THRESHOLD = 200  # Distance threshold for reward
 DODGE_FACTOR = 0.01  # Reward for dodging bullets
 
 # Aim Reward
-TRAJECTORY_AIM_REWARD = 10  # Reward for aiming at target
+TRAJECTORY_AIM_REWARD = 0  # Reward for aiming at target
 AIMING_FRAMES_THRESHOLD = 17
+
+#Bullet Reward
+BULLET_AWAY_PENALTY = 0.02
+BULLET_CLOSE_REWARD = 0.01
+DISTANCE_CANCEL_THRESHOLD = 100
 
 # Action Consistency Reward
 ACTION_CONSISTENCY_REWARD = 0  # Reward for maintaining consistent actions

@@ -124,14 +124,21 @@ python inference_multi.py --experiment_name 2a_vs_2b
 ```
 
 #### **Run a Pretrained AI Model**
-We have provided a [list of checkpoints](/demo_checkpoints/) that we have ran to the users for baseline comparisons. Run our trained single agent-to-bot model by the following. The demos will be defaulted to running the following.
-- Single: ppo v.s. aggersive bot
-- Team: 2A ppo v.s. 2B smart
+We have provided a [list of checkpoints](/demo_checkpoints/) that we have ran to the users for baseline comparisons. Run our trained single agent-to-bot model by the following. The demos will be defaulted to running the following, you can change the `bot-type` args or `experiment_name` to change demo check points to load.
 
-For team playing mode, we  support using a joy_stick_controller to play against the agent, you will be replacing one of the bot, only supported for demo mode.
+Single agent checkpoints:
+- Single: ppo v.s. aggersive bot (octagon)
+- Single: ppo v.s. smart bot (non-octagon)
+
+Team players checkpoints:
+- Team: 2A ppo v.s. 2B smart (non-octagon)
+- Team: 2A ppo v.s. 3B smart + defensive (octagon)
+- Team: 2A ppo v.s. 1B defensive (octagon)
+
+For team playing mode, we support using a joy_stick_controller to play against the agent, you will be replacing one of the bot, only supported for demo mode.
 
 ```python
 python inference.py --mode bot --bot-type aggressive --algorithm ppo --demo True
-python inference_multi.py --demo True --joy_stick_controller True
+python inference_multi.py --experiment_name 2a_vs_3b --demo True --joy_stick_controller True
 ```
 ---

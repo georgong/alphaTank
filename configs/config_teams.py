@@ -21,6 +21,17 @@ team_configs = {
         },
 }
 
+pair_configs = {
+    "Tank1":{"team":"TeamA", 
+            "color":RED, 
+            "mode": "agent",
+            },
+    "Tank2":{"team":"TeamB", 
+            "color":GREEN, 
+            "mode": "agent",
+        },
+}
+
 team_vs_bot_configs = {
     "Tank1":{"team":"TeamA", 
         "color":RED, 
@@ -62,6 +73,22 @@ team_vs_bot_hard_configs = {
             "bot_type": "smart",
         },
     "Tank5":{"team":"TeamB", 
+            "color":GREEN, 
+            "mode": "bot",
+            "bot_type": "defensive",
+        },
+}
+
+team_vs_def_bot_configs = {
+    "Tank1":{"team":"TeamA", 
+        "color":RED, 
+        "mode": "agent",
+        },
+    "Tank2":{"team":"TeamA", 
+        "color":RED, 
+        "mode": "agent",
+        },
+    "Tank3":{"team":"TeamB", 
             "color":GREEN, 
             "mode": "bot",
             "bot_type": "defensive",

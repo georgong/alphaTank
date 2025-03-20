@@ -26,9 +26,9 @@ def setup_wandb(bot_type):
             "clip_coef": 0.2,
             "ent_coef": 0.01,
             "vf_coef": 0.5,
-            "max_grad_norm": 0.2,
-            "num_steps": 1024,
-            "num_epochs": 20,
+            "max_grad_norm": 0.3,
+            "num_steps": 512, # epoch_iter = total_timesteps // num_steps
+            "num_epochs": 50,
             "total_timesteps": 200000,
             "auto_reset_interval": 10000,
             "neg_reward_threshold": 0,
