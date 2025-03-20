@@ -128,12 +128,17 @@ We have provided a [list of checkpoints](/demo_checkpoints/) that we have ran to
 
 Single agent checkpoints:
 - Single: ppo v.s. aggersive bot (octagon)
+  - Develop "lure to chase" + "backtrack to shoot" strategies
 - Single: ppo v.s. smart bot (non-octagon)
+  - Develop "wait and set traps" strategy
 
 Team players checkpoints:
 - Team: 2A ppo v.s. 2B smart (non-octagon)
-- Team: 2A ppo v.s. 3B smart + defensive (octagon)
+  - Doesn't seem to work together, work independently just like 1A vs 1B.
+- Team: 2A ppo v.s. 3B smarts + defensive (octagon)
+  - Doesn't seem to work together
 - Team: 2A ppo v.s. 1B defensive (octagon)
+  - Doesn't seem to work together
 
 For team playing mode, we support using a joy_stick_controller to play against the agent, you will be replacing one of the bot, only supported for demo mode.
 
