@@ -83,6 +83,7 @@ class Bullet:
 
         self.x = next_x
         self.y = next_y
+        self.distance_traveled += self.speed
 
         for tank in self.sharing_env.tanks:
             if tank.alive > 0 and tank.team != self.owner.team:
@@ -98,7 +99,7 @@ class Bullet:
                     self.sharing_env.update_reward_by_bullets(self.owner, tank)
                     return
 
-        if self.bounces >= self.max_bounces:
+        if self.bounces >= self.max_bounces or self.distance_traveled >= BULLET_MAX_DISTANCE:
             self.settle_penalty()
             if self in self.sharing_env.bullets:
                 self.sharing_env.bullets.remove(self)

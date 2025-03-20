@@ -32,7 +32,7 @@ class Trainer:
                 "max_grad_norm": 0.3,
                 "num_steps": 512, # epoch_iter = total_timesteps // num_steps
                 "num_epochs": 60,
-                "total_timesteps": 300000,
+                "total_timesteps": 200000,
                 "auto_reset_interval": 10000,
                 "neg_reward_threshold": 0,
                 "EPOCH_CHECK": 50,
