@@ -5,3 +5,4 @@ wandb/
 checkpoints/
 recordings/
 epoch_checkpoints/
+/models/curriculum

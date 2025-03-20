@@ -2,12 +2,13 @@ import gym
 import logging
 import pygame
 import numpy as np
+import math
 from configs.config_basic import *
 from env.sprite import Tank, Bullet, Wall
 from env.maze import generate_maze
 from env.util import *
 from env.bfs import *
-import math
+from env.rewards import RewardCalculator
 import time
 from env.bots.bot_factory import BotFactory
 
@@ -40,30 +41,116 @@ class GamingENV:
         
         self.episode_steps = 0  # Add step counter for time-based rewards
         
+        # Initialize reward calculator
+        self.reward_calculator = RewardCalculator()
+        
         self.reset()  # Call reset after all attributes are initialized
 
     def reset(self):
-        self.walls, self.empty_space = self.constructWall()
-        self.tanks = self.setup_tank(two_tank_configs)
+        """Reset environment to initial state"""
+        self.score = [0, 0]
+        self.done = False
+        self.visualize_traj = False
+        self.render_bfs = False
+        self.episode_steps = 0  # Reset steps counter
+        self.run_bfs = 1
+        self.path = None
+        
+        # Check if environment is already set up
+        if hasattr(self, 'tanks') and len(self.tanks) > 0:
+            # Reset bullets
+            self.bullets.clear()
+            self.bullets_trajs.clear()
+            
+            # Reset and reposition tanks to random empty spaces
+            # Keep track of used positions to avoid tanks spawning too close
+            used_positions = []
+            
+            for tank in self.tanks:
+                # Find a position that's not too close to other tanks
+                min_distance = 3 * self.GRID_SIZE  # Minimum distance between tanks
+                max_attempts = 50  # Prevent infinite loop
+                
+                for _ in range(max_attempts):
+                    # Get a new random position
+                    idx = np.random.choice(range(len(self.empty_space)))
+                    x, y = self.empty_space[idx]
+                    
+                    # Check if this position is far enough from other tanks
+                    too_close = False
+                    for used_x, used_y in used_positions:
+                        if math.sqrt((x - used_x)**2 + (y - used_y)**2) < min_distance:
+                            too_close = True
+                            break
+                    
+                    if not too_close or len(used_positions) == 0:
+                        # If not too close or this is the first tank, use this position
+                        used_positions.append((x, y))
+                        # Update position
+                        tank.x = x + self.GRID_SIZE/2
+                        tank.y = y + self.GRID_SIZE/2
+                        break
+                
+                # If we couldn't find a good position after max attempts, just use a random one
+                if len(used_positions) < len(self.tanks):
+                    idx = np.random.choice(range(len(self.empty_space)))
+                    x, y = self.empty_space[idx]
+                    used_positions.append((x, y))
+                    tank.x = x + self.GRID_SIZE/2
+                    tank.y = y + self.GRID_SIZE/2
+                
+                # Reset other tank properties
+                tank.reset()
+                
+            return self._get_observation(), {}
+            
+        # Set up environment from scratch
+        self.walls,self.empty_space = self.constructWall()
         self.bullets = []
         self.bullets_trajs = []
-        self.path = None  # Reset BFS path
         
-        # Reset bot with new tank if in bot mode
-        if self.mode == "bot" or self.mode == "bot_agent":
-            self.bot = BotFactory.create_bot(self.bot_type, self.tanks[0])
+        # Create tanks
+        if self.mode == "human_play":
+            self.tanks = self.setup_tank({"p1":{"team":0,"color":"Green","keys":[pygame.K_a,pygame.K_d,pygame.K_w,pygame.K_s,pygame.K_SPACE]},
+                                    "p2":{"team":1,"color":"Red","keys":[pygame.K_LEFT,pygame.K_RIGHT,pygame.K_UP,pygame.K_DOWN,pygame.K_RETURN]}})
+            
+        elif self.mode == "bot":
+            self.tanks = self.setup_tank({"p1":{"team":0,"color":"Green","keys":[pygame.K_a,pygame.K_d,pygame.K_w,pygame.K_s,pygame.K_SPACE]},
+                                    "bot":{"team":1,"color":"Red","keys":[None,None,None,None,None]}})
+            # Create bot
+            self.bot = BotFactory.create_bot(self.bot_type, self.tanks[1])
+            # Apply weakness if needed
+            if self.weakness < 1.0:
+                self.bot.apply_weakness(self.weakness)
+                
+        elif self.mode == "agent":
+            self.tanks = self.setup_tank({"agent":{"team":0,"color":"Green","keys":[None,None,None,None,None]},
+                                    "bot":{"team":1,"color":"Red","keys":[None,None,None,None,None]}})
+            self.bot = BotFactory.create_bot("smart", self.tanks[1])
+            
+        elif self.mode == "bot_agent":
+            self.tanks = self.setup_tank({"agent":{"team":0,"color":"Green","keys":[None,None,None,None,None]},
+                                    "bot":{"team":1,"color":"Red","keys":[None,None,None,None,None]}})
+            self.bot = BotFactory.create_bot(self.bot_type, self.tanks[1])
+            # Apply weakness if needed
+            if self.weakness < 1.0:
+                self.bot.apply_weakness(self.weakness)
+                
+        elif self.mode == "bot_bot":
+            self.tanks = self.setup_tank({"bot1":{"team":0,"color":"Green","keys":[None,None,None,None,None]},
+                                    "bot2":{"team":1,"color":"Red","keys":[None,None,None,None,None]}})
+            self.bot1 = BotFactory.create_bot("random", self.tanks[0])
+            self.bot2 = BotFactory.create_bot("random", self.tanks[1]) 
+            
+        # Initialize reward calculator if needed
+        if not hasattr(self, 'reward_calculator'):
+            self.reward_calculator = RewardCalculator()
+            
+        return self._get_observation(), {}
         
-        self.buff_zones = random.sample(self.empty_space, 2) if BUFF_ON else []
-        self.debuff_zones = random.sample(self.empty_space, 2) if DEBUFF_ON else []
-
-        if self.font is None:
-            pygame.font.init()
-            self.font = pygame.font.Font(None, 36)  # None uses default system font
-
-        self.episode_steps = 0  # Reset step counter
-    
     def step(self, actions=None):
-        self.episode_steps += 1  # Increment step counter
+        """Take a step in the environment"""
+        self.episode_steps += 1  # Increment steps counter
         # -- Move all bullets first (unchanged) --
         for bullet in self.bullets[:]:
             bullet.move()
@@ -382,6 +469,22 @@ class GamingENV:
                 self.score[opponent_idx] += 1
             tank.last_alive = tank.alive  # Track previous alive state
         
+        # Replace all reward calculations with reward calculator
+        rewards = self.reward_calculator.calculate_step_rewards(self, actions)
+        for tank, reward in rewards.items():
+            tank.reward += reward
+            
+        # Add victory rewards
+        if len({tank.alive for tank in self.tanks}) == 1:
+            for tank in self.tanks:
+                if tank.alive:
+                    max_steps = 1000
+                    time_bonus = 5 * max(0, (max_steps - self.episode_steps) / max_steps)
+                    victory_time_reward = VICTORY_REWARD * (time_bonus)
+                    tank.reward += victory_time_reward
+        
+        return self._get_observation(), self._calculate_rewards(), self._check_done(), False, {}
+
     def render(self):
         if self.screen is None:
             self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -499,34 +602,51 @@ class GamingENV:
 
     def setup_tank(self,tank_configs):
         tanks = []
-        for team_name,tank_config in tank_configs.items():
-            x,y = self.empty_space[np.random.choice(range(len(self.empty_space)))]
+        used_positions = []
+        min_distance = 3 * self.GRID_SIZE  # Minimum distance between tanks
+        
+        for team_name, tank_config in tank_configs.items():
+            # Try to find a position that's not too close to other tanks
+            max_attempts = 50  # Prevent infinite loop
+            valid_position = False
+            
+            for _ in range(max_attempts):
+                # Get a new random position
+                idx = np.random.choice(range(len(self.empty_space)))
+                x, y = self.empty_space[idx]
+                
+                # Check if this position is far enough from other tanks
+                too_close = False
+                for used_x, used_y in used_positions:
+                    if math.sqrt((x - used_x)**2 + (y - used_y)**2) < min_distance:
+                        too_close = True
+                        break
+                
+                if not too_close or len(used_positions) == 0:
+                    # If not too close or this is the first tank, use this position
+                    used_positions.append((x, y))
+                    valid_position = True
+                    break
+            
+            # If we couldn't find a valid position, just use a random one
+            if not valid_position:
+                idx = np.random.choice(range(len(self.empty_space)))
+                x, y = self.empty_space[idx]
+                used_positions.append((x, y))
+            
+            # Create the tank at the chosen position
             tanks.append(Tank(tank_config["team"],
-                            x+self.GRID_SIZE/2,
-                            y+self.GRID_SIZE/2,
+                            x + self.GRID_SIZE/2,
+                            y + self.GRID_SIZE/2,
                             tank_config["color"],
                             tank_config["keys"],
                             env=self,
                             mode=None))
         return tanks
     
-    def update_reward_by_bullets(self,shooter,victim):
-        if shooter.team == victim.team: #shoot the teammate
-            shooter.reward += TEAM_HIT_PENALTY
-            victim.reward += HIT_PENALTY
-        else:
-            shooter.reward += OPPONENT_HIT_REWARD
-            victim.reward += HIT_PENALTY
-        if len({tank.alive for tank in self.tanks}) == 1: #only one team exist
-            for tank in self.tanks:
-                if tank.alive:
-                    # Add time-based victory reward
-                    # The faster the victory, the higher the reward
-                    # We'll use a max episode length of 1000 steps as reference
-                    max_steps = 1000
-                    time_bonus = 5 * max(0, (max_steps - self.episode_steps) / max_steps)
-                    victory_time_reward = VICTORY_REWARD * (time_bonus)  # Up to 2x reward for instant victory
-                    tank.reward += victory_time_reward
+    def update_reward_by_bullets(self, shooter, victim):
+        """This method is now deprecated as rewards are handled by RewardCalculator"""
+        pass
 
     def constructWall(self):
         # define constant variables
@@ -673,4 +793,29 @@ class GamingENV:
         (r1, c1) = cell_a
         (r2, c2) = cell_b
         return math.sqrt((r1 - r2) ** 2 + (c1 - c2) ** 2)
+    
+    # Add a _get_observation method that returns the observation for tanks
+    def _get_observation(self):
+        """Return observation for compatibility with gym environments"""
+        # For basic implementation, return positions, angles, and status of all tanks 
+        observations = []
+        for tank in self.tanks:
+            tank_obs = [
+                tank.x, tank.y,
+                tank.angle,
+                1 if tank.alive else 0,
+                tank.speed
+            ]
+            observations.append(tank_obs)
+        return observations
+        
+    # Add methods for rewards and done flag
+    def _calculate_rewards(self):
+        """Return rewards for compatibility with gym environments"""
+        return [tank.reward for tank in self.tanks]
+        
+    def _check_done(self):
+        """Return done flag for compatibility with gym environments"""
+        # Done when only one tank or team remains
+        return len({tank.team for tank in self.tanks if tank.alive}) <= 1 or self.episode_steps >= 1000
     

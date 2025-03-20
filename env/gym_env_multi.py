@@ -5,6 +5,7 @@ from configs.config_basic import *
 from configs.config_teams import *
 from env.gaming_env_multi import GamingTeamENV
 from env.util import angle_to_vector, corner_to_xy
+from env.rewards import RewardCalculator
 
 #TODO: making it an inherent abstarct class for root class
 
@@ -18,6 +19,9 @@ class MultiAgentTeamEnv(gym.Env):
         self.num_walls = len(self.game_env.walls)
         self.max_bullets_per_tank = 6 
         self.prev_actions = None
+        self.render_mode = None
+        self.reward_calculator = RewardCalculator()
+        self.episode_steps = 0
 
         obs_dim = self._calculate_obs_dim()
         self.observation_space = gym.spaces.Box(low=-1, high=max(WIDTH, HEIGHT), shape=(obs_dim,), dtype=np.float32)
@@ -61,7 +65,9 @@ class MultiAgentTeamEnv(gym.Env):
                 debuff_zone_dim + 
                 in_buff_zone_dim) * self.num_agents
 
-    def reset(self):
+    def reset(self, seed=None):
+        super().reset(seed=seed)
+        self.episode_steps = 0
         self.game_env.reset()
         for tank in self.game_env.tanks:
             tank.reward = 0  # Reset rewards for new episode
@@ -72,6 +78,7 @@ class MultiAgentTeamEnv(gym.Env):
 
 
     def step(self, actions):
+        self.episode_steps += 1
         self.training_step += 1
         prev_obs = self._get_observation()
         # parsed_actions = [actions[i * 3:(i + 1) * 3] for i in range(self.num_tanks)]
@@ -85,11 +92,26 @@ class MultiAgentTeamEnv(gym.Env):
         # print(np.array([tank.reward for tank in self.game_env.tanks]))
         # print(self._calculate_rewards())
 
-        rewards = self._calculate_rewards()
+        # Calculate rewards using the reward calculator for each tank
+        rewards = []
+        for i, tank in enumerate(self.game_env.tanks):
+            tank_reward = self.reward_calculator.calculate_step_rewards(
+                tank,
+                actions[i],
+                tank.reward,
+                self.episode_steps
+            )
+            rewards.append(tank_reward)
+            tank.reward = tank_reward
+
+        # Get observation and info
+        observation = self._get_observation()
+        info = self._get_info()
+
         done = self._check_done()
-        obs = np.array(obs, dtype=np.float32).flatten()
+        observation = np.array(observation, dtype=np.float32).flatten()
         rewards = np.array(rewards, dtype=np.float32).flatten()
-        return obs, rewards, done, False, {}
+        return observation, rewards, done, False, info
 
     def _get_observation(self):
         """

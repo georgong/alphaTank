@@ -32,7 +32,7 @@ def load_agents_ppo(env, device, mode='agent', bot_type='smart', model_paths=Non
                 if demo:
                     model_path = f"demo_checkpoints/ppo_agent_vs_{bot_type}.pt"
                 else:
-                    model_path = f"checkpoints/ppo_agent_cycle.pt"
+                    model_path = f"checkpoints/ppo_agent_curriculum_final.pt"
 
             agent.load_state_dict(torch.load(model_path, map_location=device))
             agent.eval()

@@ -165,32 +165,25 @@ class Tank:
         self.max_bullets = MAX_BULLETS
         self.bullet_cooldown = BULLET_COOLDOWN
         self.last_shot_time = 0
-        self.closer_reward = 0
         self.reward = 0
         self.in_debuff_zone = 0
         self.in_buff_zone = 0
         self.hittingWall = False
         self.mode = mode
 
-        # reward compute
-        self.last_x, self.last_y = x, y  # 记录上一次位置
-        self.stationary_steps = 0  # 站立不动的帧数
-        self.wall_hits = 0  # 连续撞墙次数
-        self.activate_bullet_trajectory_reward = False
+        # State tracking for reward calculation
+        self.last_x, self.last_y = x, y
+        self.stationary_steps = 0
+        self.wall_hits = 0
+        self.aiming_counter = 0
+        self.total_rotation = 0
+        self.last_rotation_pos = (x, y)
 
-        # 加载坦克 GIF 动画，并应用颜色调整
-        self.frames = self.load_and_colorize_gif("env/assets/tank.gif", color, (self.width+3, self.height+3))
-        self.frame_index = 0  # 当前播放帧
-        self.frame_rate = 5  # 每 5 帧更新一次
-        self.tick = 0
-
-        self.render_aiming = RENDER_AIMING
-
-        # action consistency reward tracking
+        # Action tracking
         self.previous_actions = {
-            'movement': 1,  # Default no movement
-            'rotation': 1,  # Default no rotation
-            'shooting': 0   # Default no shooting
+            'movement': 1,
+            'rotation': 1,
+            'shooting': 0
         }
         self.action_consistency_counter = {
             'movement': 0,
@@ -198,35 +191,145 @@ class Tank:
             'shooting': 0
         }
 
-        # aiming reward tracking
-        self.aiming_counter = 0  # Add counter for consistent aiming
+        # Load tank GIF animation
+        self.frames = self.load_and_colorize_gif("env/assets/tank.gif", color, (self.width+3, self.height+3))
+        self.frame_index = 0
+        self.frame_rate = 5
+        self.tick = 0
 
-        # rotation penalty tracking
-        self.total_rotation = 0  # Track accumulated rotation
-        self.last_rotation_pos = (x, y)  # Position where we start tracking rotation
-
+        self.render_aiming = RENDER_AIMING
+        
+    def reset(self):
+        """Reset tank to initial state while keeping its team and color"""
+        # Reset position values
+        self.angle = random.randint(0, 360)
+        self.speed = 0
+        self.alive = True
+        self.last_alive = True
+        self.max_bullets = MAX_BULLETS
+        self.last_shot_time = 0
+        self.reward = 0
+        self.in_debuff_zone = 0
+        self.in_buff_zone = 0
+        self.hittingWall = False
+        
+        # Reset state tracking variables
+        self.last_x, self.last_y = self.x, self.y
+        self.stationary_steps = 0
+        self.wall_hits = 0 
+        self.aiming_counter = 0
+        self.total_rotation = 0
+        self.last_rotation_pos = (self.x, self.y)
+        
+        # Reset action tracking
+        self.previous_actions = {
+            'movement': 1,
+            'rotation': 1,
+            'shooting': 0
+        }
+        self.action_consistency_counter = {
+            'movement': 0,
+            'rotation': 0,
+            'shooting': 0
+        }
+        
+        # No need to reload frames since they stay the same
+        self.frame_index = 0
+        self.tick = 0
 
     def load_and_colorize_gif(self, gif_path, target_color, size):
-        """ 加载 GIF 并调整颜色 & 大小，返回 pygame 兼容的帧列表 """
-        pil_image = Image.open(gif_path)
-        frames = []
+        """ Load GIF, adjust color & size, return pygame-compatible frames """
+        try:
+            pil_image = Image.open(gif_path)
+            frames = []
 
-        for frame in ImageSequence.Iterator(pil_image):
-            frame = frame.convert("RGBA")  # convert to RGBA
-            resized_frame = frame.resize(size)  # **调整大小**
-            colorized_frame = self.apply_color_tint(resized_frame, target_color)  # apply color shift
+            for frame in ImageSequence.Iterator(pil_image):
+                frame = frame.convert("RGBA")  # convert to RGBA
+                resized_frame = frame.resize(size)  # resize
+                colorized_frame = self.apply_color_tint(resized_frame, target_color)  # apply color shift
 
-            #convert image to pygame.image
-            mode = colorized_frame.mode
-            size = colorized_frame.size
-            data = colorized_frame.tobytes()
-            pygame_image = pygame.image.fromstring(data, size, mode)
-            frames.append(pygame_image)
+                # convert image to pygame.image
+                mode = colorized_frame.mode
+                size = colorized_frame.size
+                data = colorized_frame.tobytes()
+                pygame_image = pygame.image.fromstring(data, size, mode)
+                frames.append(pygame_image)
 
-        return frames
+            return frames
+        except FileNotFoundError:
+            print(f"Warning: Tank GIF file not found at {gif_path}. Using fallback image.")
+            # Create a simple rectangular fallback image
+            fallback_img = pygame.Surface(size, pygame.SRCALPHA)
+            
+            # If target_color is a string, convert it to RGB using the same logic as apply_color_tint
+            if isinstance(target_color, str):
+                from configs.config_basic import GREEN, RED, YELLOW, WHITE, BLACK, GRAY
+                
+                # Define BLUE if it's not in config_basic.py
+                try:
+                    from configs.config_basic import BLUE
+                except ImportError:
+                    BLUE = (0, 0, 255)  # Default blue color
+                
+                color_name = target_color.upper()
+                color_map = {
+                    "RED": RED,
+                    "GREEN": GREEN,
+                    "BLUE": BLUE,
+                    "YELLOW": YELLOW,
+                    "WHITE": WHITE,
+                    "BLACK": BLACK,
+                    "GRAY": GRAY
+                }
+                rgb_color = color_map.get(color_name, GREEN)
+            else:
+                rgb_color = target_color
+                
+            # Add alpha for RGBA
+            rgba_color = (*rgb_color, 255)
+            fallback_img.fill(rgba_color)
+            
+            # Add a black border
+            pygame.draw.rect(fallback_img, (0, 0, 0), fallback_img.get_rect(), 2)
+            
+            # Draw a direction indicator (line pointing in the tank's direction)
+            center = (size[0] // 2, size[1] // 2)
+            edge = (size[0] - 4, size[1] // 2)
+            pygame.draw.line(fallback_img, (0, 0, 0), center, edge, 2)
+            
+            return [fallback_img]  # Return a list with a single frame
 
     def apply_color_tint(self, image, target_color):
-        """ 计算颜色偏差，并应用到 GIF 帧上 """
+        """ Calculate color shift and apply to GIF frame """
+        # Convert color name to RGB if it's a string
+        if isinstance(target_color, str):
+            # Use existing color constants from config_basic.py
+            # Normalize the color name to handle case differences
+            color_name = target_color.upper()
+            
+            # Map color names to color constants
+            from configs.config_basic import GREEN, RED, YELLOW, WHITE, BLACK, GRAY
+            
+            # Define BLUE if it's not in config_basic.py
+            try:
+                from configs.config_basic import BLUE
+            except ImportError:
+                BLUE = (0, 0, 255)  # Default blue color
+            
+            color_map = {
+                "RED": RED,
+                "GREEN": GREEN,
+                "BLUE": BLUE,
+                "YELLOW": YELLOW,
+                "WHITE": WHITE,
+                "BLACK": BLACK,
+                "GRAY": GRAY
+            }
+            
+            # Default to GREEN if color not found
+            target_color = color_map.get(color_name, GREEN)
+
+        # Now unpack the RGB values
         r, g, b = target_color
 
         # split RGBA
@@ -266,198 +369,12 @@ class Tank:
         new_y = self.y - self.speed * math.sin(rad)
         new_corners = self.get_corners(new_x, new_y)
         
-        '''Reward #1: hitting the wall'''
-        # self._wall_penalty(new_corners)
-
-        # make sure tank won't go through the wall
+        # Update position if no wall collision
         if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
             self.x, self.y = new_x, new_y
             self.hittingWall = False
         else:
             self.hittingWall = True
-        
-        '''Reward #3: stationary penalty'''
-        self._stationary_penalty()
-        
-        '''Reward #5: aiming reward'''
-        self._aiming_reward()
-        
-        '''Reward #6 consistency action reward'''
-        if current_actions is not None:
-            self._control_penalty(current_actions)
-        '''Rward $7 Dodge Reward'''
-        self._dodge_reward()
-
-        #   self._action_consistency_reward(current_actions)
-
-    def _rotate_penalty(self):
-        """Reward #7: Penalize excessive rotation without movement"""
-        # Calculate distance moved since last rotation check
-        dist_moved = math.sqrt(
-            (self.x - self.last_rotation_pos[0])**2 + 
-            (self.y - self.last_rotation_pos[1])**2
-        )
-        # rotation counter if moved enough
-        if dist_moved > ROTATION_RESET_DISTANCE:
-            self.total_rotation = 0
-            self.last_rotation_pos = (self.x, self.y)
-            return 0
-        
-        # penalty if rotated too much without moving
-        if self.total_rotation >= ROTATION_THRESHOLD:
-            self.reward += ROTATION_PENALTY
-            self.total_rotation = 0  # Reset after applying penalty
-            self.last_rotation_pos = (self.x, self.y)
-
-
-    def _action_consistency_reward(self, current_actions):
-        """Reward #6: reward for maintaining consistent actions"""
-        total_reward = 0
-        
-        # compare current actions with previous actions
-        action_types = {
-            'movement': current_actions[0],
-            'rotation': current_actions[1],
-            'shooting': current_actions[2]
-        }
-        
-        for action_type, current_value in action_types.items():
-            if (action_type == 'movement' and current_value == 1) or \
-            (action_type == 'rotation' and current_value == 1) or \
-            (action_type == 'shooting' and current_value == 0): 
-                self.action_consistency_counter[action_type] = 0
-                continue
-
-            # right now, we only consider consistency movement
-            # we can add rotation/shooting consistency later
-            if action_type == 'movement':
-                if current_value == self.previous_actions[action_type]:
-                    # increase counter for consistent actions
-                    self.action_consistency_counter[action_type] += 1
-                    # give reward based on consistency length
-                    if self.action_consistency_counter[action_type] > 5:  # Minimum frames for reward
-                        total_reward += ACTION_CONSISTENCY_REWARD
-                else:
-                    # penalize frequent action changes
-                    if self.action_consistency_counter[action_type] < 3:  # If changed too quickly
-                        total_reward += ACTION_CHANGE_PENALTY
-                    # reset counter for this action type
-                    self.action_consistency_counter[action_type] = 0
-                
-            # update previous action
-            self.previous_actions[action_type] = current_value
-
-        self.reward += total_reward
-        return total_reward
-
-
-    def _wall_penalty(self, new_corners): 
-        '''Reward #1: hitting the wall'''
-        # calculate the new corners
-        if any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
-            self.wall_hits += 1  # 记录撞墙次数
-            if self.wall_hits >= WALL_HIT_THRESHOLD:
-                self.reward += WALL_HIT_STRONG_PENALTY  # 连续撞墙，给予更大惩罚
-            else:
-                self.reward += WALL_HIT_PENALTY  # 单次撞墙，给予普通惩罚
-            return  # 停止移动
-        self.wall_hits = 0  # 重置撞墙计数
-    
-    def _control_penalty(self, current_actions):
-        """ Penalize rapid control changes (i.e., jittery movements, erratic rotation, spamming shots) """
-        penalty = 0
-
-        action_types = {
-            'movement': current_actions[0],
-            'rotation': current_actions[1],
-            'shooting': current_actions[2]
-        }
-
-        for action_type, current_value in action_types.items():
-            if current_value != self.previous_actions[action_type]:
-                self.action_consistency_counter[action_type] += 1
-            else:
-                self.action_consistency_counter[action_type] = 0
-
-            # if an action is changed too frequently, apply penalty
-            if self.action_consistency_counter[action_type] > CONTROL_CHANGE_THRESHOLD:
-                penalty += CONTROL_CHANGE_PENALTY
-
-        self.reward += penalty
-        self.previous_actions = action_types
-        
-
-    def _stationary_penalty(self):
-        '''Reward #3: stationary penalty'''
-        if int(self.x // GRID_SIZE - self.last_x // GRID_SIZE) == 0 and int(self.y // GRID_SIZE - self.last_y // GRID_SIZE) == 0:
-            self.stationary_steps += 1
-            if self.stationary_steps % 20 == 0:  # 每 30 帧不动就扣分
-                self.reward += STATIONARY_PENALTY
-                self.stationary_steps = 0
-            
-        else:
-            self.reward += MOVE_REWARD  
-            
-            # Reset the stationary counter since we moved
-            self.stationary_steps = 0
-        
-        self.last_x, self.last_y = self.x, self.y
-
-
-    def _aiming_reward(self):
-        '''Reward #5: aiming reward'''
-        if not self.alive:
-            return 0
-        
-        # calculate initial bullet position and direction
-        rad = math.radians(self.angle)
-        bullet_x = self.x + 10 * math.cos(rad)
-        bullet_y = self.y - 10 * math.sin(rad)
-        
-        # simulate trajectory
-        trajectory = BulletTrajectory(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
-        
-        # check if trajectory will hit target
-        if trajectory.will_hit_target:
-            self.aiming_counter += 1
-            if self.aiming_counter >= AIMING_FRAMES_THRESHOLD:
-                self.reward += TRAJECTORY_AIM_REWARD
-                self.aiming_counter = 0
-        else:
-            self.aiming_counter = 0
-            
-            # self.activate_bullet_trajectory_reward = True
-
-    def _dodge_reward(self):
-        reward = 0
-        tank_pos = np.array([self.x, self.y])
-        tank_vel = np.array([*angle_to_vector(self.angle,self.speed)])
-        
-        for bullet in self.sharing_env.bullets:
-            bullet_pos = np.array([bullet.x, bullet.y])
-            bullet_vel = np.array([bullet.dx, bullet.dy])
-            
-            # 计算距离
-            distance = np.linalg.norm(tank_pos - bullet_pos)
-            if distance >= 100:
-                continue  # 忽略远离的子弹
-            # 计算子弹的轨迹单位向量
-            if np.linalg.norm(bullet_vel) == 0:
-                continue  # 忽略静止子弹
-            if bullet.owner.team == self.team:
-                continue # 忽略同队子弹
-            
-            bullet_dir = bullet_vel / np.linalg.norm(bullet_vel)  # 单位向量
-            perpendicular_dir = np.array([-bullet_dir[1], bullet_dir[0]])  # 计算垂直方向
-            
-            # 计算坦克速度在该垂直向量上的投影
-            projection = np.dot(tank_vel, perpendicular_dir)
-                
-            # 给予远离子弹轨迹的奖励
-            reward += abs(projection) * DODGE_FACTOR
-
-        self.reward += reward
-
 
     def rotate(self, direction):
         if not self.alive:
@@ -470,45 +387,8 @@ class Tank:
         if angle_diff > 180:  # Handle angle wrapping
             angle_diff = 360 - angle_diff
         
-        # new_corners = self.get_corners(angle=new_angle)
-        # if it will hit walls after rotation, forbidden it.
-        #if not any(obb_vs_aabb(new_corners, wall.rect) for wall in self.sharing_env.walls):
         self.angle = new_angle
-
         self.total_rotation += angle_diff
-        '''Reward #7: rotation penalty'''
-        # self._rotate_penalty()
-
-        '''Reward #5: aiming reward'''
-        self._aiming_reward()
-        
-    
-    def _bullet_trajectory_reward(self, bullet_x, bullet_y, rad):
-        '''Reward #4: bullet trajectory reward'''
-        trajectory = BulletTrajectory(bullet_x, bullet_y, math.cos(rad), -math.sin(rad), self, self.sharing_env)
-        self.sharing_env.bullets_trajs.append(trajectory)
-        
-        # calculate minimum distance to any opponent
-        min_distance = float('inf')
-        for opponent in self.sharing_env.tanks:
-            if opponent != self and opponent.alive:
-                # get distance between trajectory end point and opponent center
-                end_x, end_y = trajectory.last_position
-                dist = math.sqrt((end_x - opponent.x)**2 + (end_y - opponent.y)**2)
-                min_distance = min(min_distance, dist)
-        
-        # award reward based on distance
-        if min_distance < TRAJECTORY_DIST_THRESHOLD:
-            # Scale reward inversely with distance
-            distance_factor = 1 - (min_distance / TRAJECTORY_DIST_THRESHOLD)
-            reward = TRAJECTORY_DIST_REWARD * distance_factor
-            self.reward += reward
-        
-        elif min_distance > TRAJECTORY_FAR_THRESHOLD:
-            # apply penalty for shots that end very far from opponents
-            distance_factor = (min_distance - TRAJECTORY_FAR_THRESHOLD) / TRAJECTORY_FAR_THRESHOLD
-            penalty = TRAJECTORY_DIST_PENALTY * min(distance_factor, 1.0)
-            self.reward += penalty
 
     def shoot(self):
         self.check_buff_debuff() # check every time before shoot
@@ -541,8 +421,6 @@ class Tank:
 
         # **更新射击时间**
         self.last_shot_time = current_time
-
-
 
     def check_buff_debuff(self):
         tank_rect = pygame.Rect(self.x - self.width // 2, self.y - self.height // 2, self.width, self.height)
@@ -589,7 +467,6 @@ class Tank:
 
         # Move the tank after setting speed
         self.move(actions)
-
 
     def draw(self):
         """ 绘制坦克（使用 GIF 动画） """

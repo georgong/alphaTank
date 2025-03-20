@@ -1,7 +1,7 @@
 import pygame
 
-WIDTH, HEIGHT = 770, 770  # 环境大小
-MAZEWIDTH, MAZEHEIGHT = 11, 11
+WIDTH, HEIGHT = 490, 490  # 环境大小
+MAZEWIDTH, MAZEHEIGHT = 7, 7
 assert WIDTH % MAZEWIDTH == 0, "MAZEWIDTH must divide WIDTH"
 assert WIDTH % MAZEHEIGHT == 0, "MAZEHEIGHT must divide HEIGTH"
 
@@ -26,7 +26,7 @@ BULLET_COOLDOWN = 300
 STATIONARY_EPSILON = 3
 
 # Map setting
-USE_OCTAGON = False  # 八角笼斗
+USE_OCTAGON = True  # 八角笼斗
 
 # Tank control setting
 ROTATION_DEGREE = 8  # ->  2, Right, negative, || 0, left, positive
@@ -90,7 +90,7 @@ BFS_PATH_LEN_PENALTY = 0
 # Bullet Trajectory Reward/Penalty
 TRAJECTORY_HIT_REWARD = 40
 TRAJECTORY_DIST_REWARD = 5  # Base reward for good aim
-TRAJECTORY_DIST_PENALTY = -5  # Base reward for good aim
+TRAJECTORY_DIST_PENALTY = 0  # Changed from -5 to 0 to remove penalty
 TRAJECTORY_FAR_THRESHOLD = 300  # Distance threshold for penalty
 TRAJECTORY_DIST_THRESHOLD = 200  # Distance threshold for reward
 
@@ -98,7 +98,7 @@ TRAJECTORY_DIST_THRESHOLD = 200  # Distance threshold for reward
 DODGE_FACTOR = 30
 
 # Aim Reward
-TRAJECTORY_AIM_REWARD = 0  # Reward for aiming at target
+TRAJECTORY_AIM_REWARD = 1  # Reward for aiming at target, increased from 0
 AIMING_FRAMES_THRESHOLD = 17
 
 # Action Consistency Reward
@@ -115,11 +115,45 @@ CONTROL_CHANGE_PENALTY = 0
 CONTROL_CHANGE_THRESHOLD = 0.5
 
 # Buff & Debuff
-BUFF_ON = True
-DEBUFF_ON = True
+BUFF_ON = False
+DEBUFF_ON = False
 
+# Reward Configuration
+REWARD_CONFIG = {
+    # Original reward constants
+    'WALL_HIT_PENALTY': 0,  # Changed from -0.1 to 0
+    'WALL_HIT_STRONG_PENALTY': 0,  # Changed from -0.2 to 0
+    'STATIONARY_PENALTY': 0,  # Changed from -0.05 to 0
+    'MOVE_REWARD': 0.01,
+    'TRAJECTORY_AIM_REWARD': 0.1,
+    'TRAJECTORY_DIST_REWARD': 0.05,
+    'TRAJECTORY_DIST_PENALTY': 0,  # Changed from -0.05 to 0
+    'TRAJECTORY_DIST_THRESHOLD': 50,
+    'TRAJECTORY_FAR_THRESHOLD': 200,
+    'DODGE_FACTOR': 0.01,
+    'ACTION_CONSISTENCY_REWARD': 0.05,
+    'ACTION_CHANGE_PENALTY': 0,  # Changed from -0.05 to 0
+    'CONTROL_CHANGE_THRESHOLD': 5,
+    'CONTROL_CHANGE_PENALTY': 0,  # Changed from -0.1 to 0
+    'ROTATION_PENALTY': 0,  # Changed from -0.1 to 0
+    'ROTATION_THRESHOLD': 180,
+    'ROTATION_RESET_DISTANCE': 10,
+    'WALL_HIT_THRESHOLD': 3,
+    'AIMING_FRAMES_THRESHOLD': 10,
+    
+    # Curriculum learning configuration
+    'CURRICULUM_STAGES': [
+        {'steps': 1000, 'reward_scale': 1.0},
+        {'steps': 2000, 'reward_scale': 1.5},
+        {'steps': 3000, 'reward_scale': 2.0},
+        {'steps': 4000, 'reward_scale': 2.5},
+        {'steps': 5000, 'reward_scale': 3.0}
+    ],
+    'CURRICULUM_DEBUG': False,
+    'CURRICULUM_LOG_INTERVAL': 100
+}
 
 """-----------KEYBOARD SETTING-----------"""
 VISUALIZE_TRAJ = False
 RENDER_AIMING = True
-RENDER_BFS = True
+RENDER_BFS = False

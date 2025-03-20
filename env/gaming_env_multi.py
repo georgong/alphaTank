@@ -8,6 +8,7 @@ from env.sprite import Tank, Bullet, Wall
 from env.maze import generate_maze
 from env.util import *
 from env.bfs import *
+from env.rewards import RewardCalculator
 import math
 import time
 from env.controller import BotTankController, HumanTankController, AgentTankController
@@ -26,7 +27,7 @@ class GamingTeamENV:
         self.env_mode = mode  # Set mode before reset
         self.type = type
         self.bot_type = bot_type
-        self.last_bfs_dist = [None] * 2
+        self.last_bfs_dist = [None] * len(game_configs['tanks'])
         self.run_bfs = 0
         self.visualize_traj = VISUALIZE_TRAJ
         self.render_bfs = RENDER_BFS
@@ -37,8 +38,13 @@ class GamingTeamENV:
         self.buff_zones = [] 
         self.debuff_zones = []
         
-        self.score = [0, 0]  # Track scores for tank1 and tank2
+        self.score = [0, 0]  # Track scores for team1 and team2
         self.font = None  # Will be initialized in render
+        
+        self.episode_steps = 0
+        
+        # Initialize reward calculator
+        self.reward_calculator = RewardCalculator()
         
         self.reset()  # Call reset after all attributes are initialized
 
@@ -60,7 +66,9 @@ class GamingTeamENV:
             self.font = pygame.font.Font(None, 36)  # None uses default system font
     
     def step(self, actions=None):
-            #     # -- Move all bullets first (unchanged) --
+        self.episode_steps += 1
+        
+        #     # -- Move all bullets first (unchanged) --
         for bullet in self.bullets[:]:
             bullet.move()
 
@@ -93,7 +101,24 @@ class GamingTeamENV:
                 self.score[opponent_idx] += 1
             tank.last_alive = tank.alive  # Track previous alive state
 
+        # Replace all reward calculations with reward calculator
+        rewards = self.reward_calculator.calculate_step_rewards(self, actions)
+        for tank, reward in rewards.items():
+            tank.reward += reward
+            
+        # Add victory rewards
+        alive_teams = {tank.team for tank in self.tanks if tank.alive}
+        if len(alive_teams) <= 1:
+            winner_team = next(iter(alive_teams))
+            for tank in self.tanks:
+                if tank.team == winner_team:
+                    max_steps = 1000
+                    time_bonus = 5 * max(0, (max_steps - self.episode_steps) / max_steps)
+                    victory_time_reward = VICTORY_REWARD * (time_bonus)
+                    tank.reward += victory_time_reward
         
+        return self._get_observation(), self._calculate_rewards(), self._check_done(), False, {}
+
     def render(self):
         if self.screen is None:
             self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
@@ -421,14 +446,9 @@ class GamingTeamENV:
                 # Increment the BFS step counter
                 self.run_bfs += 1
 
-    def update_reward_by_bullets(self,shooter,victim):
-        if shooter.team == victim.team: #shoot the teammate
-            shooter.reward += TEAM_HIT_PENALTY
-            victim.reward += HIT_PENALTY
-        else:
-            shooter.reward += OPPONENT_HIT_REWARD
-            victim.reward += HIT_PENALTY
-            
+    def update_reward_by_bullets(self, shooter, victim):
+        """This method is now deprecated as rewards are handled by RewardCalculator"""
+        pass
 
     def get_observation_order(self):
         return self.agent_controller.get_name_list()

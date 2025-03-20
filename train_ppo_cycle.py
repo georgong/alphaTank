@@ -78,6 +78,17 @@ class CycleTrainingConfig:
             raise ValueError("weakness_schedule must be either 'linear' or 'sigmoid'")
         self.weakness_schedule = weakness_schedule
         self.weakness_sigmoid_steepness = weakness_sigmoid_steepness
+        
+        # Curriculum learning configuration
+        self.curriculum_stages = [
+            {'steps': 1000, 'reward_scale': 1.0},
+            {'steps': 2000, 'reward_scale': 1.5},
+            {'steps': 3000, 'reward_scale': 2.0},
+            {'steps': 4000, 'reward_scale': 2.5},
+            {'steps': 5000, 'reward_scale': 3.0}
+        ]
+        self.current_stage = 0
+        self.total_steps = 0
     
     def get_current_weakness(self, current_step):
         """Calculate current weakness value based on training progress and schedule"""
@@ -90,6 +101,14 @@ class CycleTrainingConfig:
             x = (progress - 0.5) * self.weakness_sigmoid_steepness
             sigmoid = 1 / (1 + np.exp(-x))
             return self.weakness_start + (self.weakness_end - self.weakness_start) * sigmoid
+
+    def update_curriculum_stage(self):
+        if self.current_stage < len(self.curriculum_stages) - 1:
+            if self.total_steps >= self.curriculum_stages[self.current_stage]['steps']:
+                self.current_stage += 1
+                print(f"Advancing to curriculum stage {self.current_stage}")
+                return True
+        return False
 
 class CycleTrainingEvaluator:
     def __init__(self, config: CycleTrainingConfig, obs_dim: int):
@@ -422,9 +441,9 @@ def train_cycle(config: CycleTrainingConfig):
             "global_step": update * config.num_steps
         })
         
-        if update % EPOCH_CHECK == 0 and update > 1:
-            for bot in config.bot_types:
-                _model_inference_cycle(agent, update, bot_type=bot)
+        # if update % EPOCH_CHECK == 0 and update > 1:
+        #     for bot in config.bot_types:
+        #         _model_inference_cycle(agent, update, bot_type=bot)
         
         # Update progress bar
         progress_bar.set_description(
@@ -433,6 +452,15 @@ def train_cycle(config: CycleTrainingConfig):
             f"Weakness: {current_weakness:.2f}, "
             f"Win Rate: {win_rates[current_bot]:.2f}"
         )
+        
+        # Update total steps and curriculum stage
+        config.total_steps += config.num_steps
+        if config.update_curriculum_stage():
+            # Log curriculum stage change
+            wandb.log({
+                'curriculum/stage': config.current_stage,
+                'curriculum/reward_scale': config.curriculum_stages[config.current_stage]['reward_scale']
+            })
     
     # Save final model
     model_save_dir = "checkpoints"
@@ -484,7 +512,7 @@ DEFAULT_CONFIG = {
     
     # Training settings
     "reward_threshold_percentage": 0.5,  # When to switch to all-or-nothing rewards
-    "total_timesteps": 1000000,    # Total training steps
+    "total_timesteps": 100000,    # Total training steps
     
     # PPO hyperparameters
     "learning_rate": 1e-4,
