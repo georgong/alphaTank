@@ -182,7 +182,7 @@ class BulletTrajectory(Bullet):
                 self.distance_traveled += self.speed
                 self.trajectory_points.append((self.x, self.y))
                 self.trajectory_data.append((self.x, self.y, self.dx, self.dy))
-            
+                
             # check ending conditions
             if (self.bounces > self.max_bounces or 
                 self.distance_traveled > BULLET_MAX_DISTANCE):
