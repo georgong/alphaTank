@@ -12,13 +12,12 @@ from models.ppo_ppo_model import RunningMeanStd
 from sac_util import ContinuousToDiscreteWrapper
 
 # defined constants
-EPOCH_CHECK = 20        # the frequency to record video, 
-MAX_STEP = 400          # the time of the recorded videos, 200 ~ 5s 
-
+EPOCH_CHECK = 20        # the frequency to record video
+MAX_STEP = 400          # the maximum number of steps in the recorded videos (e.g. 200 ~ 5s)
 
 def create_video(output_dir, mode, algorithm, iteration, model_paths, bot_type=None, weakness=1.0):
     """Create video from environment rendering"""
-    # MAX_STEPS control the duration of the recoreded videos
+    # MAX_STEP controls the duration of the recorded video
     step_count = 0
     frames = []
 
@@ -31,6 +30,7 @@ def create_video(output_dir, mode, algorithm, iteration, model_paths, bot_type=N
         env = ContinuousToDiscreteWrapper(env)
     env.render()
     
+    # Load the agents based on the algorithm
     if algorithm == 'ppo':
         agents = load_agents_ppo(
             env, device, mode=mode, model_paths=model_paths, bot_type=bot_type, weakness=weakness
@@ -39,10 +39,12 @@ def create_video(output_dir, mode, algorithm, iteration, model_paths, bot_type=N
         agents = load_agents_sac(
             env, device, mode=mode, model_paths=model_paths, bot_type=bot_type, weakness=weakness
         )
-
+    else:
+        raise ValueError(f"Unknown algorithm: {algorithm}. Must be 'ppo' or 'sac'.")
+    
     obs, _ = env.reset()
     obs = torch.tensor(obs, dtype=torch.float32).to(device).reshape(env.num_tanks, -1)
-    obs_dim = env.observation_space.shape[0] // env.num_tanks # len(agents)
+    obs_dim = env.observation_space.shape[0] // env.num_tanks
     obs_norm = RunningMeanStd(shape=(env.num_tanks, obs_dim), device=device)
 
     while step_count <= MAX_STEP:
@@ -64,9 +66,9 @@ def create_video(output_dir, mode, algorithm, iteration, model_paths, bot_type=N
         
         env.render()
 
-        # for inference during training time
+        # Capture frame from environment's render (RGB array)
         frame_array = env.render(mode='rgb_array')
-        frame_array = frame_array.transpose([1, 0, 2]) 
+        frame_array = frame_array.transpose([1, 0, 2])
         frames.append(frame_array)
         step_count += 1
 
@@ -77,15 +79,11 @@ def create_video(output_dir, mode, algorithm, iteration, model_paths, bot_type=N
         path = f"{mode}_game_{iteration}.mp4"
     
     video_path = os.path.join(output_dir, path)
-    # Save video
     imageio.mimsave(video_path, frames, fps=30)
     print(f"Saving video to {video_path}")
     return video_path
 
-
-def record_video_process(
-    output_dir, mode, algorithm, iteration, model_paths, bot_type, weakness, conn
-):
+def record_video_process(output_dir, mode, algorithm, iteration, model_paths, bot_type, weakness, conn):
     """Process function for video recording"""
     try:
         video_path = create_video(
@@ -106,7 +104,6 @@ def record_video_process(
     finally:
         conn.close()
 
-
 class VideoRecorder:
     def __init__(self, output_dir="recordings"):
         self.output_dir = output_dir
@@ -114,19 +111,17 @@ class VideoRecorder:
         self.pipes = []
         os.makedirs(output_dir, exist_ok=True)
     
-
-    def start_recording(
-        self, agents, iteration, mode='bot', algorithm='ppo', bot_type=None, weakness=1.0, 
-    ):
+    def start_recording(self, agents, iteration, mode='bot', algorithm='ppo', bot_type=None, weakness=1.0):
         """Start recording process for model inference"""
         model_save_dir = f"epoch_checkpoints/{algorithm}_{mode}"
         os.makedirs(model_save_dir, exist_ok=True)
         
-        if not isinstance(agents, list): agents = [agents]
+        if not isinstance(agents, list): 
+            agents = [agents]
 
         model_paths = []
         for agent_idx, agent in enumerate(agents):
-            # ppo/sac | bot/agent | 01 or 0 | iteration
+            # If only one agent is provided, include bot_type in filename; otherwise use agent index
             if len(agents) == 1:
                 path = f"{algorithm}_{mode}_{bot_type}_epoch_{iteration}.pt"
             else:
@@ -146,15 +141,10 @@ class VideoRecorder:
         self.recording_processes.append((process, parent_conn))
         return process
     
-
     def check_recordings(self):
         """
-        Check if any recordings are complete and need logging
-        If the recording is completed, then we will use the parent process (the process for training algorithms)
-        to logging video to wandb.
-        
-        - Child process handles video creation. 
-        - Parent process handles wandb logging. 
+        Check if any recordings are complete and need logging.
+        The parent process (e.g. training) will log the video to wandb.
         """
         remaining_processes = []
         
@@ -162,11 +152,10 @@ class VideoRecorder:
             if process.is_alive():
                 remaining_processes.append((process, conn))
             else:
-                if conn.poll():  # Check if there's data to receive
+                if conn.poll():  # Check if there's data from the child process
                     data = conn.recv()
                     if data is not None:
                         video_path, iteration = data
-                        # Log to wandb in parent process
                         wandb.log({
                             "game_video": wandb.Video(video_path, fps=30, format="mp4"),
                             "iteration": iteration
@@ -177,9 +166,7 @@ class VideoRecorder:
         
         self.recording_processes = remaining_processes
 
-
     def cleanup(self):
         """Wait for all recording processes to complete"""
         while self.recording_processes:
             self.check_recordings()
-

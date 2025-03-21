@@ -24,7 +24,7 @@ def setup_wandb():
             "tau": 0.005,
             "batch_size": 256,
             "num_steps": 512,
-            "total_timesteps": 100000,
+            "total_timesteps": 200000,
             "start_steps": 1000,
             "update_after": 1000,
             "update_every": 50,

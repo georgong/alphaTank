@@ -88,7 +88,7 @@ TRAJECTORY_DIST_THRESHOLD = 200 # Distance threshold for reward
 DODGE_FACTOR  = 0.01
 
 # Aim Reward
-TRAJECTORY_AIM_REWARD = 0    # Reward for aiming at target
+TRAJECTORY_AIM_REWARD = 5    # Reward for aiming at target
 AIMING_FRAMES_THRESHOLD = 17
 
 # Action Consistency Reward
