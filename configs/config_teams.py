@@ -79,6 +79,37 @@ team_vs_bot_hard_configs = {
         },
 }
 
+team_vs_bot_harder_configs = {
+    "Tank1":{"team":"TeamA", 
+        "color":RED, 
+        "mode": "agent",
+        },
+    "Tank2":{"team":"TeamA", 
+        "color":RED, 
+        "mode": "agent",
+        },
+    "Tank3":{"team":"TeamB", 
+            "color":GREEN, 
+            "mode": "bot",
+            "bot_type": "aggressive",
+        },
+    "Tank4":{"team":"TeamB", 
+            "color":GREEN, 
+            "mode": "bot",
+            "bot_type": "smart",
+        },
+    "Tank5":{"team":"TeamB", 
+            "color":GREEN, 
+            "mode": "bot",
+            "bot_type": "defensive",
+        },
+    "Tank6":{"team":"TeamB", 
+            "color":GREEN, 
+            "mode": "bot",
+            "bot_type": "smart",
+        },
+}
+
 team_vs_def_bot_configs = {
     "Tank1":{"team":"TeamA", 
         "color":RED, 

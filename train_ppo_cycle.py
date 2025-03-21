@@ -15,7 +15,7 @@ from env.gym_env import MultiAgentEnv
 from env.bots.bot_factory import BotFactory
 from models.ppo_utils import PPOAgentBot, RunningMeanStd
 
-from models.video_utils import EPOCH_CHECK, VideoRecorder
+from models.video_utils import VideoRecorder
 
 # Valid rotation strategies
 ROTATION_STRATEGIES = ["random", "fixed", "adaptive"]
@@ -445,36 +445,28 @@ def train_cycle(config: CycleTrainingConfig):
     wandb.finish()
 
 
-# def _model_inference_cycle(agents, iteration, bot_type=None):
-#     print(f'inference check at {iteration} iteration')
-#     model_save_dir = "epoch_checkpoints/ppo_bot"
-#     os.makedirs(model_save_dir, exist_ok=True)
-#     if not isinstance(agents, list): agents = [agents]
-#     model_paths = []
-#     for agent_idx, agent in enumerate(agents):
-#         model_path = os.path.join(model_save_dir, f"ppo_agent_{agent_idx}_epoch_{iteration}.pt")
-#         model_paths.append(model_path)
-#         torch.save(agent.state_dict(), model_path)
-
-#     video_path = run_inference_with_video(
-#         mode='bot', bot_type=bot_type, epoch_checkpoint=iteration, model_paths=model_paths, MAX_STEPS=MAX_STEP
-#     )
+def _model_inference_cycle(agents, iteration, bot_type=None):
+    print(f'inference check at {iteration} iteration')
+    video_recorder = VideoRecorder()
     
-#     # Log video to wandb
-#     if video_path and os.path.exists(video_path):
-#         wandb.log({
-#             "game_video": wandb.Video(video_path, fps=30, format="mp4"),
-#             "iteration": iteration
-#         })
-#         print(f"[INFO] Video uploaded to wandb at iteration {iteration}")
-        
+    # Start video recording
+    video_recorder.start_recording(
+        agents, iteration, mode='bot', algorithm='ppo', bot_type=bot_type
+    )
+    
+    # Check recordings - this handles wandb logging internally
+    video_recorder.check_recordings()
+    
+    # Cleanup any remaining processes
+    video_recorder.cleanup()
+
 
 # Default configuration
 DEFAULT_CONFIG = {
     # Bot and rotation settings
-    "bot_types": ["smart", "aggressive", "random", "defensive"],
+    "bot_types": ["random", "aggressive", "defensive", "dodge"],
     "rotation_strategy": "fixed",  # Options: "random", "fixed", "adaptive"
-    "switch_every": 10000,          # Steps between bot switches
+    "switch_every": 5120,          # Steps between bot switches
     
     # Evaluation settings
     "rolling_window_size": 100,    # Size of rolling window for win rate calculation
@@ -484,7 +476,7 @@ DEFAULT_CONFIG = {
     
     # Training settings
     "reward_threshold_percentage": 0.5,  # When to switch to all-or-nothing rewards
-    "total_timesteps": 1000000,    # Total training steps
+    "total_timesteps": 800000,    # Total training steps
     
     # PPO hyperparameters
     "learning_rate": 1e-4,
@@ -492,7 +484,7 @@ DEFAULT_CONFIG = {
     "num_epochs": 60,
     "gamma": 0.99,
     "gae_lambda": 0.95,
-    "clip_coef": 0.1,
+    "clip_coef": 0.2,
     "ent_coef": 0.01,
     "vf_coef": 0.3,
     "max_grad_norm": 0.3,
