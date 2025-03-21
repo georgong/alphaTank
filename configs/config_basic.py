@@ -26,7 +26,7 @@ BULLET_COOLDOWN = 300
 STATIONARY_EPSILON = 3
 
 # Map setting
-USE_OCTAGON = True  # 八角笼斗
+USE_OCTAGON = False  # 八角笼斗
 
 # Tank control setting
 ROTATION_DEGREE = 3  # ->  2, Right, negative, || 0, left, positive

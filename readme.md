@@ -134,6 +134,7 @@ Team players checkpoints:
 - Team: 2A ppo v.s. 2A ppo (octagon)
 - Team: 2A ppo v.s. 2B smart (non-octagon)
 - Team: 2A ppo v.s. 3B smarts + defensive (octagon)
+- Team: 2A ppo v.s. 4B smarts + defensive (non-octagon)
 - Team: 2A ppo v.s. 1B defensive (octagon)
 
 For team playing mode, we support using a joy_stick_controller to play against the agent, you will be replacing one of the bot, only supported for demo mode.
@@ -142,4 +143,6 @@ For team playing mode, we support using a joy_stick_controller to play against t
 python inference.py --mode bot --bot-type aggressive --algorithm ppo --demo True
 python inference_multi.py --experiment_name 2a_vs_3b --demo True --joy_stick_controller True
 ```
+
+For `2a_vs_2b`, `2a_vs_4b`, and `ppo_vs_smart`, octagon setting needed to be turned off.
 ---

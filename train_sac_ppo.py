@@ -10,15 +10,10 @@ from tqdm import tqdm
 import random
 import pdb
 
-# Import your environment and models
 from env.gym_env import MultiAgentEnv
-from sac_util import ContinuousToDiscreteWrapper, DisplayManager  # if needed for SAC
-from models.ppo_ppo_model import PPOAgentPPO, RunningMeanStd
-from video_record import VideoRecorder  # if you want to record videos
-
-##########################################
-# SAC-related classes (from your files)  #
-##########################################
+from models.sac_utils import ContinuousToDiscreteWrapper, DisplayManager
+from models.ppo_utils import PPOAgentPPO, RunningMeanStd
+from models.video_utils import VideoRecorder
 
 class ReplayBuffer:
     def __init__(self, capacity):
@@ -191,9 +186,6 @@ class SACAgent:
         self.critic2_target.load_state_dict(state_dict['critic2_target'])
         self.log_alpha = torch.tensor(state_dict['log_alpha'], requires_grad=True, device=self.device)
 
-#############################################
-# Hybrid Training Setup: PPO vs SAC         #
-#############################################
 
 def setup_wandb():
     wandb.init(
@@ -230,7 +222,6 @@ def train():
     setup_wandb()
     display_manager = DisplayManager()
     display_manager.set_headless()
-    # Initialize environment (assumes a multiagent tank environment)
     env = MultiAgentEnv()
 
     # Uncomment the next line if you want to wrap the environment for SAC (as in your SAC training code)
@@ -383,7 +374,6 @@ def train():
             ratio = torch.exp(torch.clamp(new_logprobs_sum - ppo_logprobs_sum, -10, 10))
 
             
-            # pdb.set_trace()
             pg_loss1 = -advantages * ratio
             pg_loss2 = -advantages * torch.clamp(ratio, 1 - wandb.config.ppo_clip_coef, 1 + wandb.config.ppo_clip_coef)
             pg_loss = torch.max(pg_loss1, pg_loss2).mean()
@@ -423,14 +413,12 @@ def train():
                 "sac/alpha_loss": np.mean(alpha_losses),
             })
         
-        # Log average PPO reward from the rollout
         wandb.log({
             "ppo/average_reward": ppo_rewards.mean().item(),
             "global_step": global_step,
             "iteration": iteration
         })
 
-    # Save both models
     model_save_dir = "checkpoints"
     os.makedirs(model_save_dir, exist_ok=True)
     torch.save(ppo_agent.state_dict(), os.path.join(model_save_dir, "ppo_agent.pt"))
