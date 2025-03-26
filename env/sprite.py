@@ -5,6 +5,7 @@ from configs.config_basic import *
 from env.util import *
 import numpy as np
 from PIL import Image, ImageSequence, ImageEnhance
+from env.bfs import *
 
 # Reward is now defined by teams
 
@@ -238,6 +239,13 @@ class Tank:
         self.num_hit = 0
         self.num_be_hit = 0
 
+        # BFS
+        self.old_dist = None
+        self.next_cell = None
+        self.path = None
+        self.last_bfs_dist = None
+        self.run_bfs = 0
+
         # reward compute
         self.last_x, self.last_y = x, y  # 记录上一次位置
         self.stationary_steps = 0  # 站立不动的帧数
@@ -323,7 +331,7 @@ class Tank:
         ]
         return [center + c.rotate(angle) for c in corners]
 
-    def move(self, current_actions=None):
+    def move(self, current_actions=None, maze = None):
         if not self.alive:
             return
         
@@ -332,6 +340,10 @@ class Tank:
         new_y = self.y - self.speed * math.sin(rad)
         new_corners = self.get_corners(new_x, new_y)
         
+        # Find BFS Path
+        my_pos = self.get_grid_position()
+        opponent_pos = self.get_grid_position()
+        self.path = bfs_path(maze, my_pos, opponent_pos)
         '''Reward #1: hitting the wall'''
         # self._wall_penalty(new_corners)
 
@@ -354,8 +366,58 @@ class Tank:
         '''Rward $7 Dodge Reward'''
         self._dodge_reward()
 
-        #   self._action_consistency_reward(current_actions)
+        if self.path is not None and len(self.path) > 1:
+            self.bfs_reward_global()
 
+        if self.next_cell is not None and self.old_dist is not None:
+            self.bfs_reward_local()
+        
+
+        #   self._action_consistency_reward(current_actions)
+    def euclidean_distance(self, cell_a, cell_b):
+        (r1, c1) = cell_a
+        (r2, c2) = cell_b
+        return math.sqrt((r1 - r2) ** 2 + (c1 - c2) ** 2)
+    
+    def bfs_reward_global(self):
+        self.next_cell = self.path[1]
+        current_bfs_dist = len(self.path)
+        r, c = self.next_cell
+        center_x = c * GRID_SIZE + (GRID_SIZE / 2)
+        center_y = r * GRID_SIZE + (GRID_SIZE / 2)
+        
+        # Get old distance
+        self.old_dist = self.euclidean_distance((self.x, self.y), (center_x, center_y))
+        
+        # 3) Every 10 BFS steps, apply penalty based on path length
+        if self.run_bfs % 10 == 0:
+            if self.last_bfs_dist is not None:
+                # If we have a stored previous distance, compare
+                if self.last_bfs_dist is not None:
+                    if current_bfs_dist < self.last_bfs_dist:
+                        # BFS distance decreased => reward
+                        distance_diff = self.last_bfs_dist - current_bfs_dist
+                        
+                        self.reward += BFS_PATH_LEN_REWARD * distance_diff
+                        
+                    elif current_bfs_dist >= self.last_bfs_dist:
+                        # BFS distance increased => penalize
+                        distance_diff = current_bfs_dist - self.last_bfs_dist + 1
+                        self.reward -= BFS_PATH_LEN_PENALTY * distance_diff
+            self.last_bfs_dist = current_bfs_dist
+
+        # Increment the BFS step counter
+        self.run_bfs += 1
+    def bfs_reward_local(self):
+        r, c = self.next_cell
+        center_x = c * GRID_SIZE + (GRID_SIZE / 2)
+        center_y = r * GRID_SIZE + (GRID_SIZE / 2)
+        new_dist = self.euclidean_distance((self.x, self.y), (center_x, center_y))
+
+        if new_dist < self.old_dist:
+            self.reward += BFS_FORWARD_REWARD * (self.old_dist - new_dist)
+        elif new_dist > self.old_dist:
+            self.reward -= BFS_BACKWARD_PENALTY * (new_dist - self.old_dist)
     def _rotate_penalty(self):
         """Reward #7: Penalize excessive rotation without movement"""
         # Calculate distance moved since last rotation check
