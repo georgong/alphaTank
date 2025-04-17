@@ -3,7 +3,7 @@ from tqdm import tqdm
 from torch.distributions.categorical import Categorical
 from configs.config_teams import team_configs, team_vs_bot_configs, team_vs_bot_hard_configs
 from env.gym_env_multi import MultiAgentTeamEnv
-from models.ppo_utils import PPOAgentPPO, RunningMeanStd
+from models.ppo_utils import PPOAgentPPO
 from models.video_utils import VideoRecorder
 import os
 import time
@@ -23,7 +23,7 @@ class Trainer:
             project="multiagent-team-ppo",
             name = args.experiment_name,
             config={
-                "learning_rate": 3e-4,
+                "learning_rate": 1e-4,
                 "gamma": 0.99,
                 "gae_lambda": 0.95,
                 "clip_coef": 0.2,
@@ -32,7 +32,7 @@ class Trainer:
                 "max_grad_norm": 0.3,
                 "num_steps": 512, # epoch_iter = total_timesteps // num_steps
                 "num_epochs": 60,
-                "total_timesteps": 500000,
+                "total_timesteps": 300000,
                 "auto_reset_interval": 10000,
                 "neg_reward_threshold": 0,
                 "EPOCH_CHECK": 50,
@@ -86,9 +86,9 @@ class Trainer:
             for step in range(num_steps):
                 global_step += 1
                 
-                obs_norm = RunningMeanStd(shape=(num_tanks, obs_dim), device=device)
-                obs_norm.update(next_obs)
-                next_obs = obs_norm.normalize(next_obs)
+                #obs_norm = RunningMeanStd(shape=(num_tanks, obs_dim), device=device)
+                #obs_norm.update(next_obs)
+                #next_obs = obs_norm.normalize(next_obs)
                 
                 obs[step] = next_obs
                 dones[step] = next_done
@@ -108,6 +108,7 @@ class Trainer:
 
                 actions_np = actions_tensor.cpu().numpy().astype(int).reshape(num_tanks, 3).tolist()
                 next_obs_np, reward_np, done_np, _, _ = env.step(actions_np)
+                pass
                 # filter the reward with tanks
                 env.get_observation_order()
                 
@@ -214,8 +215,8 @@ class Trainer:
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="Run MultiAgentEnv in different")
-    parser.add_argument("--experiment_name", type=str, default="2a_vs_2b")
-    parser.add_argument("--config_var", type=str, default="team_vs_bot_configs",
+    parser.add_argument("--experiment_name", type=str, default="1a_vs_1a")
+    parser.add_argument("--config_var", type=str, default="agent_vs_bot_configs",
                         help="The variable name of the config dictionary defined in configs/config_teams.py (e.g., team_vs_bot_configs)")
     args = parser.parse_args()
     config_module = importlib.import_module("configs.config_teams")

@@ -1,9 +1,9 @@
 import pygame
 import random
 import math
-from configs.config_basic import *
+import numpy as np
 from PIL import Image, ImageSequence, ImageEnhance
-
+EPSILON = 0.01
 def reflect_vector(incident, normal):
     """计算反弹方向：反射向量 = incident - 2 * (incident ⋅ normal) * normal"""
     incident_vec = pygame.Vector2(incident)
@@ -147,3 +147,18 @@ class Explosion:
             rect = current_frame.get_rect(center=(self.x, self.y))
             self.env.screen.blit(current_frame, rect)
 
+def normalize_vector(rel_x, rel_y, eps=1e-8):
+    norm = np.sqrt(rel_x**2 + rel_y**2)
+    if norm < eps:
+        return 0.0, 0.0  # 或者返回 None / 保持原始方向
+    return rel_x / norm, rel_y / norm
+
+
+def to_polar(x1, y1, x2, y2):
+    dx = x2 - x1
+    dy = y2 - y1
+
+    distance = math.hypot(dx, dy)  # 等同于 sqrt(dx**2 + dy**2)
+    angle = math.atan2(dy, dx)     # 弧度，范围 [-π, π]
+
+    return distance, angle

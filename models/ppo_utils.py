@@ -3,6 +3,11 @@ import torch.nn as nn
 
 from torch.distributions.categorical import Categorical
 
+def init_weights(m):
+    if isinstance(m, nn.Linear):
+        nn.init.orthogonal_(m.weight, gain=nn.init.calculate_gain('tanh'))
+        nn.init.constant_(m.bias, 0)
+
 class RunningMeanStd:
     """Tracks mean and variance for online normalization."""
     def __init__(self, shape, epsilon=1e-4, device="cpu"):
@@ -32,17 +37,19 @@ class PPOAgentPPO(nn.Module):
     def __init__(self, obs_dim, act_dim):
         super().__init__()
         self.critic = nn.Sequential(
-            nn.Linear(obs_dim, 128), nn.Tanh(),
-            nn.Linear(128, 128), nn.Tanh(),
-            nn.Linear(128, 1)
+            nn.Linear(obs_dim, 256), nn.Tanh(),
+            nn.Linear(256, 256), nn.Tanh(),
+            nn.Linear(256, 1)
         )
         self.actor = nn.ModuleList([
             nn.Sequential(
-                nn.Linear(obs_dim, 128), nn.Tanh(),
-                nn.Linear(128, 128), nn.Tanh(),
-                nn.Linear(128, act)
+                nn.Linear(obs_dim, 256), nn.Tanh(),
+                nn.Linear(256, 256), nn.Tanh(),
+                nn.Linear(256, act)
             ) for act in act_dim
         ])
+        self.actor.apply(init_weights)
+        self.critic.apply(init_weights)
 
     def get_value(self, x: torch.Tensor):
         return self.critic(x)

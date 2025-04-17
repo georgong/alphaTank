@@ -1,73 +1,66 @@
-import gym
-import logging
 import pygame
 import numpy as np
-from configs.config_basic import *
-from env.sprite import Tank, Bullet, Wall
-from env.maze import generate_maze
+from env.sprite import Tank, Wall
 from env.util import *
 from env.bfs import *
-import math
 import time
+from env.controller import BotTankController, HumanTankController, AgentTankController
 from env.bots.bot_factory import BotFactory
+from env.render_component import TankSidebar
+from env.reward_system import RewardSystem
+from env.log_system import LogSystem
+from env.maze import MazeGenerator
+from math import atan2, degrees
+import torch
+from torch.utils.data import DataLoader, TensorDataset
 
-#TODO: making it an inherent abstarct class for root class
-
-class GamingENV:
-    def __init__(self, mode="human_play", type="train", bot_type="smart", weakness=1.0):
+class GamingTeamENV:
+    def __init__(self, game_configs,team_config):
         self.screen = None
         self.running = True
         self.clock = None
-        self.GRID_SIZE = GRID_SIZE
+        self.GRID_SIZE = game_configs.GRID_SIZE
         self.path = None
         self.maze = None
-        self.mode = mode  # Set mode before reset
         self.type = type
-        self.bot_type = bot_type
-        self.weakness = weakness  # Bot action probability
         self.last_bfs_dist = [None] * 2
         self.run_bfs = 0
-        self.visualize_traj = VISUALIZE_TRAJ
-        self.render_bfs = RENDER_BFS
+        self.visualize_traj = game_configs.VISUALIZE_TRAJ
+        self.render_bfs =  game_configs.RENDER_BFS
         self.reset_cooldown = 0
         self.bot = None
-        
-        self.buff_zones = [] 
-        self.debuff_zones = []
-        
-        self.score = [0, 0]  # Track scores for tank1 and tank2
+        self.game_configs = game_configs
+        self.team_config_dict = team_config
+        self.steps = 0 
         self.font = None  # Will be initialized in render
-        
-        self.episode_steps = 0  # Add step counter for time-based rewards
-        
-        self.reset()  # Call reset after all attributes are initialized
-
         # for enemy defeat visualization
         self.explosions = []
+        # for other components
+        self._maze_generator = MazeGenerator(self.game_configs.MAZEWIDTH, self.game_configs.MAZEHEIGHT, self.game_configs.GRID_SIZE, self.game_configs.USE_OCTAGON)
+        self._log_system = LogSystem()
+        self.sidebar = None
+        self._reward_system = RewardSystem(self._log_system)
+        # 
+        self.reset()  # Call reset after all attributes are initialized
 
     def reset(self):
-        self.walls, self.empty_space = self.constructWall()
-        self.tanks = self.setup_tank(two_tank_configs)
+        self.walls, self.empty_space = self.__constructWall()
+        self.tanks,self.bot_controller,self.human_controller,self.agent_controller = self.__setup_tank(self.team_config_dict)
         self.bullets = []
         self.bullets_trajs = []
         self.path = None  # Reset BFS path
         
         # Reset bot with new tank if in bot mode
-        if self.mode == "bot" or self.mode == "bot_agent":
-            self.bot = BotFactory.create_bot(self.bot_type, self.tanks[0])
-        
-        self.buff_zones = random.sample(self.empty_space, 2) if BUFF_ON else []
-        self.debuff_zones = random.sample(self.empty_space, 2) if DEBUFF_ON else []
+        # if self.env_mode == "bot" or self.mode == "bot_agent":
 
         if self.font is None:
             pygame.font.init()
             self.font = pygame.font.Font(None, 36)  # None uses default system font
-
-        self.episode_steps = 0  # Reset step counter
     
     def step(self, actions=None):
-        self.episode_steps += 1  # Increment step counter
-        # -- Move all bullets first (unchanged) --
+        # the observation space before actions takes effect.
+        self._log_system.add_observation(self._fill_observation_dict())
+            #     # -- Move all bullets first (unchanged) --
         for bullet in self.bullets[:]:
             bullet.move()
 
@@ -76,7 +69,6 @@ class GamingENV:
                 self.running = False
 
         keys = pygame.key.get_pressed()
-        
         # Handle reset with cooldown
         if self.reset_cooldown > 0:
             self.reset_cooldown -= 1
@@ -84,323 +76,42 @@ class GamingENV:
             self.reset()
             self.reset_cooldown = 30  # About 0.5 seconds at 60 FPS
 
-        if self.mode == "bot":
-            # Get actions from bot for tank 0
-            bot_actions = self.bot.get_action()
-            
-            # Determine if bot should act based on weakness
-            bot_acts = np.random.random() < self.weakness
-            if not bot_acts:
-                bot_actions = [1, 1, 0]  # No-op action: no rotation, no movement, no shooting
-            
-            # Handle bot tank movements (tank 0)
-            tank = self.tanks[0]
-            
-            # Handle rotation (action[0])
-            if bot_actions[0] == 2:  # Right
-                tank.rotate(-ROTATION_DEGREE)
-            elif bot_actions[0] == 0:  # Left
-                tank.rotate(ROTATION_DEGREE)
-            
-            # Handle movement (action[1])
-            if bot_actions[1] == 2:  # Forward
-                tank.speed = TANK_SPEED
-            elif bot_actions[1] == 0:  # Backward
-                tank.speed = -TANK_SPEED
-            else:
-                tank.speed = 0
-            
-            if bot_actions[2] == 1:  # Shoot
-                tank.shoot()
+        if not actions is None:
+            self.agent_controller.step(actions)
+        self.human_controller.step(keys)
+        self.bot_controller.step()
+        # the actions records after controller step(paired with observations space)
+        self._log_system.add_action(self._get_action_dict())
 
-            # Move the tank after setting speed
-            tank.move(bot_actions)
-
-            # Handle human controls for tank 1
-            human_tank = self.tanks[1]
-            
-            if human_tank.keys:
-                if keys[human_tank.keys["left"]]: human_tank.rotate(ROTATION_DEGREE)
-                if keys[human_tank.keys["right"]]: human_tank.rotate(-ROTATION_DEGREE)
-                if keys[human_tank.keys["up"]]: human_tank.speed = TANK_SPEED
-                elif keys[human_tank.keys["down"]]: human_tank.speed = -TANK_SPEED
-                else: human_tank.speed = 0
-                if keys[human_tank.keys["shoot"]]: human_tank.shoot()
-            
-            current_actions = [
-                2 if keys[tank.keys["up"]] else (0 if keys[tank.keys["down"]] else 1),  # Movement
-                2 if keys[tank.keys["right"]] else (0 if keys[tank.keys["left"]] else 1),  # Rotation
-                1 if keys[tank.keys["shoot"]] else 0  # Shooting
-            ]
-
-            # Move the human tank
-            human_tank.move(current_actions)
-        
-        elif self.mode == "bot_agent":
-            # Get actions from bot for tank 0
-            bot_actions = self.bot.get_action()
-            
-            # Determine if bot should act based on weakness
-            bot_acts = np.random.random() < self.weakness
-            if not bot_acts:
-                bot_actions = [1, 1, 0]  # No-op action: no rotation, no movement, no shooting
-            
-            # Handle bot tank movements (tank 0)
-            tank = self.tanks[0]
-            
-            # Handle rotation (action[0])
-            if bot_actions[0] == 2:  # Right
-                tank.rotate(-ROTATION_DEGREE)
-            elif bot_actions[0] == 0:  # Left
-                tank.rotate(ROTATION_DEGREE)
-            
-            # Handle movement (action[1])
-            if bot_actions[1] == 2:  # Forward
-                tank.speed = TANK_SPEED
-            elif bot_actions[1] == 0:  # Backward
-                tank.speed = -TANK_SPEED
-            else:
-                tank.speed = 0
-            
-            if bot_actions[2] == 1:  # Shoot
-                tank.shoot()
-
-            # Move the tank after setting speed
-            tank.move(bot_actions)
-
-            # Handle agent controls tank 1, convineient for more actions
-            if actions is not None:
-                # print(actions)
-                tank = self.tanks[1]
-                
-                correct_index = 1 if self.type == "train" else 0
-                rot_cmd, mov_cmd, shoot_cmd = actions[correct_index] # actions[0] should always be [0,0,0], inference only have one list
-
-                # Rotate
-                if rot_cmd == 0:
-                    tank.rotate(ROTATION_DEGREE)   # left
-                elif rot_cmd == 2:
-                    tank.rotate(-ROTATION_DEGREE)  # right
-                # else, do nothing for rotation
-
-                # Move
-                if mov_cmd == 0:
-                    tank.speed = TANK_SPEED   # forward
-                elif mov_cmd == 2:
-                    tank.speed = -TANK_SPEED  # backward
-                else:
-                    tank.speed = 1   # "stop"
-
-                # Shoot
-                if shoot_cmd == 1:
-                    tank.shoot()
-            
-            # 5) Now the tank actually moves
-            tank.move(current_actions=actions[correct_index])
-
-        elif self.mode == "human_play":
-            keys = pygame.key.get_pressed()
-
-            if keys[pygame.K_r]:
-                self.reset()
-            keys = pygame.key.get_pressed()
-
-            for tank in self.tanks:
-                i = self.tanks.index(tank)
-                
-                # 1) Get BFS path
-                my_pos = tank.get_grid_position()
-                opponent_pos = self.tanks[1 - i].get_grid_position()
-                self.path = bfs_path(self.maze, my_pos, opponent_pos)
-
-                old_dist = None
-                next_cell = None
-
-                # 2) If we have a BFS path
-                if self.path is not None and len(self.path) > 1:
-                    next_cell = self.path[1]
-                    current_bfs_dist = len(self.path)
-                    r, c = next_cell
-                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
-                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    
-                    # Get old distance
-                    old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                    
-                    # 3) Every 20 BFS steps, apply penalty based on path length
-                    if self.run_bfs % 20 == 0:
-                        if self.last_bfs_dist[i] is not None:
-                            # If we have a stored previous distance, compare
-                            if self.last_bfs_dist[i] is not None:
-                                if current_bfs_dist < self.last_bfs_dist[i]:
-                                    # BFS distance decreased => reward
-                                    distance_diff = self.last_bfs_dist[i] - current_bfs_dist
-                                    
-                                    self.tanks[i].reward += BFS_PATH_LEN_REWARD * distance_diff
-                                    
-                                elif current_bfs_dist >= self.last_bfs_dist[i]:
-                                    # BFS distance increased => penalize
-                                    distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
-                                    self.tanks[i].reward -= BFS_PATH_LEN_PENALTY * distance_diff
-                        self.last_bfs_dist[i] = current_bfs_dist
-
-                    # Increment the BFS step counter
-                    self.run_bfs += 1
-                    
-                if tank.keys:
-                    if keys[tank.keys["left"]]: tank.rotate(ROTATION_DEGREE)  
-                    elif keys[tank.keys["right"]]: tank.rotate(-ROTATION_DEGREE) 
-                    if keys[tank.keys["up"]]: tank.speed = TANK_SPEED 
-                    elif keys[tank.keys["down"]]: tank.speed = -TANK_SPEED
-                    else: tank.speed = 0  
-                    if keys[tank.keys["shoot"]]: tank.shoot()  
-                    
-                    current_actions = [
-                    2 if keys[tank.keys["up"]] else (0 if keys[tank.keys["down"]] else 1),  # Movement
-                    2 if keys[tank.keys["right"]] else (0 if keys[tank.keys["left"]] else 1),  # Rotation
-                    1 if keys[tank.keys["shoot"]] else 0  # Shooting
-                    ]
-
-                # -- Human or AI controls (rotate, move, shoot) as you already have. --
-                # e.g., for AI:
-                if actions is not None:
-                    
-                    chosen_action = actions[i]  # (rotate, move, shoot)
-                    rot_cmd, mov_cmd, shoot_cmd = chosen_action
-                    
-                    # Rotate
-                    if rot_cmd == 0:
-                        tank.rotate(ROTATION_DEGREE)   # left
-                    elif rot_cmd == 2:
-                        tank.rotate(-ROTATION_DEGREE)  # right
-                    # else, do nothing for rotation
-
-                    # Move
-                    if mov_cmd == 0:
-                        tank.speed = TANK_SPEED   # forward
-                    elif mov_cmd == 2:
-                        tank.speed = -TANK_SPEED  # backward
-                    else:
-                        tank.speed = 1   # "stop"
-
-                    # Shoot
-                    if shoot_cmd == 1:
-                        tank.shoot()
-
-                    current_actions = actions[i]
-                # 5) Now the tank actually moves
-                tank.move(current_actions=current_actions)
-
-                # 5) After move, measure new distance if next_cell is not None
-                if next_cell is not None and old_dist is not None:
-                    r, c = next_cell
-                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
-                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-
-                    if new_dist < old_dist:
-                        self.tanks[i].reward += BFS_FORWARD_REWARD * (old_dist - new_dist)
-                    elif new_dist > old_dist:
-                        self.tanks[i].reward -= BFS_BACKWARD_PENALTY * (new_dist - old_dist)
-
-            self.run_bfs += 1
-
-        # ========== AI ONLY MODE ==========
-        else:
-            for tank in self.tanks:
-                i = self.tanks.index(tank)
-                # overall_bfs_dist = 0
-                
-                # 2) BFS path
-                my_pos = tank.get_grid_position() 
-                opponent_pos = self.tanks[1 - i].get_grid_position()
-                self.path = bfs_path(self.maze, my_pos,opponent_pos)
-
-                self.run_bfs += 1
-                old_dist = None
-                next_cell = None
-                if self.path is not None and len(self.path) > 1:
-                    next_cell = self.path[1]
-                    current_bfs_dist = len(self.path)
-                    r, c = next_cell
-                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
-                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    old_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-                    if self.run_bfs % 20 == 0:
-                        # If we have a stored previous distance, compare
-                        if self.last_bfs_dist[i] is not None:
-                            if current_bfs_dist < self.last_bfs_dist[i]:
-                                # BFS distance decreased => reward
-                                distance_diff = self.last_bfs_dist[i] - current_bfs_dist
-                                
-                                self.tanks[i].reward += BFS_PATH_LEN_REWARD * distance_diff
-                                
-                            elif current_bfs_dist >= self.last_bfs_dist[i]:
-                                # BFS distance increased => penalize
-                                distance_diff = current_bfs_dist - self.last_bfs_dist[i] + 1
-                                self.tanks[i].reward -= BFS_PATH_LEN_PENALTY * distance_diff
-
-
-                        self.last_bfs_dist[i] = current_bfs_dist
-
-                    # Increment the BFS step counter
-                    self.run_bfs += 1
-                
-                i = self.tanks.index(tank)  # **获取坦克索引**
-                if actions[i][0] == 0: tank.rotate(ROTATION_DEGREE)  # **左转**
-                elif actions[i][0] == 2: tank.rotate(-ROTATION_DEGREE)  # **右转**
-                else: pass
-                if actions[i][1] == 2: tank.speed = TANK_SPEED  # **前进**
-                elif actions[i][1] == 0: tank.speed = -TANK_SPEED  # **后退**
-                else: tank.speed = 0  # **停止** 
-                if actions[i][2] == 1: tank.shoot()  # **射击**
-                else: pass
-                current_actions = actions[i]
-                tank.move(current_actions=current_actions)
-
-                # ### NEW LOGIC ###
-                # 5) After move, measure new distance if next_cell is not None
-                if next_cell is not None and old_dist is not None:
-                    r, c = next_cell
-                    center_x = c * GRID_SIZE + (GRID_SIZE / 2)
-                    center_y = r * GRID_SIZE + (GRID_SIZE / 2)
-                    new_dist = self.euclidean_distance((tank.x, tank.y), (center_x, center_y))
-
-                    if new_dist < old_dist:
-                        self.tanks[i].reward += BFS_FORWARD_REWARD * (old_dist - new_dist)
-                    elif new_dist > old_dist:
-                        self.tanks[i].reward -= BFS_BACKWARD_PENALTY * (new_dist - old_dist)
-
-            self.run_bfs += 1
         self.bullets_trajs = [traj for traj in self.bullets_trajs if not traj.update()]
-
-        # -- Move bullets again or do collision checks if desired --
         for bullet in self.bullets[:]:
             bullet.move()
-            
-        # Update scores when tanks are destroyed
-        for tank in self.tanks:
-            if not tank.alive and tank.last_alive:  # Tank was just destroyed
-                opponent_idx = 0 if self.tanks.index(tank) == 1 else 1
-                self.score[opponent_idx] += 1
-            tank.last_alive = tank.alive  # Track previous alive state
+        self._log_system.step()
+        self.steps += 1
+
         
     def render(self):
+        SIDEBAR_WIDTH = 300
         if self.screen is None:
-            self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+            #self.screen = pygame.display.set_mode((WIDTH, HEIGHT))
+            self.screen = pygame.display.set_mode((self.game_configs.WIDTH + SIDEBAR_WIDTH, self.game_configs.HEIGHT))
         if self.clock is None:
             self.clock = pygame.time.Clock()
+        pygame.font.init()
+        font = pygame.font.SysFont("Arial", 20)
+        if self.sidebar is None:
+            self.sidebar = TankSidebar(self)
         self.screen.fill((255, 255, 255))
         
-        for pos in self.buff_zones:
-            buff_surface = pygame.Surface((GRID_SIZE * 3.5, GRID_SIZE * 3.5), pygame.SRCALPHA)
-            buff_surface.fill((0, 255, 255, 128))  # Semi-transparent Cyan Buff Zone
-            self.screen.blit(buff_surface, (pos[0] - GRID_SIZE * 0.25, pos[1] - GRID_SIZE * 0.25))
+        # for pos in self.buff_zones:
+        #     buff_surface = pygame.Surface(( self.game_configs.GRID_SIZE * 3.5,  self.game_configs.GRID_SIZE * 3.5), pygame.SRCALPHA)
+        #     buff_surface.fill((0, 255, 255, 128))  # Semi-transparent Cyan Buff Zone
+        #     self.screen.blit(buff_surface, (pos[0] -  self.game_configs.GRID_SIZE * 0.25, pos[1] -  self.game_configs.GRID_SIZE * 0.25))
         
-        for pos in self.debuff_zones:
-            debuff_surface = pygame.Surface((GRID_SIZE * 3.5, GRID_SIZE * 3.5), pygame.SRCALPHA)
-            debuff_surface.fill((255, 0, 255, 128))  # Semi-transparent Magenta Debuff Zone
-            self.screen.blit(debuff_surface, (pos[0] - GRID_SIZE * 0.25, pos[1] - GRID_SIZE * 0.25))
+        # for pos in self.debuff_zones:
+        #     debuff_surface = pygame.Surface(( self.game_configs.GRID_SIZE * 3.5,  self.game_configs.GRID_SIZE * 3.5), pygame.SRCALPHA)
+        #     debuff_surface.fill((255, 0, 255, 128))  # Semi-transparent Magenta Debuff Zone
+        #     self.screen.blit(debuff_surface, (pos[0] -  self.game_configs.GRID_SIZE * 0.25, pos[1] -  self.game_configs.GRID_SIZE * 0.25))
         
         for wall in self.walls:
             wall.draw()
@@ -410,6 +121,8 @@ class GamingENV:
             bullet.draw()
         
         # draw bullet trajectory
+        for event in pygame.event.get():
+            self.sidebar.handle_event(event,screen_height=self.game_configs.HEIGHT)
         keys = pygame.key.get_pressed()
         if keys[pygame.K_t]:
             self.visualize_traj = not self.visualize_traj
@@ -425,135 +138,80 @@ class GamingENV:
         if self.visualize_traj:
             for bullet_traj in self.bullets_trajs:
                 bullet_traj.draw()
-            
-        if self.render_bfs:
-            if self.path is not None:
-                self._draw_bfs_path()
+        
 
         # Update and draw explosions
-        if VISUALIZE_EXPLOSION:
+        if  self.game_configs.VISUALIZE_EXPLOSION:
             self.explosions = [exp for exp in self.explosions if not exp.update()]
             for explosion in self.explosions:
                 explosion.draw()
 
-        pygame.font.init()
-        font = pygame.font.SysFont("Arial", 20)
-
         # Draw tank info
-        y_offset = 10
-        for i, tank in enumerate(self.tanks):
-            # Draw reward
-            reward_text = f"Tank {i+1} (Team {tank.team}) Reward: {tank.reward:.4f}"
-            text_surface = font.render(reward_text, True, (0, 0, 0))
-            self.screen.blit(text_surface, (10, y_offset))
-            y_offset += 25
-
-            # Draw bot debug info if this is the bot's tank
-            if self.mode == "bot" and i == 0 and hasattr(self, 'bot'):
-                bot = self.bot
-                debug_lines = [
-                    f"State: {bot.state}",
-                    f"Stuck Timer: {bot.stuck_timer}",
-                ]
-                if bot.target:
-                    dist = math.sqrt((bot.target.x - tank.x)**2 + (bot.target.y - tank.y)**2)
-                    debug_lines.append(f"Target Distance: {dist:.1f}")
-                
-                for line in debug_lines:
-                    text_surface = font.render(line, True, (0, 0, 0))
-                    self.screen.blit(text_surface, (10, y_offset))
-                    y_offset += 25
-
-        # Draw scoreboard at the bottom
-        if self.font:
-            score_text = f"Green-Bot {self.score[0]} : {self.score[1]} Red-Agent"
-            text_surface = self.font.render(score_text, True, (0, 0, 0))  # Black text
-            text_rect = text_surface.get_rect()
-            text_rect.centerx = self.screen.get_rect().centerx
-            text_rect.bottom = self.screen.get_rect().bottom - 10
-            self.screen.blit(text_surface, text_rect)
-        
+        self.sidebar.draw(self.screen)
         pygame.display.flip()
         self.clock.tick(60)
-    
-    def _draw_bfs_path(self):
-        # Draw path background for better visibility
-        for i in range(len(self.path) - 1):
-            current = self.path[i]
-            next_pos = self.path[i + 1]
-            
-            # Calculate center points of grid cells
-            start_x = current[1] * GRID_SIZE + (GRID_SIZE / 2)
-            start_y = current[0] * GRID_SIZE + (GRID_SIZE / 2)
-            end_x = next_pos[1] * GRID_SIZE + (GRID_SIZE / 2)
-            end_y = next_pos[0] * GRID_SIZE + (GRID_SIZE / 2)
-            
-            # Draw path line
-            pygame.draw.line(
-                self.screen,
-                (50, 200, 50),  # Light green color
-                (start_x, start_y),
-                (end_x, end_y),
-                4  # Line width
-            )
-            
-            # Draw connecting circles at each point
-            pygame.draw.circle(
-                self.screen,
-                (0, 150, 0),  # Darker green for points
-                (int(start_x), int(start_y)),
-                6
-            )
 
 
-    def setup_tank(self,tank_configs):
+    def __setup_tank(self,tank_configs):
         tanks = []
-        for team_name,tank_config in tank_configs.items():
+        self.tank_name_dict = {}
+        bot_controller = BotTankController() 
+        human_controller = HumanTankController()
+        human_controller.setup(tank_configs) 
+        agent_controller = AgentTankController()
+        for tank_name,tank_config in tank_configs.items():
             x,y = self.empty_space[np.random.choice(range(len(self.empty_space)))]
-            tanks.append(Tank(tank_config["team"],
-                            x+self.GRID_SIZE/2,
-                            y+self.GRID_SIZE/2,
-                            tank_config["color"],
-                            tank_config["keys"],
-                            env=self,
-                            mode=None))
-        return tanks
-    
-    def update_reward_by_bullets(self,shooter,victim):
-        if shooter.team == victim.team: #shoot the teammate
-            shooter.reward += TEAM_HIT_PENALTY
-            victim.reward += HIT_PENALTY
-        else:
-            shooter.reward += OPPONENT_HIT_REWARD
-            victim.reward += HIT_PENALTY
-        if len({tank.alive for tank in self.tanks}) == 1: #only one team exist
-            for tank in self.tanks:
-                if tank.alive:
-                    # Add time-based victory reward
-                    # The faster the victory, the higher the reward
-                    # We'll use a max episode length of 1000 steps as reference
-                    max_steps = 1000
-                    time_bonus = 5 * max(0, (max_steps - self.episode_steps) / max_steps)
-                    victory_time_reward = VICTORY_REWARD * (time_bonus)  # Up to 2x reward for instant victory
-                    tank.reward += victory_time_reward
-        
-        # visualize explosions
-        self.explosions.append(Explosion(victim.x, victim.y, self))
+            if tank_config["mode"] == "human":
+                human_tank = Tank(team = tank_config["team"],
+                                x = x+self.GRID_SIZE/2,
+                                y =y+self.GRID_SIZE/2,
+                                color = getattr(self.game_configs,tank_config["color"]),
+                                keys = {k:getattr(pygame, v) for k,v in tank_config["keys"].items()},
+                                mode = tank_config["mode"],
+                                env=self)
+                tanks.append(human_tank)
+                self.tank_name_dict[tank_name] = human_tank
+                human_controller.set_item(tank_name,human_tank)
+            elif tank_config["mode"] == "bot":
+                bot_tank = Tank(team = tank_config["team"],
+                                x = x+self.GRID_SIZE/2,
+                                y =y+self.GRID_SIZE/2,
+                                color = getattr(self.game_configs,tank_config["color"]),
+                                keys = None,
+                                mode = tank_config["mode"],
+                                env=self)
+                tanks.append(bot_tank)
+                self.tank_name_dict[tank_name] = bot_tank
+                bot_controller.set_item(tank_name,bot_tank)
+                bot_controller.set_bot_item(tank_name,BotFactory.create_bot(tank_config["bot_type"], bot_tank))
+            elif tank_config["mode"] == "agent":
+                agent_tank = Tank(team = tank_config["team"],
+                                x = x+self.GRID_SIZE/2,
+                                y =y+self.GRID_SIZE/2,
+                                color = getattr(self.game_configs,tank_config["color"]),
+                                keys = None,
+                                mode = tank_config["mode"],
+                                env=self)
+                tanks.append(agent_tank)
+                self.tank_name_dict[tank_name] = agent_tank
+                agent_controller.set_item(tank_name,agent_tank)
+                agent_controller.append_name_item(tank_name)
+                
 
-    def constructWall(self):
-        # define constant variables
-        mazewidth = MAZEWIDTH
-        mazeheight = MAZEHEIGHT
+                
+        return tanks,bot_controller,human_controller,agent_controller
+    
+
+    def __constructWall(self):
+        #based on the config, generate maze
+        mazewidth = self.game_configs.MAZEWIDTH
+        mazeheight = self.game_configs.MAZEHEIGHT
 
         walls = []
         empty_space = []
-        if USE_OCTAGON:
-            self.maze = np.ones((mazeheight, mazewidth), dtype=int)
-            self.maze[1:-1, 1:-1] = 0
-        else:
-            self.maze = generate_maze(mazewidth, mazeheight)
+        self.maze = self._maze_generator.construct_wall()
 
-        self.grid_map = [[0]*MAZEWIDTH for _ in range(MAZEHEIGHT)]
+        self.grid_map = [[0]*self.game_configs.MAZEWIDTH for _ in range(self.game_configs.MAZEHEIGHT)]
         for row in range(mazeheight):
             for col in range(mazewidth):
                 if self.maze[row, col] == 1:
@@ -561,63 +219,317 @@ class GamingENV:
                 else:
                     empty_space.append((col * self.GRID_SIZE,row * self.GRID_SIZE))
         return walls,empty_space
-    
-    
-    def constructWall(self):
-        """
-        Creates a battlefield-style map with cover instead of a random maze.
-        """
-        mazewidth = MAZEWIDTH
-        mazeheight = MAZEHEIGHT
 
-        walls = []
-        empty_space = []
 
-        if USE_OCTAGON:
-            self.maze = np.ones((mazeheight, mazewidth), dtype=int)
-            self.maze[1:-1, 1:-1] = 0  # Keep open space in the middle
+
+    def _update_reward_by_bullets(self,shooter,victim):
+        if shooter.team == victim.team: #shoot the teammate
+            shooter.reward += self.game_configs.TEAM_HIT_PENALTY
+            victim.reward += self.game_configs.HIT_PENALTY
         else:
-            # Create a battlefield layout instead of a maze
-            self.maze = np.zeros((mazeheight, mazewidth), dtype=int)
+            shooter.reward += self.game_configs.OPPONENT_HIT_REWARD
+            victim.reward += self.game_configs.HIT_PENALTY
 
-            # 1. Border walls (players can't escape)
-            self.maze[0, :] = 1  # Top border
-            self.maze[-1, :] = 1  # Bottom border
-            self.maze[:, 0] = 1  # Left border
-            self.maze[:, -1] = 1  # Right border
+        # visualize explosions
+        self.explosions.append(Explosion(victim.x, victim.y, self))
+            
+    """
+    Observation_Construction
+    """
+    def get_observation_order(self):
+        return self.agent_controller.get_name_list()
+    
+    def _get_observation_dict(self):
+        return {
+                'agent_tank_info': {
+                    'multiplier': '1',
+                    'items': {
+                        'position': {'description': '(x, y)', 'dimension': 2},
+                        'angle_vector': {'description': '(dx, dy)', 'dimension': 2},
+                        'speed-angle': {'description': '(speed, angle)', 'dimension':2},
+                        'hitting_wall': {'description': 'Boolean', 'dimension': 1},
+                        'cooling_down_status': {'description': 'Boolean', 'dimension': 1},
+                    }
+                },
+                'other_tank_info': {
+                    'multiplier': '(num_tanks - 1)',
+                    'items': {
+                        'relative_position': {'description': '(rel_x, rel_y)', 'dimension': 2},
+                        'angle_coordiante':{'description': '(distance ,angle)','dimension': 2},
+                        'angle_vector': {'description': '(dx, dy)', 'dimension': 2},
+                        'speed-angle': {'description': '(speed, angle)', 'dimension':2},
+                        'hitting_wall': {'description': 'Boolean', 'dimension': 1},
+                        'cooling_down_status': {'description': 'Boolean', 'dimension': 1},
+                        'team_notification': {'description': 'Team mate(1) or enemy(0)', 'dimension': 1},
+                        'alive_status': {'description': 'Alive(1) or dead(0)', 'dimension': 1},
+                    }
+                },
+                'bullet_info': {
+                    'multiplier': '(num_tanks) * max_bullets_per_tank',
+                    'items': {
+                        'mask':{'description': '1 identify exist, otherwise 0', 'dimension': 1},
+                        'relative_position': {'description': '(rel_x, rel_y)', 'dimension': 2},
+                        'angle_coordiante':{'description': '(distance ,angle)', 'dimension': 2},
+                        'velocity': {'description': '(dx, dy)', 'dimension': 2},
+                        'speed-angle': {'description': '(speed, angle)', 'dimension':2},
+                        'team_notification': {'description': 'Team mate(1) or enemy(0)', 'dimension': 1},
+                    }
+                },
+                'wall_info': {
+                    'multiplier': 'num_walls',
+                    'items': {
+                        'corner_positions': {'description': '(x1,y1)', 'dimension': 2},
+                        'angle_coordiante':{'description': '(distance ,angle)','dimension': 2},
+                    }
+                }
+                }
+    def _get_context(self):
+        return {
+            'num_agents': len(self.get_observation_order()),
+            'num_tanks': len(self.tanks),
+            'max_bullets_per_tank': self.game_configs.MAX_BULLETS,
+            'num_walls': len(self.walls),
+        }
+    
+    def _fill_observation_dict(self):
+        content_dict = {tank_name:self._get_observation_dict() for tank_name in self.tank_name_dict}
+        for tank_name,tank in self.tank_name_dict.items():
+            dx, dy = angle_to_vector(float(tank.angle), float(1))
 
-            # 2. Central covers (midfield obstacles)
-            center_x, center_y = mazewidth // 2, mazeheight // 2
-            self.maze[center_y, center_x] = 1
-            self.maze[center_y - 1, center_x] = 1
-            self.maze[center_y + 1, center_x] = 1
-            self.maze[center_y, center_x - 1] = 1
-            self.maze[center_y, center_x + 1] = 1
-
-            # 3. Side covers (Tactical areas)
-            cover_positions = [
-                (2, 3), (2, 4), (2, 5), (2, 6), (2, 7),  # Top-left cover
-                (mazewidth - 3, 3), (mazewidth - 3, 4), (mazewidth - 3, 5), (mazewidth - 3, 6), (mazewidth - 3, 7),  # Bottom-left cover
-                (4, 8), (5, 8), (6, 8),  # Right-side vertical cover
-                (4, 2), (5, 2), (6, 2),  # Left-side vertical cover
+            content_dict[tank_name]['agent_tank_info']['items']['position']["value"] = [
+                float(tank.x / self.game_configs.WIDTH),
+                float(tank.y / self.game_configs.HEIGHT)
             ]
 
-            for (r, c) in cover_positions:
-                self.maze[r, c] = 1
+            content_dict[tank_name]['agent_tank_info']['items']['angle_vector']["value"] = [
+                float(dx), float(dy)
+            ]
 
-        # Convert the grid into wall objects
-        self.grid_map = [[0] * mazewidth for _ in range(mazeheight)]
-        for row in range(mazeheight):
-            for col in range(mazewidth):
-                if self.maze[row, col] == 1:
-                    walls.append(Wall(col * self.GRID_SIZE, row * self.GRID_SIZE, self))
-                else:
-                    empty_space.append((col * self.GRID_SIZE, row * self.GRID_SIZE))
+            content_dict[tank_name]['agent_tank_info']['items']['speed-angle']["value"] = [
+                float(tank.speed / self.game_configs.TANK_SPEED),
+                float(math.radians(tank.angle))
+            ]
 
-        return walls, empty_space
+            content_dict[tank_name]['agent_tank_info']['items']['hitting_wall']["value"] = [
+                float(tank.hittingWall)
+            ]
+
+            content_dict[tank_name]['agent_tank_info']['items']['cooling_down_status']["value"] = [
+                float(tank.if_cool_down())
+            ]
+
+            other_items = content_dict[tank_name]['other_tank_info']['items']
+
+            # other items
+            for key in other_items:
+                other_items[key]['value'] = []
+
+            for other_name, other_tank in self.tank_name_dict.items():
+                if other_name == tank_name:
+                    continue
+
+                rel_x = other_tank.x - tank.x
+                rel_y = other_tank.y - tank.y
+                distance, angle = to_polar(tank.x, tank.y, other_tank.x, other_tank.y)
+                dx, dy = angle_to_vector(float(other_tank.angle), float(1))
+
+                other_items['relative_position']['value'].append([
+                    float(rel_x / self.game_configs.WIDTH),
+                    float(rel_y / self.game_configs.HEIGHT)
+                ])
+                other_items['angle_coordiante']['value'].append([
+                    float(distance / self.game_configs.WIDTH),
+                    float(angle)
+                ])
+                other_items['angle_vector']['value'].append([float(dx), float(dy)])
+                other_items['speed-angle']['value'].append([
+                    float(other_tank.speed / self.game_configs.TANK_SPEED),
+                    float(math.radians(other_tank.angle))
+                ])
+                other_items['hitting_wall']['value'].append([float(other_tank.hittingWall)])
+                other_items['cooling_down_status']['value'].append([float(other_tank.if_cool_down())])
+                other_items['team_notification']['value'].append([float(other_tank.team == tank.team)])
+                other_items['alive_status']['value'].append([float(1 if other_tank.alive else 0)])
+
+            # --- 在 fill_observation_dict() 的循环内（每个 tank_name）追加以下逻辑 ---
+            bullet_items = content_dict[tank_name]['bullet_info']['items']
+            for key in bullet_items:
+                bullet_items[key]['value'] = []
+
+            for tank_owner in self.tank_name_dict.values():
+                tank_bullets = [b for b in self.bullets if b.owner == tank_owner]
+
+                for bullet in tank_bullets:
+                    rel_x = bullet.x - tank.x
+                    rel_y = bullet.y - tank.y
+                    distance, angle = to_polar(tank.x, tank.y, bullet.x, bullet.y)
+                    dx, dy = normalize_vector(bullet.dx, bullet.dy)
+                    radians = atan2(dy, dx)
+                    degree = degrees(radians)
+
+                    bullet_items['mask']['value'].append([1.0])
+
+                    bullet_items['relative_position']['value'].append([
+                        float(rel_x / self.game_configs.WIDTH),
+                        float(rel_y / self.game_configs.HEIGHT)
+                    ])
+                    bullet_items['angle_coordiante']['value'].append([
+                        float(distance / self.game_configs.WIDTH),
+                        float(angle)
+                    ])
+                    bullet_items['velocity']['value'].append([float(dx), float(dy)])
+                    bullet_items['speed-angle']['value'].append([
+                        float(degree),
+                        float(bullet.speed)
+                    ])
+                    bullet_items['team_notification']['value'].append([
+                        float(tank_owner.team == tank.team)
+                    ])
+
+                # padding bullets
+                while len(tank_bullets) < self.game_configs.MAX_BULLETS:
+                    bullet_items['mask']['value'].append([0.0])
+                    bullet_items['relative_position']['value'].append([0.0, 0.0])
+                    bullet_items['angle_coordiante']['value'].append([0.0, 0.0])
+                    bullet_items['velocity']['value'].append([0.0, 0.0])
+                    bullet_items['speed-angle']['value'].append([0.0, 0.0])
+                    bullet_items['team_notification']['value'].append([0.0])
+                    tank_bullets.append(None)
+
+            wall_items = content_dict[tank_name]['wall_info']['items']
+            for key in wall_items:
+                wall_items[key]['value'] = []
+
+            for wall in self.walls:
+                distance, angle = to_polar(tank.x, tank.y, wall.x, wall.y)
+
+                wall_items['corner_positions']['value'].append([
+                    float(wall.x / self.game_configs.WIDTH),
+                    float(wall.y / self.game_configs.HEIGHT)
+                ])
+
+                wall_items['angle_coordiante']['value'].append([
+                    float(distance / self.game_configs.WIDTH),
+                    float(angle)
+                ])
+
+        return content_dict
     
-    def euclidean_distance(self, cell_a, cell_b):
-        (r1, c1) = cell_a
-        (r2, c2) = cell_b
-        return math.sqrt((r1 - r2) ** 2 + (c1 - c2) ** 2)
+    def _get_action_dict(self):
+        # if call before controller.steps(), it would be the last actions for previous obs
+        # if call after controller.steps(), it is the agent current actions for obs
+        return {tank_name:tank.last_actions for tank_name,tank in self.tank_name_dict.items()}
+
+    def extract_training_data(
+        self,
+        agent_names="all",
+        mode="pair",         # "obs", "action", or "pair"
+        return_type="np",    # "np" | "torch" | "dict"
+        batch_size=32,
+        shuffle=True,
+        flatten=True         # ← 控制是否合并所有 agent 数据
+    ):
+        raw = self._log_system.extract_from_logs(
+            agent_names=agent_names,
+            mode=mode,
+            flatten=False  # 保留分 agent 格式
+        )
+
+        # 统一 flatten 各 agent 的 log（[list[list[float]]] → np.array）
+        flat_data = {
+            name: np.array(trajs, dtype=np.float32)
+            for name, trajs in raw.items()
+        }
+
+        # === 模式 A：返回 dict ===
+        if not flatten:
+            return flat_data if return_type == "np" else {
+                name: DataLoader(
+                    TensorDataset(torch.tensor(data)),
+                    batch_size=batch_size,
+                    shuffle=shuffle
+                ) for name, data in flat_data.items()
+            }
+
+        # === 模式 B：合并为单个 array / DataLoader ===
+        merged = np.concatenate(list(flat_data.values()), axis=0)
+
+        if return_type == "np":
+            return merged
+        elif return_type == "torch":
+            tensor_data = torch.tensor(merged, dtype=torch.float32)
+            return DataLoader(TensorDataset(tensor_data), batch_size=batch_size, shuffle=shuffle)
+        else:
+            raise ValueError(f"Unsupported return_type: {return_type}")
+        
+        
+    def display_observation_table(self,observation_dict, context):
+        num_agents = context.get('num_agents', '?')
+        print("\n" + "=" * 80)
+        print(f"| Observation Table For Single Agent (Total Will Be Multiplied By num_agents = {num_agents}) |".center(80))
+        print("=" * 80 + "\n")
+
+        # Prepare header row
+        table_data = [["Component", "Description", "Dimension"]]
+        table_data.append(["-"*10, "-"*40, "-"*10])
+
+        for obs_type, obs_info in observation_dict.items():
+            multiplier_expr = obs_info.get('multiplier', '1')
+            try:
+                multiplier_val = eval(multiplier_expr, {}, context)
+            except Exception as e:
+                multiplier_val = 'Error'
+                print(f"Error evaluating multiplier for {obs_type}: {e}")
+
+            multiplier_display = f"x {multiplier_expr} = {multiplier_val}" if multiplier_val != 'Error' else f"x {multiplier_expr} (eval error)"
+            table_data.append([f"**{obs_type.replace('_', ' ').title()} ({multiplier_display})**", "-", "-"])
+
+            for key, value in obs_info['items'].items():
+                description = value.get('description', '-')
+                dimension = value.get('dimension', '-')
+                table_data.append([key.replace('_', ' ').title(), description, dimension])
+
+            table_data.append(["", "", ""])  # Empty row for spacing
+
+        # Print table with manual alignment
+        col_widths = [max(len(str(row[i])) for row in table_data) for i in range(3)]
+
+        def format_row(row):
+            return f"| {row[0].ljust(col_widths[0])} | {row[1].ljust(col_widths[1])} | {str(row[2]).ljust(col_widths[2])} |"
+
+        separator = f"|{'-'*(col_widths[0]+2)}|{'-'*(col_widths[1]+2)}|{'-'*(col_widths[2]+2)}|"
+
+        print(separator)
+        for row in table_data:
+            print(format_row(row))
+            if row[0].startswith("**"):
+                print(separator)
+        print(separator)
+
+    def calculate_observation_dim(self,observation_dict, context):
+        total_dim_single = 0
+        self_obj = context.get('self')
+        for obs_type, obs_info in observation_dict.items():
+            multiplier_expr = obs_info.get('multiplier', '1')
+            try:
+                multiplier = eval(multiplier_expr, {}, {'self': self_obj, **context})
+            except Exception as e:
+                print(f"Error evaluating multiplier for {obs_type}: {e}")
+                multiplier = 1
+
+            for key, value in obs_info['items'].items():
+                dim = value.get('dimension', 0)
+                if isinstance(dim, str):
+                    try:
+                        dim = eval(dim, {}, {'self': self_obj, **context})
+                    except Exception as e:
+                        print(f"Error evaluating dimension for {key} in {obs_type}: {e}")
+                        dim = 0
+                total_dim_single += dim * multiplier
+
+        return total_dim_single
     
+    def _calculate_obs_dim(self):
+        self.display_observation_table(self._get_observation_dict(),self._get_context())
+        print(f"The total dimension is:{self.calculate_observation_dim(self._get_observation_dict(),self._get_context())}")
+        return self.calculate_observation_dim(self._get_observation_dict(),self._get_context())

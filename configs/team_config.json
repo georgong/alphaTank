@@ -1,0 +1,126 @@
+{
+    "team_configs": {
+      "Tank1": {"team": "TeamA", "color": "RED", "mode": "agent"},
+      "Tank2": {"team": "TeamA", "color": "RED", "mode": "agent"},
+      "Tank3": {"team": "TeamB", "color": "GREEN", "mode": "agent"},
+      "Tank4": {"team": "TeamB", "color": "GREEN", "mode": "agent"}
+    },
+    "pair_configs": {
+      "Tank1": {"team": "TeamA", "color": "RED", "mode": "agent"},
+      "Tank2": {"team": "TeamB", "color": "GREEN", "mode": "agent"}
+    },
+    "agent_vs_bot_configs": {
+      "Tank1": {"team": "TeamA", "color": "RED", "mode": "agent"},
+      "Tank2": {"team": "TeamB", "color": "GREEN", "mode": "agent"}
+    },
+    "team_vs_bot_configs": {
+      "Tank1": {"team": "TeamA", "color": "RED", "mode": "agent"},
+      "Tank2": {"team": "TeamA", "color": "RED", "mode": "agent"},
+      "Tank3": {"team": "TeamB", "color": "GREEN", "mode": "bot", "bot_type": "smart"},
+      "Tank4": {"team": "TeamB", "color": "GREEN", "mode": "bot", "bot_type": "smart"}
+    },
+    "team_vs_bot_hard_configs": {
+      "Tank1": {"team": "TeamA", "color": "RED", "mode": "agent"},
+      "Tank2": {"team": "TeamA", "color": "RED", "mode": "agent"},
+      "Tank3": {"team": "TeamB", "color": "GREEN", "mode": "bot", "bot_type": "aggressive"},
+      "Tank4": {"team": "TeamB", "color": "GREEN", "mode": "bot", "bot_type": "smart"},
+      "Tank5": {"team": "TeamB", "color": "GREEN", "mode": "bot", "bot_type": "defensive"}
+    },
+    "team_vs_bot_harder_configs": {
+      "Tank1": {"team": "TeamA", "color": "RED", "mode": "agent"},
+      "Tank2": {"team": "TeamA", "color": "RED", "mode": "agent"},
+      "Tank3": {"team": "TeamB", "color": "GREEN", "mode": "bot", "bot_type": "aggressive"},
+      "Tank4": {"team": "TeamB", "color": "GREEN", "mode": "bot", "bot_type": "smart"},
+      "Tank5": {"team": "TeamB", "color": "GREEN", "mode": "bot", "bot_type": "defensive"},
+      "Tank6": {"team": "TeamB", "color": "GREEN", "mode": "bot", "bot_type": "smart"}
+    },
+    "team_vs_def_bot_configs": {
+      "Tank1": {"team": "TeamA", "color": "RED", "mode": "agent"},
+      "Tank2": {"team": "TeamA", "color": "RED", "mode": "agent"},
+      "Tank3": {"team": "TeamB", "color": "GREEN", "mode": "bot", "bot_type": "defensive"}
+    },
+    "bot_team_configs": {
+      "Tank1": {"team": "TeamA", "color": "GREEN", "mode": "bot", "bot_type": "smart"},
+      "Tank2": {"team": "TeamA", "color": "GREEN", "mode": "bot", "bot_type": "smart"},
+      "Tank3": {"team": "TeamB", "color": "RED", "mode": "bot", "bot_type": "aggressive"},
+      "Tank4": {"team": "TeamB", "color": "RED", "mode": "bot", "bot_type": "aggressive"},
+      "Tank5": {"team": "TeamC", "color": "GRAY", "mode": "bot", "bot_type": "defensive"},
+      "Tank6": {"team": "TeamC", "color": "GRAY", "mode": "bot", "bot_type": "defensive"}
+    },
+    "mixed_team_configs": {
+      "Tank1": {
+        "team": "TeamA",
+        "color": "GREEN",
+        "mode": "human",
+        "keys": {
+          "left": "K_a",
+          "right": "K_d",
+          "up": "K_w",
+          "down": "K_s",
+          "shoot": "K_f"
+        }
+      },
+      "Tank2": {"team": "TeamA", "color": "GREEN", "mode": "bot", "bot_type": "smart"},
+      "Tank3": {"team": "TeamA", "color": "GREEN", "mode": "agent"},
+      "Tank4": {
+        "team": "TeamB",
+        "color": "RED",
+        "mode": "human",
+        "keys": {
+          "left": "K_j",
+          "right": "K_l",
+          "up": "K_i",
+          "down": "K_k",
+          "shoot": "K_p"
+        }
+      },
+      "Tank5": {"team": "TeamB", "color": "RED", "mode": "bot", "bot_type": "smart"},
+      "Tank6": {"team": "TeamB", "color": "RED", "mode": "agent"},
+      "Tank7": {"team": "TeamC", "color": "GRAY", "mode": "bot", "bot_type": "aggressive"},
+      "Tank8": {"team": "TeamC", "color": "GRAY", "mode": "bot", "bot_type": "smart"}
+    },
+    "two_players_configs":{
+        "Tank1": {
+            "team": "TeamA",
+            "color": "GREEN",
+            "mode": "human",
+            "keys": {
+                "left": "K_a",
+                "right": "K_d",
+                "up": "K_w",
+                "down": "K_s",
+                "shoot": "K_f"
+        }},
+        "Tank2": {
+            "team": "TeamB",
+            "color": "RED",
+            "mode": "human",
+            "keys": {
+                "left": "K_j",
+                "right": "K_l",
+                "up": "K_i",
+                "down": "K_k",
+                "shoot": "K_p"
+            }}
+    },
+    "player_vs_bot": {
+        "Tank1": {
+            "team": "TeamA",
+            "color": "RED",
+            "mode": "human",
+            "keys": {
+                "left": "K_a",
+                "right": "K_d",
+                "up": "K_w",
+                "down": "K_s",
+                "shoot": "K_f"
+        }},  
+        "Tank2": {"team": "TeamB", "color": "GREEN", "mode": "bot", "bot_type": "smart"}
+    },
+    "bot_vs_bot": {
+      "Tank1": {"team": "TeamA", "color": "RED", "mode": "bot", "bot_type": "dodge"},
+      "Tank2": {"team": "TeamB", "color": "GREEN", "mode": "bot", "bot_type": "smart"}
+    }
+    
+  }
+  

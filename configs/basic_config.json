@@ -1,0 +1,83 @@
+{
+    "ENVIRONMENT": {
+      "WIDTH": 770,
+      "HEIGHT": 770,
+      "MAZEWIDTH": 11,
+      "MAZEHEIGHT": 11,
+      "GRID_SIZE": 70.0
+    },
+    "COLORS": {
+      "WHITE": [255, 255, 255],
+      "BLACK": [0, 0, 0],
+      "GREEN": [0, 255, 0],
+      "RED": [255, 0, 0],
+      "GRAY": [100, 100, 100],
+      "YELLOW": [255, 255, 0]
+    },
+    "GAME_SETTING": {
+      "EPSILON": 0.01,
+      "ROTATION_SPEED": 1,
+      "BULLET_SPEED": 3,
+      "BULLET_MAX_BOUNCES": 2,
+      "BULLET_MAX_DISTANCE": 1000,
+      "MAX_BULLETS": 6,
+      "BULLET_COOLDOWN": 500,
+      "STATIONARY_EPSILON": 3
+    },
+    "MAP_SETTING": {
+      "USE_OCTAGON": true
+    },
+    "TANK_CONTROL": {
+      "ROTATION_DEGREE": 4,
+      "TANK_SPEED": 3
+    },
+    "TANK_SETTING": {
+      "TANK_WIDTH": 30,
+      "TANK_HEIGHT": 24
+    },
+    "REWARD_CONFIG": {
+      "HIT_PENALTY": -25,
+      "TEAM_HIT_PENALTY": -25,
+      "OPPONENT_HIT_REWARD": 200,
+      "VICTORY_REWARD": 200,
+      "WALL_HIT_THRESHOLD": 0,
+      "WALL_HIT_STRONG_PENALTY": 0,
+      "WALL_HIT_PENALTY": 0,
+      "STATIONARY_PENALTY": 0,
+      "MOVE_REWARD": 0,
+      "BFS_FORWARD_REWARD": 0,
+      "BFS_BACKWARD_PENALTY": 0,
+      "BFS_PATH_LEN_REWARD": 0,
+      "BFS_PATH_LEN_PENALTY": 0,
+      "TRAJECTORY_HIT_REWARD": 40,
+      "TRAJECTORY_DIST_REWARD": 10,
+      "TRAJECTORY_DIST_PENALTY": -10,
+      "TRAJECTORY_FAR_THRESHOLD": 300,
+      "TRAJECTORY_DIST_THRESHOLD": 200,
+      "DODGE_FACTOR": 0.0,
+      "TRAJECTORY_AIM_REWARD": 0.0,
+      "AIMING_FRAMES_THRESHOLD": 17,
+      "BULLET_AWAY_PENALTY": -0.0,
+      "BULLET_CLOSE_REWARD": 0.0,
+      "DISTANCE_CANCEL_THRESHOLD": 50,
+      "ACTION_CONSISTENCY_REWARD": 0.0,
+      "ACTION_CHANGE_PENALTY": -0.0,
+      "ROTATION_PENALTY": 0,
+      "ROTATION_THRESHOLD": 20,
+      "ROTATION_RESET_DISTANCE": 50,
+      "CONTROL_CHANGE_PENALTY": 0,
+      "CONTROL_CHANGE_THRESHOLD": 0.5,
+      "BUFF_ON": false,
+      "DEBUFF_ON": false,
+      "TERMINATE_TIME": null
+    },
+    "KEYBOARD_SETTING": {
+      "VISUALIZE_TRAJ": false,
+      "RENDER_BFS": true
+    },
+    "VISUALIZATION": {
+      "VISUALIZE_EXPLOSION": true,
+      "VISUALIZE_DISTRIBUTION": false
+    }
+  }
+  

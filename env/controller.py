@@ -30,7 +30,7 @@ class HumanTankController(Controller):
         self.key_mappings = {}
         for tank_name, config in team_configs.items():
             if config["mode"] == "human":  # Only add human-controlled tanks
-                self.key_mappings[tank_name] = config["keys"]
+                self.key_mappings[tank_name] = {k:getattr(pygame, v) for k,v in config["keys"].items()}
         
 
     def step(self,keys):

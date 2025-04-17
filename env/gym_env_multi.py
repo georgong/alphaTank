@@ -4,8 +4,10 @@ import pygame
 from configs.config_basic import *
 from configs.config_teams import *
 from env.gaming_env_multi import GamingTeamENV
-from env.util import angle_to_vector, corner_to_xy
+from env.util import angle_to_vector, corner_to_xy,normalize_vector,to_polar
 from pprint import pprint
+import math
+from configs.config_basic import TANK_SPEED
 
 #TODO: making it an inherent abstarct class for root class
 
@@ -44,55 +46,44 @@ class MultiAgentTeamEnv(gym.Env):
                     'multiplier': '1',
                     'items': {
                         'position': {'description': '(x, y)', 'dimension': 2},
-                        'corner_positions': {'description': '4 corners', 'dimension': 8},
                         'angle_vector': {'description': '(dx, dy)', 'dimension': 2},
+                        'speed-angle': {'description': '(speed, angle)', 'dimension':2},
                         'hitting_wall': {'description': 'Boolean', 'dimension': 1},
-                        'team_notification': {'description': 'Team mate(1) or enemy(0)', 'dimension': 1},
-                        'alive_status': {'description': 'Alive(1) or dead(0)', 'dimension': 1},
+                        'cooling_down_status': {'description': 'Boolean', 'dimension': 1},
+                        'last_actions':{'description':'pre_action1, pre_action2, pre_action3','dimension':3},  
                     }
                 },
                 'other_tank_info': {
                     'multiplier': '(num_tanks - 1)',
                     'items': {
-                        'position': {'description': '(x, y)', 'dimension': 2},
                         'relative_position': {'description': '(rel_x, rel_y)', 'dimension': 2},
-                        'distance': {'description': 'Distance to agent', 'dimension': 1},
-                        'corner_positions': {'description': '4 corners', 'dimension': 8},
-                        'velocity': {'description': '(dx, dy)', 'dimension': 2},
+                        'angle_coordiante':{'description': '(distance ,angle)','dimension': 2},
+                        'angle_vector': {'description': '(dx, dy)', 'dimension': 2},
+                        'speed-angle': {'description': '(speed, angle)', 'dimension':2},
                         'hitting_wall': {'description': 'Boolean', 'dimension': 1},
+                        'cooling_down_status': {'description': 'Boolean', 'dimension': 1},
+                        'last_actions':{'description':'pre_action1, pre_action2, pre_action3','dimension':3},
                         'team_notification': {'description': 'Team mate(1) or enemy(0)', 'dimension': 1},
                         'alive_status': {'description': 'Alive(1) or dead(0)', 'dimension': 1},
                     }
                 },
-                'agent_bullet_info': {
-                    'multiplier': 'max_bullets_per_tank',
+                'bullet_info': {
+                    'multiplier': '(num_tanks) * max_bullets_per_tank',
                     'items': {
-                        'position': {'description': '(x, y)', 'dimension': 2},
-                        'velocity': {'description': '(dx, dy)', 'dimension': 2},
-                    }
-                },
-                'enemy_bullet_info': {
-                    'multiplier': '(num_tanks - 1) * max_bullets_per_tank',
-                    'items': {
-                        'position': {'description': '(x, y)', 'dimension': 2},
-                        'velocity': {'description': '(dx, dy)', 'dimension': 2},
                         'relative_position': {'description': '(rel_x, rel_y)', 'dimension': 2},
-                        'distance': {'description': 'Distance to agent', 'dimension': 1},
+                        'angle_coordiante':{'description': '(distance ,angle)','dimension': 2},
+                        'velocity': {'description': '(dx, dy)', 'dimension': 2},
+                        'speed-angle': {'description': '(speed, angle)', 'dimension':2},
                         'team_notification': {'description': 'Team mate(1) or enemy(0)', 'dimension': 1},
                     }
                 },
-                'wall_info': {
-                    'multiplier': 'num_walls',
-                    'items': {
-                        'corner_positions': {'description': '(x1, y1, x2, y2)', 'dimension': 4},
-                    }
-                },
-                'maze_info': {
-                    'multiplier': '1',
-                    'items': {
-                        'maze_flat': {'description': 'Maze flatten array', 'dimension': 'maze_dim'},
-                    }
-                },
+                # 'wall_info': {
+                #     'multiplier': 'num_walls',
+                #     'items': {
+                #         'corner_positions': {'description': '(x1,y1)', 'dimension': 2},
+                #         'angle_coordiante':{'description': '(distance ,angle)','dimension': 2},
+                #     }
+                # },
                 'buff_zone_info': {
                     'multiplier': 'buff_zone_count',
                     'items': {
@@ -186,6 +177,7 @@ class MultiAgentTeamEnv(gym.Env):
 
     def _calculate_obs_dim(self):
         self.display_observation_table(self._get_observation_dict(),self._get_context())
+        print(f"The total dimension is:{self.calculate_observation_dim(self._get_observation_dict(),self._get_context())}")
         return self.calculate_observation_dim(self._get_observation_dict(),self._get_context())
     
 
@@ -238,67 +230,108 @@ class MultiAgentTeamEnv(gym.Env):
         
         for tank in self.game_env.agent_controller.tanks.values():
             tank_obs = []
-            dx,dy = angle_to_vector(float(tank.angle),float(tank.speed))
+            dx,dy = angle_to_vector(float(tank.angle),float(1))
             # Tank's own position and status
-            tank_obs.extend([float(tank.x), float(tank.y), *corner_to_xy(tank), float(dx), float(dy), float(tank.hittingWall), float(1), float(1 if tank.alive else 0)]) # 5 + 8
+            tank_obs.extend([float(tank.x/WIDTH),float(tank.y/HEIGHT), #'position': {'description': '(x, y)', 'dimension': 2},
+                             float(dx), float(dy), #'angle_vector': {'description': '(dx, dy)', 'dimension': 2},
+                             float(tank.speed/TANK_SPEED), float(tank.angle), #'speed-angle': {'description': '(speed, angle)', 'dimension':2},
+                             float(tank.hittingWall), #'hitting_wall': {'description': 'Boolean', 'dimension': 1},
+                             float(tank.if_cool_down()), #'cooling_down_status': {'description': 'Boolean', 'dimension': 1},
+                             *tank.last_action]) #'last_actions':{'description':'pre_action1, pre_action2, pre_action3','dimension':3},  
 
 
-            # Tank's bullets
-            active_bullets = [b for b in self.game_env.bullets if b.owner == tank]
-            for bullet in active_bullets[:self.max_bullets_per_tank]:
-                tank_obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy)]) # 4
-            while len(active_bullets) < self.max_bullets_per_tank:
-                tank_obs.extend([0, 0, 0, 0])
-                active_bullets.append(None)
-                
-
-            # Enemy bullets & distances
-            for other_tank in self.game_env.tanks:
-                if other_tank != tank:
-                    enemy_bullets = [b for b in self.game_env.bullets if b.owner == other_tank]
-                    for bullet in enemy_bullets[:self.max_bullets_per_tank]:
-                        rel_x = bullet.x - tank.x
-                        rel_y = bullet.y - tank.y
-                        distance = np.sqrt(rel_x**2 + rel_y**2)
-                        tank_obs.extend([float(bullet.x), float(bullet.y), float(bullet.dx), float(bullet.dy), rel_x, rel_y, distance,float(other_tank.team == tank.team)]) # 8 #add a team notification
-                    while len(enemy_bullets) < self.max_bullets_per_tank:
-                        tank_obs.extend([0, 0, 0, 0, 0, 0, 0, 0]) 
-                        enemy_bullets.append(None)
-
-            
             # Enemy tanks' positions & pairwise distances (exclude current tank)
             # min_enemy_dist = float('inf')
+            """
+                        'relative_position': {'description': '(rel_x, rel_y)', 'dimension': 2},
+                        'angle_coordiante':{'description': '(distance ,angle)','dimension': 2},
+                        'angle_vector': {'description': '(dx, dy)', 'dimension': 2},
+                        'speed': {'description': 'speed','dimension': 1},
+                        'hitting_wall': {'description': 'Boolean', 'dimension': 1},
+                        'cooling_down_status': {'description': 'Boolean', 'dimension': 1},
+                        'last_actions':{'description':'pre_action1, pre_action2, pre_action3','dimension':3},
+                        'team_notification': {'description': 'Team mate(1) or enemy(0)', 'dimension': 1},
+                        'alive_status': {'description': 'Alive(1) or dead(0)', 'dimension': 1},
+            """
             for other_tank in self.game_env.tanks:
                 if other_tank != tank:
                     rel_x = other_tank.x - tank.x
                     rel_y = other_tank.y - tank.y
-                    distance = np.sqrt(rel_x**2 + rel_y**2)
-                    # min_enemy_dist = min(min_enemy_dist, distance)
-                    
-                    dx, dy = angle_to_vector(float(other_tank.angle), float(other_tank.speed))
-                    tank_obs.extend([float(other_tank.x), float(other_tank.y), rel_x, rel_y, distance, *corner_to_xy(other_tank), float(dx), float(dy),  float(other_tank.hittingWall), float(other_tank.team == tank.team),float(1 if other_tank.alive else 0)]) # 18
-                
-            # Wall information
-            for wall in self.game_env.walls: # 40
-                tank_obs.extend([float(wall.x), float(wall.y), float(wall.x + wall.size), float(wall.y + wall.size)]) # 4
-            
-            tank_obs.extend(self.game_env.maze.flatten())
+                    angle_x, angle_y = normalize_vector(rel_x,rel_y)
+                    distance, angle = to_polar(tank.x,tank.y,other_tank.x,other_tank.y)
+                    dx, dy = angle_to_vector(float(other_tank.angle), float(1))
+                    tank_obs.extend([float(rel_x/WIDTH), float(rel_y/HEIGHT), #  'relative_position': {'description': '(rel_x, rel_y)', 'dimension': 2},
+                                     float(distance)/WIDTH,float(angle), #'angle_coordiante':{'description': '(distance ,angle)','dimension': 2},
+                                     float(dx), float(dy),   #'angle_vector': {'description': '(dx, dy)', 'dimension': 2},
+                                     float(other_tank.speed/TANK_SPEED),float(other_tank.angle), #'speed-angle': {'description': '(speed, angle)', 'dimension':2},
+                                     float(other_tank.hittingWall), #'hitting_wall': {'description': 'Boolean', 'dimension': 1},
+                                     float(other_tank.if_cool_down()), #'cooling_down_status': {'description': 'Boolean', 'dimension': 1},
+                                     *other_tank.last_action, #'last_actions':{'description':'pre_action1, pre_action2, pre_action3','dimension':3},
+                                     float(other_tank.team == tank.team), #'team_notification': {'description': 'Team mate(1) or enemy(0)', 'dimension': 1},
+                                     float(1 if other_tank.alive else 0)]) #'alive_status': {'description': 'Alive(1) or dead(0)', 'dimension': 1},
+
+            # Enemy bullets & distances
+            # for other_tank in self.game_env.tanks:
+            #     if other_tank != tank:
+            #         enemy_bullets = [b for b in self.game_env.bullets if b.owner == other_tank]
+            #         for bullet in enemy_bullets[:self.max_bullets_per_tank]:
+            #             rel_x = bullet.x - tank.x
+            #             rel_y = bullet.y - tank.y
+            #             distance = np.sqrt(rel_x**2 + rel_y**2)
+            #             tank_obs.extend([rel_x/WIDTH, rel_y/HEIGHT, 
+            #                              float(bullet.dx), float(bullet.dy), 
+            #                              float(other_tank.team == tank.team)])
+            #         while len(enemy_bullets) < self.max_bullets_per_tank:
+            #             tank_obs.extend([0, 0, 0, 0, 0]) 
+            #             enemy_bullets.append(None)
+
+            """
+                        'relative_position': {'description': '(rel_x, rel_y)', 'dimension': 2},
+                        'angle_coordiante':{'description': '(distance ,angle)','dimension': 2},
+                        'velocity': {'description': '(dx, dy)', 'dimension': 2},
+                        'speed': {'description': 'speed','dimension': 1},
+                        'team_notification': {'description': 'Team mate(1) or enemy(0)', 'dimension': 1},
+            """
+            for tank in self.game_env.tanks:
+                tank_bullets = [b for b in self.game_env.bullets if b.owner == tank]
+                for bullet in tank_bullets:
+                    rel_x = bullet.x - tank.x
+                    rel_y = bullet.y - tank.y
+                    distance,angle = to_polar(tank.x,tank.y,bullet.x,bullet.y)
+                    dx, dy = normalize_vector(bullet.dx, bullet.dy)
+                    radians = math.atan2(dy, dx)
+                    degree = math.degrees(radians)
+                    tank_obs.extend([rel_x/WIDTH, rel_y/HEIGHT,  #'relative_position': {'description': '(rel_x, rel_y)', 'dimension': 2},
+                                    float(distance/WIDTH),float(angle),# 'angle_coordiante':{'description': '(distance ,angle)','dimension': 2},
+                                    float(dx), float(dy), #'velocity': {'description': '(dx, dy)', 'dimension': 2},
+                                    float(degree),float(bullet.speed),#'speed': {'description': 'speed','dimension': 1},
+                                    float(other_tank.team == tank.team)]) #'team_notification': {'description': 'Team mate(1) or enemy(0)', 'dimension': 1},
+                while len(tank_bullets) < self.max_bullets_per_tank:
+                    tank_obs.extend([0]*9) 
+                    tank_bullets.append(None)
+
+
+
+            # # Wall information
+            # for wall in self.game_env.walls: # 40
+            #     distance,angle = to_polar(tank.x,tank.y,wall.x,wall.y)
+            #     tank_obs.extend([float(wall.x/WIDTH), float(wall.y/HEIGHT),
+            #                     float(distance/WIDTH),float(angle),
+            #                     ]) # 2
 
             # Buff Zone Information
             for buff_zone in self.game_env.buff_zones: # 4
-                tank_obs.extend([float(buff_zone[0]), float(buff_zone[1])]) # 2
+                tank_obs.extend([float(buff_zone[0]/WIDTH), float(buff_zone[1]/HEIGHT)]) # 2
 
             # Debuff Zone Information
             for debuff_zone in self.game_env.debuff_zones: # 4
-                tank_obs.extend([float(debuff_zone[0]), float(debuff_zone[1])]) # 2
+                tank_obs.extend([float(debuff_zone[0]/WIDTH), float(debuff_zone[1]/HEIGHT)]) # 2
 
             # Tank's Current Buff/Debuff Status
             tank_obs.append(1 if tank.in_buff_zone else 0)
             tank_obs.append(1 if tank.in_debuff_zone else 0)
             
-            # print(len(tank_obs)) # 265
-            
-            observations.append(tank_obs)   # obs is 265 dim each * 2
+            observations.append(tank_obs)  
 
 
         return np.array(observations, dtype=np.float32)

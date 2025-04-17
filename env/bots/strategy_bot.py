@@ -1,6 +1,5 @@
 import math
 import numpy as np
-from configs.config_basic import *
 from env.sprite import BulletTrajectory
 from env.bfs import bfs_path
 from env.bots.base_bot import BaseBot
@@ -106,8 +105,8 @@ class SmartStrategyBot(BaseBot):
             return 1  # No movement
             
         # Calculate target position (center of the cell)
-        target_x = next_cell[1] * GRID_SIZE + (GRID_SIZE / 2)
-        target_y = next_cell[0] * GRID_SIZE + (GRID_SIZE / 2)
+        target_x = next_cell[1] * self.tank.sharing_env.game_configs.GRID_SIZE + (self.tank.sharing_env.game_configs.GRID_SIZE / 2)
+        target_y = next_cell[0] * self.tank.sharing_env.game_configs.GRID_SIZE + (self.tank.sharing_env.game_configs.GRID_SIZE / 2)
         
         # Calculate rotation needed to face the cell
         rotation = self.aim_at_target(target_x, target_y)
@@ -163,8 +162,8 @@ class SmartStrategyBot(BaseBot):
                 # No line of sight, use BFS to navigate
                 if self.next_cell:
                     # Calculate target position (center of the cell)
-                    target_x = self.next_cell[1] * GRID_SIZE + (GRID_SIZE / 2)
-                    target_y = self.next_cell[0] * GRID_SIZE + (GRID_SIZE / 2)
+                    target_x = self.next_cell[1] * self.tank.sharing_env.game_configs.GRID_SIZE + (self.tank.sharing_env.game_configs.GRID_SIZE / 2)
+                    target_y = self.next_cell[0] * self.tank.sharing_env.game_configs.GRID_SIZE + (self.tank.sharing_env.game_configs.GRID_SIZE / 2)
                     
                     # Aim at next cell
                     rotation = self.aim_at_target(target_x, target_y)

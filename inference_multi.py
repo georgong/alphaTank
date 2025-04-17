@@ -75,6 +75,7 @@ def display_hit_table(hit_stats):
 
 def inference_from_checkpoint(checkpoint_file_path, replace_human=None, demo=False, experiment_name=None):
     if demo:
+        print("use_demo")
         checkpoint_file_path = f"demo_checkpoints/team_ppo/{experiment_name}.pth"
         
     checkpoint = torch.load(checkpoint_file_path, map_location=device)
@@ -154,8 +155,8 @@ if __name__ == "__main__":
     args = parser.parse_args()
     checkpoint_path = f"checkpoints/team_ppo/{args.experiment_name}.pth"
     
-    if args.joy_stick_controller and args.demo:
-        replace_human = {"Tank3":{
+    if args.joy_stick_controller:
+        replace_human = {"Tank1":{
                 "left": pygame.K_a,
                 "right": pygame.K_d,
                 "up": pygame.K_w,

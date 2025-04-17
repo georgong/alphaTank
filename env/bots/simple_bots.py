@@ -1,10 +1,12 @@
 import math
 import random
 import numpy as np
-from configs.config_basic import *
+#from configs.config_basic import *
 from env.sprite import BulletTrajectory
 from env.bots.base_bot import BaseBot
 import pygame
+
+
 
 class RandomBot(BaseBot):
     """A bot that moves and shoots randomly （人工智障）"""
@@ -51,7 +53,7 @@ class AggressiveBot(BaseBot):
         super().__init__(tank)
         self.aim_threshold = 15  # Very forgiving aim threshold for constant shooting
         self.move_threshold = 45  # Wider threshold for movement
-        self.min_distance = GRID_SIZE * 1  # Stop approaching at this distance
+        self.min_distance = self.tank.sharing_env.game_configs.GRID_SIZE * 1  # Stop approaching at this distance
         self.state = "pursuing"  # Add state for debug display
         self.stuck_timer = 0  # Add stuck timer for debug display
         self.target = None  # Add target for debug display
@@ -148,31 +150,54 @@ class DefensiveBot(BaseBot):
         
         return nearest, min_dist
 
-    def find_safe_position_in_buff_zone(self, buff_pos):
-        """Calculate a safe position within the buff zone that keeps the tank well inside"""
-        # Buff zone dimensions
-        buff_width = GRID_SIZE * 3.5
-        buff_height = GRID_SIZE * 3.5
-        
-        # Tank dimensions
-        tank_width = self.tank.width
-        tank_height = self.tank.height
-        
-        # Calculate margins to keep tank fully inside
-        margin_x = tank_width * 0.75  # Leave some space from edges
-        margin_y = tank_height * 0.75
-        
-        # Calculate safe area boundaries
-        safe_x_min = buff_pos[0] + margin_x
-        safe_x_max = buff_pos[0] + buff_width - margin_x
-        safe_y_min = buff_pos[1] + margin_y
-        safe_y_max = buff_pos[1] + buff_height - margin_y
-        
-        # Return center of safe area
-        return (
-            (safe_x_min + safe_x_max) / 2,
-            (safe_y_min + safe_y_max) / 2
-        )
+    def find_safe_position(self):
+        shoot_distance = self.tank.shoot_distance
+        min_dist = 0.5 * shoot_distance
+
+        env = self.tank.sharing_env
+        my_team = self.tank.team
+
+        width = env.game_configs.WIDTH
+        height = env.game_configs.HEIGHT
+        grid = env.maze  # 2D array: 0 is free, 1 is wall
+
+        enemy_tanks = [t for t in env.tanks if t.team != my_team and t.alive]
+
+        def is_far_enough(x, y):
+            for enemy in enemy_tanks:
+                dx = enemy.x - x
+                dy = enemy.y - y
+                if (dx ** 2 + dy ** 2) ** 0.5 < min_dist:
+                    return False
+            return True
+
+        def has_line_of_sight(x1, y1, x2, y2):
+            # Simple Bresenham-style ray check
+            num_steps = int(max(abs(x2 - x1), abs(y2 - y1)) / 5)
+            for i in range(1, num_steps):
+                xi = int(x1 + (x2 - x1) * i / num_steps)
+                yi = int(y1 + (y2 - y1) * i / num_steps)
+                gx = xi // env.game_configs.GRID_SIZE
+                gy = yi // env.game_configs.GRID_SIZE
+                if 0 <= gx < grid.shape[1] and 0 <= gy < grid.shape[0]:
+                    if grid[gy][gx] == 1:
+                        return False
+            return True
+
+        # Sample candidate positions
+        for _ in range(1000):
+            x = random.randint(0, width)
+            y = random.randint(0, height)
+
+            if not is_far_enough(x, y):
+                continue
+
+            visible_to_all = all(has_line_of_sight(x, y, e.x, e.y) for e in enemy_tanks)
+            if visible_to_all:
+                return x, y
+
+        # fallback
+        return self.tank.x, self.tank.y
 
     def find_nearest_buff_position(self):
         """Find the nearest buff zone center with safe positioning"""
@@ -188,7 +213,7 @@ class DefensiveBot(BaseBot):
         
         for buff_pos in buff_zones:
             # Calculate a safe position within this buff zone
-            safe_x, safe_y = self.find_safe_position_in_buff_zone(buff_pos)
+            safe_x, safe_y = self.find_safe_position()
             
             # Calculate distance to this safe position
             dist = math.sqrt((safe_x - current_x)**2 + (safe_y - current_y)**2)
@@ -229,8 +254,8 @@ class DefensiveBot(BaseBot):
             buff_rect = pygame.Rect(
                 buff_pos[0],
                 buff_pos[1],
-                GRID_SIZE * 3.5,
-                GRID_SIZE * 3.5
+                self.tank.sharing_env.game_configs.GRID_SIZE * 3.5,
+                self.tank.sharing_env.game_configs.GRID_SIZE * 3.5
             )
             
             # Check if the tank rectangle intersects with the buff zone rectangle
@@ -249,7 +274,7 @@ class DefensiveBot(BaseBot):
             return actions
 
         # Check if we're in a buff zone
-        in_buff = self.is_in_buff_zone()
+        in_buff = True #self.is_in_buff_zone()
 
         if in_buff:
             self.state = "shooting"
@@ -271,7 +296,7 @@ class DefensiveBot(BaseBot):
             self.state = "moving_to_buff"
             # Find nearest buff zone if we don't have a target
             if self.target_position is None:
-                self.target_position = self.find_nearest_buff_position()
+                self.target_position = self.tank.x, self.tank.y #self.find_nearest_buff_position()
             
             if self.target_position:
                 # Calculate rotation needed to face buff zone
@@ -295,7 +320,7 @@ class DodgeBot(BaseBot):
     """A bot that focuses on dodging enemy tanks and bullets (走位，走位)"""
     def __init__(self, tank):
         super().__init__(tank)
-        self.detection_radius = GRID_SIZE * 4  # Detection radius for threats
+        self.detection_radius = self.tank.sharing_env.game_configs.GRID_SIZE * 4  # Detection radius for threats
         self.min_dodge_angle = 45  # Minimum angle to dodge (from threat vector)
         self.max_dodge_angle = 120  # Maximum angle to dodge (from threat vector)
         self.dodge_duration = 10  # Frames to maintain dodge direction
@@ -304,7 +329,7 @@ class DodgeBot(BaseBot):
         self.state = "idle"  # States: idle, dodging
         self.stuck_timer = 0
         self.target = None
-        self.wall_check_distance = GRID_SIZE * 1.5  # Distance to check for walls
+        self.wall_check_distance = self.tank.sharing_env.game_configs.GRID_SIZE * 1.5  # Distance to check for walls
 
     def will_hit_wall(self, angle):
         """Check if moving in this angle will hit a wall"""
@@ -346,13 +371,13 @@ class DodgeBot(BaseBot):
         
         # Check bullets
         for bullet in self.tank.sharing_env.bullets:
-            if bullet.owner.team != self.tank.team:  # Don't dodge own bullets
-                dist = math.sqrt((bullet.x - self.tank.x)**2 + (bullet.y - self.tank.y)**2)
-                if dist < min_dist and dist < self.detection_radius:
-                    min_dist = dist
-                    nearest_pos = (bullet.x, bullet.y)
-                    threat_type = "bullet"
-                    self.target = None  # Clear tank target when dodging bullets
+            #if bullet.owner.team != self.tank.team:  # Don't dodge own bullets
+            dist = math.sqrt((bullet.x - self.tank.x)**2 + (bullet.y - self.tank.y)**2)
+            if dist < min_dist and dist < self.detection_radius:
+                min_dist = dist
+                nearest_pos = (bullet.x, bullet.y)
+                threat_type = "bullet"
+                self.target = None  # Clear tank target when dodging bullets
         
         return nearest_pos, min_dist, threat_type
 
